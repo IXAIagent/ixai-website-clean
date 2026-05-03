@@ -83,7 +83,7 @@ export default function LoginPage() {
               <input
                 autoComplete="email"
                 className="w-full rounded-xl border border-gray-700 bg-black px-4 py-3 text-white outline-none transition focus:border-white"
-                placeholder="test2@test.com"
+                placeholder="you@example.com"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -97,7 +97,7 @@ export default function LoginPage() {
               <input
                 autoComplete="current-password"
                 className="w-full rounded-xl border border-gray-700 bg-black px-4 py-3 text-white outline-none transition focus:border-white"
-                placeholder="111111"
+                placeholder="請輸入密碼"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

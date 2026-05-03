@@ -1,7 +1,23 @@
 "use client";
 
+const LOCAL_API_BASE = "http://127.0.0.1:8000";
+
+function resolveApiBase() {
+  const configuredBase = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+  if (configuredBase) {
+    return configuredBase.replace(/\/$/, "");
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is required in production");
+  }
+
+  return LOCAL_API_BASE;
+}
+
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim().replace(/\/$/, "") || LOCAL_API_BASE;
 
 type ErrorPayload = {
   detail?: string;
@@ -79,7 +95,8 @@ export async function apiFetch<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const res = await fetch(path.startsWith("http") ? path : `${API_BASE}${path}`, {
+  const apiBase = resolveApiBase();
+  const res = await fetch(path.startsWith("http") ? path : `${apiBase}${path}`, {
     ...init,
     headers,
   });
