@@ -10,7 +10,7 @@ export default function DashboardPage() {
     async function load() {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/dashboard/dev-real-summary`
+          `https://ixai-backend.onrender.com/api/v1/dashboard/dev-real-summary`
         );
 
         if (!res.ok) {
