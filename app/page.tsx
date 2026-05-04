@@ -95,7 +95,7 @@ export default function Page() {
 
       if (token) {
         try {
-          const userSummary = await apiFetch<unknown>("/api/v1/dashboard/my-summary");
+          const userSummary = await apiFetch<unknown>("/api/v1/dashboard/dev-real-summary");
           if (!active) return;
           setData(asRecord(userSummary));
           setMode("user");
