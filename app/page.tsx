@@ -2,43 +2,45 @@
 
 import { useEffect, useState } from "react";
 
-export default function DashboardPage() {
+export default function Dashboard() {
   const [data, setData] = useState<any>(null);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(
-          `https://ixai-backend.onrender.com/api/v1/dashboard/dev-real-summary`
-        );
-
-        if (!res.ok) {
-          throw new Error("API failed");
-        }
-
-        const json = await res.json();
-        setData(json);
-      } catch (err) {
-        console.error("Dashboard error:", err);
-        setError("Failed to fetch");
-      }
-    }
-
-    load();
+    fetch("https://ixai-backend.onrender.com/api/v1/dashboard/dev-real-summary")
+      .then(res => res.json())
+      .then(setData)
+      .catch(() => setData(null));
   }, []);
 
+  if (!data) return <div style={{ padding: 20 }}>Loading...</div>;
+
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: 20, fontFamily: "Arial" }}>
       <h1>IXAI Dashboard</h1>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      <h2>Summary</h2>
+      <p>{data.summary}</p>
 
-      {data ? (
-        <pre>{JSON.stringify(data, null, 2)}</pre>
-      ) : (
-        <p>Loading...</p>
-      )}
+      <h2>Alerts</h2>
+      <ul>
+        {data.alerts.map((a: any, i: number) => (
+          <li key={i}>{a.level.toUpperCase()} - {a.message}</li>
+        ))}
+      </ul>
+
+      <h2>Stocks</h2>
+      <ul>
+        {data.stocks.map((s: any, i: number) => (
+          <li key={i}>{s.symbol}: ${s.price}</li>
+        ))}
+      </ul>
+
+      <h2>Summary Cards</h2>
+      <ul>
+        {data.summary_cards.map((c: any, i: number) => (
+          <li key={i}>{c.title}: {c.value}</li>
+        ))}
+      </ul>
     </div>
   );
 }
