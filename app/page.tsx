@@ -1,255 +1,185 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch } from "./lib/api";
 
-import { ApiError, apiFetch, getToken, logout } from "./lib/api";
-
-type DashboardRecord = Record<string, unknown>;
-
-type AlertItem = {
-  level?: unknown;
-  severity?: unknown;
-  message?: unknown;
-  title?: unknown;
+type Alert = {
+  level: string;
+  message: string;
 };
 
-type StockItem = {
-  symbol?: unknown;
-  price?: unknown;
-  current_price?: unknown;
-  current_value?: unknown;
-  pnl?: unknown;
+type Stock = {
+  symbol: string;
+  price: number;
 };
 
-type FcnItem = {
-  name?: unknown;
-  fcn_code?: unknown;
-  code?: unknown;
-  worst_symbol?: unknown;
-  worst_of_symbol?: unknown;
-  worst_of?: unknown;
-  distance_to_KI?: unknown;
-  distance_to_ki?: unknown;
-  distance_to_ki_pct?: unknown;
-  risk_level?: unknown;
-};
-
-type CryptoItem = {
-  symbol?: unknown;
-  price?: unknown;
-  current_price?: unknown;
-  current_value?: unknown;
-  pnl?: unknown;
-};
+type FCN = any;
 
 type SummaryCard = {
-  title?: unknown;
-  label?: unknown;
-  value?: unknown;
-  message?: unknown;
+  title: string;
+  value: string;
 };
 
-function asRecord(value: unknown): DashboardRecord {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as DashboardRecord)
-    : {};
-}
-
-function asArray<T>(value: unknown): T[] {
-  return Array.isArray(value) ? (value as T[]) : [];
-}
-
-function asOneOrMany<T>(value: unknown): T[] {
-  if (Array.isArray(value)) return value as T[];
-  if (value && typeof value === "object") return [value as T];
-  return [];
-}
-
-function text(value: unknown, fallback = "-") {
-  if (typeof value === "string" && value.trim()) return value.trim();
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  return fallback;
-}
-
-function errorMessage(error: unknown, fallback: string) {
-  if (error instanceof ApiError) return error.message || fallback;
-  if (error instanceof Error) return error.message || fallback;
-  return fallback;
-}
-
-export default function Dashboard() {
-  const [data, setData] = useState<DashboardRecord | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<"loading" | "user" | "demo">("loading");
+export default function Page() {
+  const [data, setData] = useState<any>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let active = true;
-
-    async function loadDashboard() {
-      setError(null);
-
-      if (getToken()) {
-        try {
-          const userSummary = await apiFetch<unknown>("/api/v1/dashboard/my-summary");
-          if (!active) return;
-          setData(asRecord(userSummary));
-          setMode("user");
-          return;
-        } catch (err) {
-          if (err instanceof ApiError && err.status === 401) {
-            logout();
-          }
-          console.error("User dashboard error:", err);
-        }
-      }
-
+    const load = async () => {
       try {
-        const demoSummary = await apiFetch<unknown>(
-          "/api/v1/dashboard/dev-real-summary",
-        );
-        if (!active) return;
-        setData(asRecord(demoSummary));
-        setMode("demo");
-      } catch (err) {
-        if (!active) return;
-        console.error("Demo dashboard error:", err);
-        setData(null);
-        setMode("demo");
-        setError(errorMessage(err, "Failed to load dashboard."));
+        let res;
+
+        try {
+          // 有 token → 真資料
+          res = await apiFetch("/api/v1/dashboard/my-summary");
+        } catch {
+          // fallback → demo
+          res = await apiFetch("/api/v1/dashboard/dev-real-summary");
+        }
+
+        setData(res);
+      } catch (e: any) {
+        setError(e.message || "Failed to fetch");
+      } finally {
+        setLoading(false);
       }
-    }
-
-    void loadDashboard();
-
-    return () => {
-      active = false;
     };
+
+    load();
   }, []);
 
-  const alerts = asArray<AlertItem>(data?.alerts ?? data?.latest_alerts);
-  const stocks = asArray<StockItem>(data?.stocks ?? data?.stock_positions);
-  const fcnItems = asOneOrMany<FcnItem>(
-    data?.fcn_analysis ?? data?.fcn_positions ?? data?.fcn_summary ?? data?.fcn,
-  );
-  const cryptoItems = asArray<CryptoItem>(data?.crypto_positions ?? data?.crypto);
-  const summaryCards = asArray<SummaryCard>(
-    data?.summary_cards ?? data?.decision_cards ?? data?.cards,
-  );
-  const riskSources = asArray<unknown>(data?.risk_sources);
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (error) return <div className="p-6 text-red-500">{error}</div>;
+  if (!data) return <div className="p-6">No data</div>;
 
-  if (!data && !error) {
-    return <div style={{ padding: 20 }}>Loading...</div>;
-  }
+  const alerts: Alert[] = data.alerts || [];
+  const stocks: Stock[] = data.stocks || [];
+  const fcn: FCN[] = data.fcn || [];
+  const summaryCards: SummaryCard[] = data.summary_cards || [];
 
   return (
-    <div style={{ padding: 20, fontFamily: "Arial" }}>
-      <h1>IXAI Dashboard</h1>
-      <p>Mode: {mode === "user" ? "User" : "Demo"}</p>
+    <div className="p-6 space-y-6">
+      <h1 className="text-2xl font-bold">IXAI Dashboard</h1>
 
-      {error && (
-        <section>
-          <h2>API Error</h2>
-          <p style={{ color: "red" }}>{error}</p>
-        </section>
-      )}
+      {/* ✅ Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {summaryCards.map((c, i) => (
+          <div
+            key={i}
+            className="border rounded-xl p-4 shadow-sm bg-white"
+          >
+            <div className="text-sm text-gray-500">{c.title}</div>
+            <div className="text-xl font-semibold">{c.value}</div>
+          </div>
+        ))}
+      </div>
 
-      <h2>Summary</h2>
-      <p>{text(data?.summary ?? data?.message, "No summary")}</p>
-
-      <h2>Alerts</h2>
-      {alerts.length === 0 ? (
-        <p>No alerts</p>
-      ) : (
-        <ul>
-          {alerts.map((alert, index) => (
-            <li key={`${text(alert.title ?? alert.message, "alert")}-${index}`}>
-              {text(alert.level ?? alert.severity, "INFO").toUpperCase()} -{" "}
-              {text(alert.message ?? alert.title)}
-            </li>
+      {/* 🚨 Alerts */}
+      <div>
+        <h2 className="font-semibold mb-2">Alerts</h2>
+        <div className="space-y-2">
+          {alerts.length === 0 && <div>No alerts</div>}
+          {alerts.map((a, i) => (
+            <div
+              key={i}
+              className={`p-3 rounded-lg text-white ${
+                a.level === "high"
+                  ? "bg-red-500"
+                  : a.level === "medium"
+                  ? "bg-yellow-500"
+                  : "bg-green-500"
+              }`}
+            >
+              {a.level.toUpperCase()} - {a.message}
+            </div>
           ))}
-        </ul>
-      )}
+        </div>
+      </div>
 
-      <h2>Stocks</h2>
-      {stocks.length === 0 ? (
-        <p>No stock positions</p>
-      ) : (
-        <ul>
-          {stocks.map((stock, index) => (
-            <li key={`${text(stock.symbol, "stock")}-${index}`}>
-              {text(stock.symbol, "STOCK")}: $
-              {text(stock.price ?? stock.current_price ?? stock.current_value ?? stock.pnl, "0")}
-            </li>
+      {/* 📊 Stocks */}
+      <div>
+        <h2 className="font-semibold mb-2">Stocks</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {stocks.length === 0 && <div>No stock positions</div>}
+          {stocks.map((s, i) => (
+            <div
+              key={i}
+              className="border rounded-xl p-4 bg-white shadow-sm"
+            >
+              <div className="text-sm text-gray-500">{s.symbol}</div>
+              <div className="text-lg font-semibold">${s.price}</div>
+            </div>
           ))}
-        </ul>
-      )}
+        </div>
+      </div>
 
-      <h2>FCN</h2>
-      {fcnItems.length === 0 ? (
-        <p>No FCN positions</p>
-      ) : (
-        <ul>
-          {fcnItems.map((fcn, index) => (
-            <li key={`${text(fcn.fcn_code ?? fcn.code ?? fcn.name, "fcn")}-${index}`}>
-              {text(fcn.name ?? fcn.fcn_code ?? fcn.code, "FCN")} | Worst:{" "}
-              {text(fcn.worst_symbol ?? fcn.worst_of_symbol ?? fcn.worst_of)} | KI
-              dist:{" "}
-              {text(
-                fcn.distance_to_KI ??
-                  fcn.distance_to_ki ??
-                  fcn.distance_to_ki_pct,
-              )}{" "}
-              | Risk: {text(fcn.risk_level, "unknown")}
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* 🧨 FCN */}
+      <div>
+        <h2 className="font-semibold mb-2">FCN</h2>
 
-      <h2>Crypto</h2>
-      {cryptoItems.length === 0 ? (
-        <p>No crypto positions</p>
-      ) : (
-        <ul>
-          {cryptoItems.map((crypto, index) => (
-            <li key={`${text(crypto.symbol, "crypto")}-${index}`}>
-              {text(crypto.symbol, "CRYPTO")}: $
-              {text(
-                crypto.price ??
-                  crypto.current_price ??
-                  crypto.current_value ??
-                  crypto.pnl,
-                "0",
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+        {fcn.length === 0 && <div>No FCN positions</div>}
 
-      <h2>Risk Sources</h2>
-      {riskSources.length === 0 ? (
-        <p>No risks</p>
-      ) : (
-        <ul>
-          {riskSources.map((source, index) => (
-            <li key={`risk-${index}`}>
-              {typeof source === "object" ? JSON.stringify(source) : text(source)}
-            </li>
-          ))}
-        </ul>
-      )}
+        <div className="space-y-4">
+          {fcn.map((item: any, i: number) => {
+            const underlyings =
+              item.underlying_results ||
+              item.underlyings ||
+              [];
 
-      <h2>Summary Cards</h2>
-      {summaryCards.length === 0 ? (
-        <p>No summary cards</p>
-      ) : (
-        <ul>
-          {summaryCards.map((card, index) => (
-            <li key={`${text(card.title ?? card.label, "card")}-${index}`}>
-              {text(card.title ?? card.label)}: {text(card.value ?? card.message)}
-            </li>
-          ))}
-        </ul>
-      )}
+            return (
+              <div
+                key={i}
+                className="border rounded-xl p-4 bg-white shadow-sm"
+              >
+                <div className="font-semibold mb-2">
+                  {item.name || `FCN ${i + 1}`}
+                </div>
+
+                {/* Underlyings */}
+                <div className="flex gap-4 flex-wrap mb-2">
+                  {Array.isArray(underlyings) &&
+                    underlyings.map((u: any, j: number) => (
+                      <div
+                        key={j}
+                        className="text-sm border px-2 py-1 rounded"
+                      >
+                        {u.symbol || u}
+                      </div>
+                    ))}
+                </div>
+
+                <div className="text-sm text-gray-600">
+                  KI Distance: {item.distance_to_ki_pct ?? "N/A"}%
+                </div>
+
+                <div className="text-sm text-gray-600">
+                  KO Distance: {item.distance_to_ko_pct ?? "N/A"}%
+                </div>
+
+                <div className="text-sm mt-1">
+                  Risk:{" "}
+                  <span className="font-semibold">
+                    {item.risk_level || "Unknown"}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ⚙️ System */}
+      <div>
+        <h2 className="font-semibold mb-2">System</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="border p-3 rounded">Backend: Live</div>
+          <div className="border p-3 rounded">Frontend: Connected</div>
+          <div className="border p-3 rounded">
+            Data: {data.mode || "unknown"}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
