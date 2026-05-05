@@ -236,12 +236,12 @@ export default function Page() {
         {summaryCards.map((c, i) => (
           <div
             key={`${textValue(c.title || c.label, "card")}-${i}`}
-            className="border rounded-xl p-4 shadow-sm bg-white"
+            className="rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-white shadow-xl"
           >
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-300">
               {textValue(c.title || c.label)}
             </div>
-            <div className="text-xl font-semibold">
+            <div className="text-xl font-semibold text-white">
               {textValue(c.value ?? c.message)}
             </div>
           </div>
@@ -250,10 +250,24 @@ export default function Page() {
 
       <div>
         <h2 className="font-semibold mb-2">AI Summary</h2>
-        <div className="border rounded-xl p-4 bg-white shadow-sm space-y-1">
-          <div>Risk: {textValue(data.risk_level, "Unknown")}</div>
-          <div>Top Risk: {textValue(data.top_risk, "None")}</div>
-          <div>{textValue(data.ai_advice, "No AI advice")}</div>
+        <div className="space-y-2 rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-white shadow-xl">
+          <div className="text-gray-300">
+            Risk:{" "}
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${riskBadgeClass(data.risk_level)}`}
+            >
+              {textValue(data.risk_level, "Unknown")}
+            </span>
+          </div>
+          <div className="text-gray-300">
+            Top Risk:{" "}
+            <span className={data.risk_level === "low" ? "text-green-400" : "text-red-400"}>
+              {textValue(data.top_risk, "None")}
+            </span>
+          </div>
+          <div className="leading-7 text-gray-300">
+            {textValue(data.ai_advice, "No AI advice")}
+          </div>
         </div>
       </div>
 
@@ -286,17 +300,17 @@ export default function Page() {
       <div>
         <h2 className="font-semibold mb-2">Stocks</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {stocks.length === 0 && <div>No stock positions</div>}
+          {stocks.length === 0 && <div className="text-gray-400">No stock positions</div>}
           {stocks.map((s, i) => (
             <div
               key={`${textValue(s.id || s.symbol, "stock")}-${i}`}
-              className="border rounded-xl p-4 bg-white shadow-sm"
+              className="rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-gray-300 shadow-xl"
             >
-              <div className="text-sm text-gray-500">{textValue(s.symbol)}</div>
-              <div className="text-lg font-semibold">
+              <div className="text-sm font-semibold text-white">{textValue(s.symbol)}</div>
+              <div className="text-lg font-semibold text-emerald-400">
                 Current: {money(s.current_price)}
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-300">
                 Value: {money(s.current_value)}
               </div>
             </div>
@@ -308,16 +322,16 @@ export default function Page() {
       <div>
         <h2 className="font-semibold mb-2">Cash</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {cash.length === 0 && <div>No cash positions</div>}
+          {cash.length === 0 && <div className="text-gray-400">No cash positions</div>}
           {cash.map((c, i) => (
             <div
               key={`${textValue(c.id || c.currency, "cash")}-${i}`}
-              className="border rounded-xl p-4 bg-white shadow-sm"
+              className="rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-gray-300 shadow-xl"
             >
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-gray-300">
                 {textValue(c.currency, "Cash")}
               </div>
-              <div className="text-lg font-semibold">{money(c.amount)}</div>
+              <div className="text-lg font-semibold text-white">{money(c.amount)}</div>
             </div>
           ))}
         </div>
@@ -327,19 +341,19 @@ export default function Page() {
       <div>
         <h2 className="font-semibold mb-2">Crypto</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {crypto.length === 0 && <div>No crypto positions</div>}
+          {crypto.length === 0 && <div className="text-gray-400">No crypto positions</div>}
           {crypto.map((c, i) => (
             <div
               key={`${textValue(c.id || c.symbol, "crypto")}-${i}`}
-              className="border rounded-xl p-4 bg-white shadow-sm"
+              className="rounded-xl border border-zinc-700 bg-zinc-900 p-4 text-gray-300 shadow-xl"
             >
-              <div className="text-sm text-gray-500">
+              <div className="text-sm font-semibold text-white">
                 {textValue(c.symbol)} · {textValue(c.asset_type, "crypto")}
               </div>
-              <div className="text-lg font-semibold">
+              <div className="text-lg font-semibold text-emerald-400">
                 Current: {money(c.current_price)}
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-300">
                 Value: {money(c.current_value)}
               </div>
             </div>
@@ -435,9 +449,13 @@ export default function Page() {
       <div>
         <h2 className="font-semibold mb-2">System</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="border p-3 rounded">Backend: Live</div>
-          <div className="border p-3 rounded">Frontend: Connected</div>
-          <div className="border p-3 rounded">
+          <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-3 text-gray-300 shadow-xl">
+            Backend: Live
+          </div>
+          <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-3 text-gray-300 shadow-xl">
+            Frontend: Connected
+          </div>
+          <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-3 text-gray-300 shadow-xl">
             Data: {textValue(data.mode, "unknown")}
           </div>
         </div>
