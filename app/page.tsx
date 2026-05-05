@@ -132,6 +132,42 @@ function percent(value: unknown) {
   return `${normalized.toFixed(1)}%`;
 }
 
+function percentNumber(value: unknown) {
+  const number =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim()
+        ? Number(value)
+        : NaN;
+
+  if (!Number.isFinite(number)) return null;
+  return Math.abs(number) <= 1 && number !== 0 ? number * 100 : number;
+}
+
+function riskBadgeClass(value: unknown) {
+  const level = String(value || "").toLowerCase();
+  if (level === "high") return "bg-red-500 text-white";
+  if (level === "medium") return "bg-yellow-500 text-black";
+  if (level === "low") return "bg-green-500 text-white";
+  return "bg-gray-600 text-white";
+}
+
+function kiDistanceClass(value: unknown) {
+  const number = percentNumber(value);
+  if (number === null) return "text-gray-300";
+  if (number < 5) return "text-red-500";
+  if (number <= 15) return "text-yellow-400";
+  return "text-green-400";
+}
+
+function performanceClass(value: unknown) {
+  const number = percentNumber(value);
+  if (number === null) return "text-gray-300";
+  if (number < 0) return "text-red-400";
+  if (number > 0) return "text-green-400";
+  return "text-gray-300";
+}
+
 function uniqueAlerts(alerts: Alert[]) {
   const seen = new Set<string>();
   return alerts.filter((alert) => {
@@ -317,68 +353,76 @@ export default function Page() {
 
         {fcn.length === 0 && <div>No FCN positions</div>}
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           {fcn.map((item, i) => {
             const underlyingResults = arrayValue(item.underlying_results);
             const priceResults = arrayValue(item.prices);
             const underlyings = underlyingResults.length
               ? underlyingResults
               : priceResults;
+            const worstSymbol = textValue(
+              item.worst_symbol || item.worst_of_symbol || item.worst_of,
+              "N/A",
+            );
+            const worstPerformance = percent(item.worst_performance);
+            const kiDistance = item.distance_to_KI ?? item.distance_to_ki_pct;
+            const riskLevel = textValue(item.risk_level, "unknown");
 
             return (
               <div
                 key={`${textValue(item.fcn_id || item.id || item.fcn_code || item.code, "fcn")}-${i}`}
-                className="border rounded-xl p-4 bg-white shadow-sm"
+                className="relative rounded-xl border border-gray-800 bg-zinc-900 p-6 text-gray-200 shadow-xl"
               >
-                <div className="font-semibold mb-2">
+                <div className="pr-24 text-base font-semibold text-white">
                   {textValue(item.fcn_code || item.code || item.name, `FCN ${i + 1}`)}
                 </div>
-                <div className="text-sm text-gray-600 mb-2">
-                  Worst:{" "}
-                  {textValue(
-                    item.worst_symbol || item.worst_of_symbol || item.worst_of,
-                    "N/A",
-                  )}
+                <div
+                  className={`absolute right-6 top-6 rounded-full px-3 py-1 text-xs font-semibold uppercase ${riskBadgeClass(item.risk_level)}`}
+                >
+                  {riskLevel}
                 </div>
 
-                <div className="text-sm text-gray-600">
-                  Worst Performance: {percent(item.worst_performance)}
+                <div className="mt-4 text-lg font-semibold text-gray-100">
+                  ⚠️ Worst-of:{" "}
+                  <span className="text-red-400">
+                    {worstSymbol} ({worstPerformance})
+                  </span>
                 </div>
 
                 {/* Underlyings */}
-                <div className="flex gap-4 flex-wrap my-2">
+                <div className="my-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {underlyings.map((u, j) => (
                     <div
                       key={`${textValue(u.symbol, "underlying")}-${j}`}
-                      className="text-sm border px-2 py-1 rounded"
+                      className="rounded-lg bg-gray-800 p-3 text-sm shadow-sm"
                     >
-                      <div className="font-medium">{textValue(u.symbol)}</div>
-                      <div>Initial: {money(u.initial_price)}</div>
-                      <div>Current: {money(u.current_price)}</div>
-                      <div>Perf: {percent(u.performance)}</div>
-                      <div>Source: {textValue(u.price_source, "unknown")}</div>
+                      <div className="font-semibold text-white">
+                        {textValue(u.symbol)}
+                      </div>
+                      <div className="mt-2 text-gray-300">
+                        Current: {money(u.current_price)}
+                      </div>
+                      <div className={performanceClass(u.performance)}>
+                        Perf: {percent(u.performance)}
+                      </div>
+                      <div className="text-gray-400">
+                        Source: {textValue(u.price_source, "unknown")}
+                      </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="text-sm text-gray-600">
+                <div className={`text-sm font-semibold ${kiDistanceClass(kiDistance)}`}>
                   KI Distance:{" "}
-                  {percent(item.distance_to_KI ?? item.distance_to_ki_pct)}
+                  {percent(kiDistance)}
                 </div>
 
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-gray-300">
                   KO Distance:{" "}
                   {percent(item.distance_to_KO ?? item.distance_to_ko_pct)}
                 </div>
 
-                <div className="text-sm mt-1">
-                  Risk:{" "}
-                  <span className="font-semibold">
-                    {textValue(item.risk_level, "Unknown")}
-                  </span>
-                </div>
-
-                <div className="text-sm text-gray-600">
+                <div className="mt-1 text-sm text-gray-300">
                   Price Source: {textValue(item.price_source, "unknown")}
                 </div>
               </div>
