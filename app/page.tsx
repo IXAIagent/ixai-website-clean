@@ -39,6 +39,7 @@ type FcnUnderlying = {
   initial_price?: number | string | null;
   current_price?: number | string | null;
   performance?: number | string | null;
+  price_source?: string | null;
 };
 
 type FCN = {
@@ -50,11 +51,13 @@ type FCN = {
   worst_symbol?: string | null;
   worst_of_symbol?: string | null;
   worst_of?: string | null;
+  worst_performance?: number | string | null;
   distance_to_KI?: number | string | null;
   distance_to_KO?: number | string | null;
   distance_to_ki_pct?: number | string | null;
   distance_to_ko_pct?: number | string | null;
   risk_level?: string | null;
+  price_source?: string | null;
   underlying_results?: FcnUnderlying[] | null;
   prices?: FcnUnderlying[] | null;
   symbols?: string[] | null;
@@ -80,6 +83,7 @@ type DashboardData = {
   crypto_positions?: Crypto[] | null;
   fcn_analysis?: FCN[] | FCN | null;
   fcn_positions?: FCN[] | null;
+  fcn_summary?: FCN[] | null;
   summary_cards?: SummaryCard[] | null;
   decision_cards?: SummaryCard[] | null;
 };
@@ -175,9 +179,14 @@ export default function Page() {
     : arrayValue(data.stocks);
   const cash = arrayValue(data.cash_summary);
   const crypto = arrayValue(data.crypto_positions);
-  const fcn = oneOrMany(data.fcn_analysis).length
-    ? oneOrMany(data.fcn_analysis)
-    : arrayValue(data.fcn_positions);
+  const fcnAnalysis = oneOrMany(data.fcn_analysis);
+  const fcnPositions = arrayValue(data.fcn_positions);
+  const fcnSummary = arrayValue(data.fcn_summary);
+  const fcn = fcnAnalysis.length
+    ? fcnAnalysis
+    : fcnPositions.length
+      ? fcnPositions
+      : fcnSummary;
   const summaryCards = arrayValue(data.summary_cards).length
     ? arrayValue(data.summary_cards)
     : arrayValue(data.decision_cards);
@@ -310,8 +319,11 @@ export default function Page() {
 
         <div className="space-y-4">
           {fcn.map((item, i) => {
-            const underlyings =
-              item.underlying_results || item.prices || [];
+            const underlyingResults = arrayValue(item.underlying_results);
+            const priceResults = arrayValue(item.prices);
+            const underlyings = underlyingResults.length
+              ? underlyingResults
+              : priceResults;
 
             return (
               <div
@@ -319,7 +331,7 @@ export default function Page() {
                 className="border rounded-xl p-4 bg-white shadow-sm"
               >
                 <div className="font-semibold mb-2">
-                  {textValue(item.name || item.fcn_code || item.code, `FCN ${i + 1}`)}
+                  {textValue(item.fcn_code || item.code || item.name, `FCN ${i + 1}`)}
                 </div>
                 <div className="text-sm text-gray-600 mb-2">
                   Worst:{" "}
@@ -329,14 +341,22 @@ export default function Page() {
                   )}
                 </div>
 
+                <div className="text-sm text-gray-600">
+                  Worst Performance: {percent(item.worst_performance)}
+                </div>
+
                 {/* Underlyings */}
-                <div className="flex gap-4 flex-wrap mb-2">
+                <div className="flex gap-4 flex-wrap my-2">
                   {underlyings.map((u, j) => (
                     <div
                       key={`${textValue(u.symbol, "underlying")}-${j}`}
                       className="text-sm border px-2 py-1 rounded"
                     >
-                      {textValue(u.symbol)}
+                      <div className="font-medium">{textValue(u.symbol)}</div>
+                      <div>Initial: {money(u.initial_price)}</div>
+                      <div>Current: {money(u.current_price)}</div>
+                      <div>Perf: {percent(u.performance)}</div>
+                      <div>Source: {textValue(u.price_source, "unknown")}</div>
                     </div>
                   ))}
                 </div>
@@ -356,6 +376,10 @@ export default function Page() {
                   <span className="font-semibold">
                     {textValue(item.risk_level, "Unknown")}
                   </span>
+                </div>
+
+                <div className="text-sm text-gray-600">
+                  Price Source: {textValue(item.price_source, "unknown")}
                 </div>
               </div>
             );
