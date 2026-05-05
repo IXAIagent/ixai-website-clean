@@ -103,6 +103,11 @@ export async function apiFetch<T>(
   const payload = await parseResponse(res);
 
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined") {
+      window.localStorage.removeItem("ixai_token");
+      window.location.href = "/login";
+    }
+
     throw new ApiError(
       readableError(payload, `API request failed (${res.status})`),
       res.status,

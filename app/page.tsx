@@ -150,14 +150,7 @@ export default function Page() {
   useEffect(() => {
     const load = async () => {
       try {
-        let res: unknown;
-
-        try {
-          res = await apiFetch("/api/v1/dashboard/my-summary");
-        } catch {
-          res = await apiFetch("/api/v1/dashboard/dev-real-summary");
-        }
-
+        const res: unknown = await apiFetch("/api/v1/dashboard/my-summary");
         setData(isDashboardData(res) ? res : null);
       } catch (e) {
         setError(errorMessage(e));
