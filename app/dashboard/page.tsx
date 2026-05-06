@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -140,6 +141,9 @@ export default function DashboardPage() {
   const alerts = listValue(data.risk.alerts);
   const riskLevel = data.risk.risk_level || data.summary.risk_level || "unknown";
   const totalValue = data.summary.total_value ?? data.allocation.total_value;
+  const hasPortfolioAssets =
+    allocationItems.some((item) => Number(item.value) > 0) ||
+    Number(totalValue || 0) > 0;
 
   return (
     <main className="min-h-screen bg-black px-5 py-8 text-white">
@@ -155,14 +159,32 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <button
-            className="w-full rounded-xl border border-zinc-700 px-4 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-900 md:w-auto"
-            onClick={handleLogout}
-            type="button"
-          >
-            Logout
-          </button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              className="w-full rounded-xl border border-emerald-400/50 px-4 py-3 text-center text-sm font-semibold text-emerald-200 transition hover:bg-emerald-400/10 md:w-auto"
+              onClick={() => router.push("/input")}
+              type="button"
+            >
+              新增資產 / Add Asset
+            </button>
+            <button
+              className="w-full rounded-xl border border-zinc-700 px-4 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-900 md:w-auto"
+              onClick={handleLogout}
+              type="button"
+            >
+              Logout
+            </button>
+          </div>
         </header>
+
+        {!hasPortfolioAssets && (
+          <Link
+            className="block rounded-2xl border border-dashed border-emerald-400/50 bg-emerald-400/10 p-6 text-center text-lg font-semibold text-emerald-100 transition hover:bg-emerald-400/15"
+            href="/input"
+          >
+            尚未新增資產，點此新增
+          </Link>
+        )}
 
         <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">

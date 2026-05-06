@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
 import { ApiError, apiFetch, getToken, logout } from "../lib/api";
@@ -231,6 +232,7 @@ function inputClass() {
 }
 
 export default function InputPage() {
+  const router = useRouter();
   const [checkedAuth, setCheckedAuth] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [activeAsset, setActiveAsset] = useState<AssetMode>("stock");
@@ -250,6 +252,10 @@ export default function InputPage() {
   const [savingAsset, setSavingAsset] = useState<AssetMode | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const parsedUnderlyings = parseFcnUnderlyings(fcnForm.underlyings);
+
+  function returnToDashboard() {
+    router.push("/dashboard");
+  }
 
   function updateFcnField(
     key: Exclude<keyof FCNForm, "underlyings">,
@@ -394,6 +400,7 @@ export default function InputPage() {
       setAvgPrice("");
       setCurrentPrice("");
       await loadAssets();
+      returnToDashboard();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setToken(null);
@@ -433,6 +440,7 @@ export default function InputPage() {
       setNotice({ type: "success", message: "Cash 已更新。" });
       setCashForm({ ...emptyCashForm });
       await loadAssets();
+      returnToDashboard();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setToken(null);
@@ -511,6 +519,7 @@ export default function InputPage() {
         })),
       });
       await loadAssets();
+      returnToDashboard();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setToken(null);
@@ -579,6 +588,7 @@ export default function InputPage() {
       setNotice({ type: "success", message: "Crypto / Grid 已新增。" });
       setCryptoForm({ ...emptyCryptoForm });
       await loadAssets();
+      returnToDashboard();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setToken(null);
@@ -600,6 +610,7 @@ export default function InputPage() {
       await apiFetch(path, { method: "DELETE" });
       setNotice({ type: "success", message: `${label} 已刪除。` });
       await loadAssets();
+      returnToDashboard();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setToken(null);
@@ -664,7 +675,7 @@ export default function InputPage() {
             </div>
 
             <Link
-              href="/"
+              href="/dashboard"
               className="rounded-lg border border-gray-700 px-5 py-3 font-semibold transition hover:bg-white hover:text-black"
             >
               回 Dashboard
@@ -686,7 +697,7 @@ export default function InputPage() {
                 前往登入
               </Link>
               <Link
-                href="/"
+                href="/dashboard"
                 className="rounded-lg border border-gray-700 px-5 py-3 font-semibold transition hover:bg-white hover:text-black"
               >
                 回 Dashboard
@@ -722,7 +733,7 @@ export default function InputPage() {
               {loadingAssets ? "更新中..." : "更新清單"}
             </button>
             <Link
-              href="/"
+              href="/dashboard"
               className="rounded-lg border border-gray-700 px-5 py-3 font-semibold transition hover:bg-white hover:text-black"
             >
               回 Dashboard
