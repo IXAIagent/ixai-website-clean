@@ -4,16 +4,17 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { ApiError, login } from "../lib/api";
+import { ApiError, register } from "../lib/api";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("demo@ixai.local");
-  const [password, setPassword] = useState("demo");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+  async function handleRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const trimmedEmail = email.trim();
@@ -22,17 +23,20 @@ export default function LoginPage() {
       return;
     }
 
+    if (password !== confirmPassword) {
+      setError("兩次輸入的密碼不一致。");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      await login(trimmedEmail, password);
-      router.replace("/dashboard");
+      await register(trimmedEmail, password);
+      router.replace("/login");
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        setError("帳號或密碼錯誤，請重新確認。");
-      } else if (err instanceof ApiError) {
-        setError(err.message || "登入失敗，請稍後再試。");
+      if (err instanceof ApiError) {
+        setError(err.message || "註冊失敗，請稍後再試。");
       } else {
         setError("無法連線後端 API，請確認 FastAPI 是否啟動。");
       }
@@ -49,13 +53,13 @@ export default function LoginPage() {
             <div className="mb-3 text-sm font-semibold uppercase text-emerald-400">
               IXAI Agent
             </div>
-            <h1 className="text-3xl font-bold">登入一玄AI Dashboard</h1>
+            <h1 className="text-3xl font-bold">建立測試帳號</h1>
             <p className="mt-3 text-sm leading-6 text-zinc-400">
-              Demo 帳號：demo@ixai.local / demo
+              目前僅限受邀測試用戶使用。註冊後將自動建立你的 Portfolio。
             </p>
           </div>
 
-          <form className="space-y-5" onSubmit={handleLogin}>
+          <form className="space-y-5" onSubmit={handleRegister}>
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-zinc-300">
                 Email
@@ -63,7 +67,7 @@ export default function LoginPage() {
               <input
                 autoComplete="email"
                 className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none transition focus:border-emerald-400"
-                placeholder="demo@ixai.local"
+                placeholder="you@example.com"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -75,12 +79,26 @@ export default function LoginPage() {
                 Password
               </span>
               <input
-                autoComplete="current-password"
+                autoComplete="new-password"
                 className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none transition focus:border-emerald-400"
-                placeholder="demo"
+                placeholder="請輸入密碼"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-zinc-300">
+                Confirm Password
+              </span>
+              <input
+                autoComplete="new-password"
+                className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+                placeholder="再次輸入密碼"
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
               />
             </label>
 
@@ -95,18 +113,15 @@ export default function LoginPage() {
               disabled={loading}
               type="submit"
             >
-              {loading ? "登入中..." : "登入 Dashboard"}
+              {loading ? "建立中..." : "建立帳號"}
             </button>
 
-            <div className="text-center text-sm text-zinc-400">
-              目前僅限受邀測試用戶使用。
-              <Link
-                className="ml-2 font-semibold text-emerald-300 transition hover:text-emerald-200"
-                href="/register"
-              >
-                建立測試帳號
-              </Link>
-            </div>
+            <Link
+              className="block w-full rounded-xl border border-zinc-700 px-5 py-3 text-center font-semibold text-zinc-200 transition hover:bg-zinc-900"
+              href="/login"
+            >
+              返回登入
+            </Link>
           </form>
         </div>
       </section>

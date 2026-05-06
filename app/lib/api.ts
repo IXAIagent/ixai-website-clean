@@ -3,15 +3,19 @@
 const LOCAL_API_BASE = "http://localhost:8000";
 
 function resolveApiBase() {
-  return (
-    process.env.NEXT_PUBLIC_API_BASE_URL?.trim().replace(/\/$/, "") ||
-    LOCAL_API_BASE
-  );
+  const configuredBase = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (configuredBase) return configuredBase.replace(/\/$/, "");
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is required in production");
+  }
+
+  return LOCAL_API_BASE;
 }
 
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL?.trim().replace(/\/$/, "") ||
-  LOCAL_API_BASE;
+  (process.env.NODE_ENV === "production" ? "" : LOCAL_API_BASE);
 
 type ErrorPayload = {
   detail?: string;
@@ -26,6 +30,12 @@ type ApiFetchInit = RequestInit & {
 export type LoginResponse = {
   access_token: string;
   token_type: string;
+};
+
+export type RegisterResponse = {
+  status?: string;
+  message?: string;
+  email?: string;
 };
 
 export type SummaryResponse = {
@@ -189,6 +199,14 @@ export async function login(email: string, password: string) {
   });
   setToken(data.access_token);
   return data;
+}
+
+export function register(email: string, password: string) {
+  return apiFetch<RegisterResponse>("/api/v1/auth/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+    skipAuthRedirect: true,
+  });
 }
 
 export function getMySummary() {
