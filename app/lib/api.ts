@@ -1,27 +1,86 @@
 "use client";
 
-const LOCAL_API_BASE = "http://127.0.0.1:8000";
+const LOCAL_API_BASE = "http://localhost:8000";
 
 function resolveApiBase() {
-  const configuredBase = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
-
-  if (configuredBase) {
-    return configuredBase.replace(/\/$/, "");
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("NEXT_PUBLIC_API_BASE_URL is required in production");
-  }
-
-  return LOCAL_API_BASE;
+  return (
+    process.env.NEXT_PUBLIC_API_BASE_URL?.trim().replace(/\/$/, "") ||
+    LOCAL_API_BASE
+  );
 }
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.trim().replace(/\/$/, "");
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim().replace(/\/$/, "") ||
+  LOCAL_API_BASE;
 
 type ErrorPayload = {
   detail?: string;
   message?: string;
   [key: string]: unknown;
+};
+
+type ApiFetchInit = RequestInit & {
+  skipAuthRedirect?: boolean;
+};
+
+export type LoginResponse = {
+  access_token: string;
+  token_type: string;
+};
+
+export type SummaryResponse = {
+  portfolio_id?: string | null;
+  portfolio_name?: string | null;
+  total_value?: number | string | null;
+  stock_value?: number | string | null;
+  fcn_value?: number | string | null;
+  crypto_value?: number | string | null;
+  cash_value?: number | string | null;
+  risk_level?: string | null;
+  top_risk?: string | null;
+  ai_advice?: string | null;
+};
+
+export type AllocationItem = {
+  asset_class: string;
+  value: number;
+  percentage: number;
+};
+
+export type AssetAllocationResponse = {
+  portfolio_id?: string | null;
+  portfolio_name?: string | null;
+  total_value?: number | string | null;
+  items?: AllocationItem[] | null;
+};
+
+export type DecisionCard = {
+  title?: string | null;
+  level?: string | null;
+  message?: string | null;
+  action_label?: string | null;
+};
+
+export type AlertItem = {
+  id?: string | number | null;
+  title?: string | null;
+  message?: string | null;
+  severity?: string | null;
+  level?: string | null;
+  asset_class?: string | null;
+  asset_ref?: string | null;
+  status?: string | null;
+};
+
+export type RiskOverviewResponse = {
+  portfolio_id?: string | null;
+  portfolio_name?: string | null;
+  risk_level?: string | null;
+  risk_score?: number | string | null;
+  top_risk?: string | null;
+  decision_cards?: DecisionCard[] | null;
+  alerts?: AlertItem[] | null;
+  ai_advice?: string | null;
 };
 
 export class ApiError extends Error {
@@ -39,6 +98,12 @@ export class ApiError extends Error {
 export function getToken() {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem("ixai_token");
+}
+
+export function setToken(token: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem("ixai_token", token);
+  window.localStorage.removeItem("token");
 }
 
 export function authHeaders(headers?: HeadersInit) {
@@ -60,12 +125,10 @@ export function logout() {
 
 function readableError(payload: unknown, fallback: string) {
   if (!payload) return fallback;
-
   if (typeof payload === "string") return payload;
 
   if (typeof payload === "object") {
     const data = payload as ErrorPayload;
-
     if (typeof data.detail === "string") return data.detail;
     if (typeof data.message === "string") return data.message;
   }
@@ -86,25 +149,25 @@ async function parseResponse(res: Response) {
 
 export async function apiFetch<T>(
   path: string,
-  init: RequestInit = {},
+  init: ApiFetchInit = {},
 ): Promise<T> {
-  const headers = authHeaders(init.headers);
+  const { skipAuthRedirect, ...fetchInit } = init;
+  const headers = authHeaders(fetchInit.headers);
 
-  if (init.body && !headers.has("Content-Type")) {
+  if (fetchInit.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
   const apiBase = resolveApiBase();
   const res = await fetch(path.startsWith("http") ? path : `${apiBase}${path}`, {
-    ...init,
+    ...fetchInit,
     headers,
   });
-
   const payload = await parseResponse(res);
 
   if (!res.ok) {
-    if (res.status === 401 && typeof window !== "undefined") {
-      window.localStorage.removeItem("ixai_token");
+    if (res.status === 401 && !skipAuthRedirect && typeof window !== "undefined") {
+      logout();
       window.location.href = "/login";
     }
 
@@ -116,4 +179,28 @@ export async function apiFetch<T>(
   }
 
   return payload as T;
+}
+
+export async function login(email: string, password: string) {
+  const data = await apiFetch<LoginResponse>("/api/v1/auth/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+    skipAuthRedirect: true,
+  });
+  setToken(data.access_token);
+  return data;
+}
+
+export function getMySummary() {
+  return apiFetch<SummaryResponse>("/api/v1/dashboard/my-summary");
+}
+
+export function getMyAssetAllocation() {
+  return apiFetch<AssetAllocationResponse>(
+    "/api/v1/dashboard/my-asset-allocation",
+  );
+}
+
+export function getMyRiskOverview() {
+  return apiFetch<RiskOverviewResponse>("/api/v1/dashboard/my-risk-overview");
 }

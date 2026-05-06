@@ -1,25 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { ApiError, apiFetch } from "../lib/api";
-
-type LoginResponse = {
-  access_token?: string;
-  token_type?: string;
-};
+import { ApiError, login } from "../lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("demo@ixai.local");
+  const [password, setPassword] = useState("demo");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function login(event: FormEvent<HTMLFormElement>) {
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const trimmedEmail = email.trim();
@@ -32,25 +25,8 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const data = await apiFetch<LoginResponse>("/api/v1/auth/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: trimmedEmail,
-          password,
-        }),
-      });
-
-      if (!data?.access_token) {
-        setError("登入成功但後端未回傳 access token，請檢查 API。");
-        return;
-      }
-
-      window.localStorage.setItem("ixai_token", data.access_token);
-      window.localStorage.removeItem("token");
-      router.replace("/");
+      await login(trimmedEmail, password);
+      router.replace("/dashboard");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError("帳號或密碼錯誤，請重新確認。");
@@ -65,45 +41,45 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black px-6 py-12 text-white">
-      <section className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-6xl items-center justify-center">
-        <div className="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-950 p-8 shadow-2xl shadow-blue-500/10">
+    <main className="min-h-screen bg-black px-5 py-10 text-white">
+      <section className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
+        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-emerald-500/10 sm:p-8">
           <div className="mb-8">
-            <div className="mb-3 text-sm font-semibold uppercase tracking-[0.22em] text-gray-500">
-              IXAI AGENT
+            <div className="mb-3 text-sm font-semibold uppercase text-emerald-400">
+              IXAI Agent
             </div>
-            <h1 className="text-3xl font-bold">登入投資監控系統</h1>
-            <p className="mt-3 text-sm leading-6 text-gray-400">
-              使用你的帳號載入個人 Portfolio、Dashboard 與資產管理資料。
+            <h1 className="text-3xl font-bold">登入一玄AI Dashboard</h1>
+            <p className="mt-3 text-sm leading-6 text-zinc-400">
+              Demo 帳號：demo@ixai.local / demo
             </p>
           </div>
 
-          <form className="space-y-5" onSubmit={login}>
+          <form className="space-y-5" onSubmit={handleLogin}>
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-gray-300">
+              <span className="mb-2 block text-sm font-medium text-zinc-300">
                 Email
               </span>
               <input
                 autoComplete="email"
-                className="w-full rounded-xl border border-gray-700 bg-black px-4 py-3 text-white outline-none transition focus:border-white"
-                placeholder="you@example.com"
+                className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+                placeholder="demo@ixai.local"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-gray-300">
+              <span className="mb-2 block text-sm font-medium text-zinc-300">
                 Password
               </span>
               <input
                 autoComplete="current-password"
-                className="w-full rounded-xl border border-gray-700 bg-black px-4 py-3 text-white outline-none transition focus:border-white"
-                placeholder="請輸入密碼"
+                className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+                placeholder="demo"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(event) => setPassword(event.target.value)}
               />
             </label>
 
@@ -114,19 +90,12 @@ export default function LoginPage() {
             )}
 
             <button
-              className="w-full rounded-xl bg-white px-5 py-3 font-semibold text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-xl bg-emerald-400 px-5 py-3 font-semibold text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loading}
               type="submit"
             >
-              {loading ? "登入中..." : "登入"}
+              {loading ? "登入中..." : "登入 Dashboard"}
             </button>
-
-            <Link
-              className="block w-full rounded-xl border border-gray-700 px-5 py-3 text-center font-semibold text-white transition hover:bg-white hover:text-black"
-              href="/"
-            >
-              回 Dashboard
-            </Link>
           </form>
         </div>
       </section>
