@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -85,29 +85,48 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
+  const loadDashboard = useCallback(async (showLoading = false) => {
+    if (showLoading) {
+      setLoading(true);
+    }
+
+    try {
+      setError("");
+      const [summary, allocation, risk] = await Promise.all([
+        getMySummary(),
+        getMyAssetAllocation(),
+        getMyRiskOverview(),
+      ]);
+      setData({ summary, allocation, risk });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Dashboard 載入失敗。");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!getToken()) {
       router.replace("/login");
       return;
     }
 
-    async function loadDashboard() {
-      try {
-        const [summary, allocation, risk] = await Promise.all([
-          getMySummary(),
-          getMyAssetAllocation(),
-          getMyRiskOverview(),
-        ]);
-        setData({ summary, allocation, risk });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Dashboard 載入失敗。");
-      } finally {
-        setLoading(false);
+    function refreshOnFocus() {
+      if (getToken()) {
+        void loadDashboard(false);
       }
     }
 
-    void loadDashboard();
-  }, [router]);
+    const initialLoad = window.setTimeout(() => {
+      void loadDashboard(false);
+    }, 0);
+    window.addEventListener("focus", refreshOnFocus);
+
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.removeEventListener("focus", refreshOnFocus);
+    };
+  }, [loadDashboard, router]);
 
   function handleLogout() {
     logout();
