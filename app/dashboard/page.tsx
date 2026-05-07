@@ -8,13 +8,21 @@ import {
   AlertItem,
   AllocationItem,
   AssetAllocationResponse,
+  CashPositionResponse,
+  CryptoPositionResponse,
   DecisionCard,
+  FCNPositionResponse,
+  getCash,
+  getCrypto,
+  getFcns,
   getMyAssetAllocation,
   getMyRiskOverview,
   getMySummary,
+  getStocks,
   getToken,
   logout,
   RiskOverviewResponse,
+  StockPositionResponse,
   SummaryResponse,
 } from "../lib/api";
 
@@ -22,9 +30,13 @@ type DashboardState = {
   summary: SummaryResponse;
   allocation: AssetAllocationResponse;
   risk: RiskOverviewResponse;
+  stocks: StockPositionResponse[];
+  fcns: FCNPositionResponse[];
+  crypto: CryptoPositionResponse[];
+  cash: CashPositionResponse[];
 };
 
-function money(value: unknown) {
+function numberValue(value: unknown, fallback = 0) {
   const number =
     typeof value === "number"
       ? value
@@ -32,8 +44,20 @@ function money(value: unknown) {
         ? Number(value)
         : NaN;
 
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function money(value: unknown) {
+  const number = numberValue(value, NaN);
+
   if (!Number.isFinite(number)) return "$0";
   return `$${number.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
+function priceMoney(value: unknown) {
+  const number = numberValue(value, NaN);
+  if (!Number.isFinite(number) || number <= 0) return "待更新";
+  return `$${number.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 }
 
 function textValue(value: unknown, fallback = "-") {
@@ -79,6 +103,32 @@ function severityClass(alert: AlertItem) {
   return "border-emerald-400/50";
 }
 
+function underlyingsText(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return "-";
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      const symbols = parsed
+        .map((item) =>
+          typeof item === "object" && item !== null && "symbol" in item
+            ? String(item.symbol || "").trim().toUpperCase()
+            : "",
+        )
+        .filter(Boolean);
+      return symbols.length > 0 ? symbols.join(", ") : value;
+    }
+  } catch {
+    return value;
+  }
+
+  return value;
+}
+
+function positionCardClass() {
+  return "rounded-xl border border-zinc-800 bg-zinc-900 p-4";
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<DashboardState | null>(null);
@@ -92,12 +142,25 @@ export default function DashboardPage() {
 
     try {
       setError("");
-      const [summary, allocation, risk] = await Promise.all([
+      const [summary, allocation, risk, stocks, fcns, crypto, cash] =
+        await Promise.all([
         getMySummary(),
         getMyAssetAllocation(),
         getMyRiskOverview(),
+        getStocks(),
+        getFcns(),
+        getCrypto(),
+        getCash(),
       ]);
-      setData({ summary, allocation, risk });
+      setData({
+        summary,
+        allocation,
+        risk,
+        stocks: Array.isArray(stocks) ? stocks : [],
+        fcns: Array.isArray(fcns) ? fcns : [],
+        crypto: Array.isArray(crypto) ? crypto : [],
+        cash: Array.isArray(cash) ? cash : [],
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Dashboard 載入失敗。");
     } finally {
@@ -158,6 +221,10 @@ export default function DashboardPage() {
   const allocationItems = listValue(data.allocation.items);
   const decisionCards = listValue(data.risk.decision_cards);
   const alerts = listValue(data.risk.alerts);
+  const stocks = listValue(data.stocks);
+  const fcns = listValue(data.fcns);
+  const crypto = listValue(data.crypto);
+  const cash = listValue(data.cash);
   const riskLevel = data.risk.risk_level || data.summary.risk_level || "unknown";
   const totalValue = data.summary.total_value ?? data.allocation.total_value;
   const hasPortfolioAssets =
@@ -291,6 +358,117 @@ export default function DashboardPage() {
             <p className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-7 text-zinc-200">
               {textValue(data.risk.ai_advice || data.summary.ai_advice, "No advice available.")}
             </p>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+          <h2 className="text-xl font-semibold">持倉明細 / Positions</h2>
+          <div className="mt-4 grid gap-4 xl:grid-cols-4">
+            <div className={positionCardClass()}>
+              <h3 className="font-semibold text-white">Stocks</h3>
+              <div className="mt-4 grid gap-3">
+                {stocks.length === 0 && (
+                  <div className="text-sm text-zinc-400">尚無股票部位</div>
+                )}
+                {stocks.map((stock, index) => (
+                  <div
+                    className="rounded-lg border border-zinc-800 bg-black/30 p-3"
+                    key={`${textValue(stock.id || stock.symbol, "stock")}-${index}`}
+                  >
+                    <div className="font-semibold text-white">
+                      {textValue(stock.symbol, "STOCK")}
+                    </div>
+                    <div className="mt-2 grid gap-1 text-sm text-zinc-300">
+                      <div>Quantity: {textValue(stock.quantity, "0")}</div>
+                      <div>Avg Price: {priceMoney(stock.avg_price)}</div>
+                      <div>Current Price: {priceMoney(stock.current_price)}</div>
+                      <div>Current Value: {money(stock.current_value)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={positionCardClass()}>
+              <h3 className="font-semibold text-white">FCN</h3>
+              <div className="mt-4 grid gap-3">
+                {fcns.length === 0 && (
+                  <div className="text-sm text-zinc-400">尚無 FCN 部位</div>
+                )}
+                {fcns.map((fcn, index) => (
+                  <div
+                    className="rounded-lg border border-zinc-800 bg-black/30 p-3"
+                    key={`${textValue(fcn.id || fcn.fcn_code || fcn.name, "fcn")}-${index}`}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="font-semibold text-white">
+                        {textValue(fcn.name || fcn.fcn_code, "FCN")}
+                      </div>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${riskBadgeClass(fcn.risk_level)}`}
+                      >
+                        {textValue(fcn.risk_level, "unknown")}
+                      </span>
+                    </div>
+                    <div className="mt-2 grid gap-1 text-sm text-zinc-300">
+                      <div>Notional: {money(fcn.notional_amount || fcn.notional)}</div>
+                      <div>Underlyings: {underlyingsText(fcn.underlyings)}</div>
+                      <div>KI Level: {textValue(fcn.ki_level)}</div>
+                      <div>KO Level: {textValue(fcn.ko_level)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={positionCardClass()}>
+              <h3 className="font-semibold text-white">Crypto</h3>
+              <div className="mt-4 grid gap-3">
+                {crypto.length === 0 && (
+                  <div className="text-sm text-zinc-400">尚無 Crypto 部位</div>
+                )}
+                {crypto.map((item, index) => (
+                  <div
+                    className="rounded-lg border border-zinc-800 bg-black/30 p-3"
+                    key={`${textValue(item.id || item.symbol, "crypto")}-${index}`}
+                  >
+                    <div className="font-semibold text-white">
+                      {textValue(item.symbol, "CRYPTO")}
+                    </div>
+                    <div className="mt-2 grid gap-1 text-sm text-zinc-300">
+                      <div>Type: {textValue(item.asset_type, "crypto")}</div>
+                      <div>Quantity: {textValue(item.quantity, "0")}</div>
+                      <div>Avg Price: {priceMoney(item.avg_price)}</div>
+                      <div>Current Price: {priceMoney(item.current_price)}</div>
+                      <div>Leverage: {textValue(item.leverage, "-")}</div>
+                      <div>Current Value: {money(item.current_value)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={positionCardClass()}>
+              <h3 className="font-semibold text-white">Cash</h3>
+              <div className="mt-4 grid gap-3">
+                {cash.length === 0 && (
+                  <div className="text-sm text-zinc-400">尚無現金部位</div>
+                )}
+                {cash.map((item, index) => (
+                  <div
+                    className="rounded-lg border border-zinc-800 bg-black/30 p-3"
+                    key={`${textValue(item.id || item.currency, "cash")}-${index}`}
+                  >
+                    <div className="font-semibold text-white">
+                      {textValue(item.currency, "USD")}
+                    </div>
+                    <div className="mt-2 text-sm text-zinc-300">
+                      Amount: {money(item.amount)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 

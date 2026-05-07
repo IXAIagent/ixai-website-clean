@@ -93,6 +93,44 @@ export type RiskOverviewResponse = {
   ai_advice?: string | null;
 };
 
+export type StockPositionResponse = {
+  id?: string | number | null;
+  symbol?: string | null;
+  quantity?: number | string | null;
+  avg_price?: number | string | null;
+  current_price?: number | string | null;
+  current_value?: number | string | null;
+};
+
+export type FCNPositionResponse = {
+  id?: string | number | null;
+  name?: string | null;
+  fcn_code?: string | null;
+  notional_amount?: number | string | null;
+  notional?: number | string | null;
+  underlyings?: string | null;
+  ki_level?: number | string | null;
+  ko_level?: number | string | null;
+  risk_level?: string | null;
+};
+
+export type CryptoPositionResponse = {
+  id?: string | number | null;
+  symbol?: string | null;
+  asset_type?: string | null;
+  quantity?: number | string | null;
+  avg_price?: number | string | null;
+  current_price?: number | string | null;
+  current_value?: number | string | null;
+  leverage?: number | string | null;
+};
+
+export type CashPositionResponse = {
+  id?: string | number | null;
+  currency?: string | null;
+  amount?: number | string | null;
+};
+
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -221,4 +259,20 @@ export function getMyAssetAllocation() {
 
 export function getMyRiskOverview() {
   return apiFetch<RiskOverviewResponse>("/api/v1/dashboard/my-risk-overview");
+}
+
+export function getStocks() {
+  return apiFetch<StockPositionResponse[]>("/api/v1/portfolio/stocks");
+}
+
+export function getFcns() {
+  return apiFetch<FCNPositionResponse[]>("/api/v1/portfolio/fcns");
+}
+
+export function getCrypto() {
+  return apiFetch<CryptoPositionResponse[]>("/api/v1/portfolio/crypto");
+}
+
+export function getCash() {
+  return apiFetch<CashPositionResponse[]>("/api/v1/portfolio/cash");
 }
