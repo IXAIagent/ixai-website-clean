@@ -36,6 +36,25 @@ type DashboardState = {
   cash: CashPositionResponse[];
 };
 
+type FCNUnderlyingResult = {
+  symbol?: string | null;
+  initial_price?: number | string | null;
+  current_price?: number | string | null;
+  performance?: number | string | null;
+  distance_to_ki_pct?: number | string | null;
+  distance_to_KI?: number | string | null;
+  price_source?: string | null;
+};
+
+type FCNDetail = FCNPositionResponse & {
+  fcn_id?: string | number | null;
+  distance_to_ki_pct?: number | string | null;
+  distance_to_ko_pct?: number | string | null;
+  underlying_results?: FCNUnderlyingResult[] | null;
+  prices?: FCNUnderlyingResult[] | null;
+  symbols?: string[] | null;
+};
+
 function numberValue(value: unknown, fallback = 0) {
   const number =
     typeof value === "number"
@@ -60,10 +79,26 @@ function priceMoney(value: unknown) {
   return `$${number.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 }
 
+function percentValue(value: unknown) {
+  const number = numberValue(value, NaN);
+  if (!Number.isFinite(number)) return "-";
+  const pct = Math.abs(number) <= 1 ? number * 100 : number;
+  return `${pct.toFixed(1)}%`;
+}
+
 function textValue(value: unknown, fallback = "-") {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return fallback;
+}
+
+function stockDisplayName(value: unknown) {
+  const symbol = textValue(value, "STOCK").toUpperCase();
+  const labels: Record<string, string> = {
+    "2330.TW": "台積電 2330.TW",
+    "2454.TW": "聯發科 2454.TW",
+  };
+  return labels[symbol] || symbol;
 }
 
 function listValue<T>(value: T[] | null | undefined): T[] {
@@ -136,6 +171,89 @@ function positionCardClass() {
 function priceSource(value: unknown) {
   const source = textValue(value, "");
   return source ? `source: ${source}` : "";
+}
+
+function positionKey(item: FCNDetail) {
+  return textValue(
+    item.fcn_id || item.id || item.fcn_code || item.code || item.name,
+    "",
+  ).toUpperCase();
+}
+
+function mergeFcnDetails(
+  analyses: FCNDetail[],
+  positions: FCNDetail[],
+  summaries: FCNDetail[],
+  raw: FCNDetail[],
+) {
+  const byKey = new Map<string, FCNDetail>();
+
+  for (const item of [...positions, ...summaries, ...raw]) {
+    const key = positionKey(item);
+    if (key) {
+      byKey.set(key, { ...byKey.get(key), ...item });
+    }
+  }
+
+  for (const analysis of analyses) {
+    const key = positionKey(analysis);
+    if (key) {
+      byKey.set(key, { ...byKey.get(key), ...analysis });
+    } else {
+      byKey.set(`analysis-${byKey.size}`, analysis);
+    }
+  }
+
+  return Array.from(byKey.values());
+}
+
+function cryptoCurrentValue(item: CryptoPositionResponse) {
+  const storedValue = numberValue(item.current_value, NaN);
+  if (Number.isFinite(storedValue) && storedValue > 0) return money(storedValue);
+
+  const currentPrice = numberValue(item.current_price, NaN);
+  const avgPrice = numberValue(item.avg_price, NaN);
+  const quantity = numberValue(item.quantity, NaN);
+
+  if (Number.isFinite(currentPrice) && currentPrice > 0 && Number.isFinite(quantity)) {
+    return money(currentPrice * quantity);
+  }
+
+  if (Number.isFinite(avgPrice) && avgPrice > 0 && Number.isFinite(quantity)) {
+    return money(avgPrice * quantity);
+  }
+
+  return "待更新";
+}
+
+function cryptoPriceSource(item: CryptoPositionResponse) {
+  const currentPrice = numberValue(item.current_price, NaN);
+  const avgPrice = numberValue(item.avg_price, NaN);
+  if ((!Number.isFinite(currentPrice) || currentPrice <= 0) && avgPrice > 0) {
+    return "source: input estimate";
+  }
+  return priceSource(item.price_source);
+}
+
+function fcnUnderlyingList(fcn: FCNDetail) {
+  return firstNonEmpty(
+    listValue(fcn.underlying_results),
+    listValue(fcn.prices),
+  );
+}
+
+function fcnUnderlyingsLabel(fcn: FCNDetail) {
+  const results = fcnUnderlyingList(fcn);
+  if (results.length > 0) {
+    return results.map((item) => textValue(item.symbol, "")).filter(Boolean).join(", ");
+  }
+  if (Array.isArray(fcn.symbols) && fcn.symbols.length > 0) {
+    return fcn.symbols.join(", ");
+  }
+  return textValue(
+    fcn.worst_symbol || fcn.worst_of,
+    underlyingsText(fcn.underlyings),
+  );
 }
 
 export default function DashboardPage() {
@@ -235,7 +353,7 @@ export default function DashboardPage() {
     listValue(data.summary.stocks),
     listValue(data.stocks),
   );
-  const fcns = firstNonEmpty(
+  const fcns = mergeFcnDetails(
     listValue(data.summary.fcn_analysis),
     listValue(data.summary.fcn_positions),
     listValue(data.summary.fcn_summary),
@@ -400,7 +518,7 @@ export default function DashboardPage() {
                     key={`${textValue(stock.id || stock.symbol, "stock")}-${index}`}
                   >
                     <div className="font-semibold text-white">
-                      {textValue(stock.symbol, "STOCK")}
+                      {stockDisplayName(stock.symbol)}
                     </div>
                     <div className="mt-2 grid gap-1 text-sm text-zinc-300">
                       <div>Quantity: {textValue(stock.quantity, "0")}</div>
@@ -441,18 +559,45 @@ export default function DashboardPage() {
                     </div>
                     <div className="mt-2 grid gap-1 text-sm text-zinc-300">
                       <div>Notional: {money(fcn.notional_amount || fcn.notional)}</div>
+                      <div>Underlyings: {fcnUnderlyingsLabel(fcn)}</div>
+                      <div>Worst-of: {textValue(fcn.worst_symbol || fcn.worst_of)}</div>
                       <div>
-                        Underlyings:{" "}
-                        {textValue(
-                          fcn.worst_symbol || fcn.worst_of,
-                          underlyingsText(fcn.underlyings),
-                        )}
+                        KI Distance: {percentValue(fcn.distance_to_KI || fcn.distance_to_ki_pct)}
                       </div>
-                      <div>KI Level: {textValue(fcn.ki_level)}</div>
-                      <div>KO Level: {textValue(fcn.ko_level)}</div>
+                      <div>
+                        KO Distance: {percentValue(fcn.distance_to_KO || fcn.distance_to_ko_pct)}
+                      </div>
                       {priceSource(fcn.price_source) && (
                         <div className="text-xs text-zinc-500">
                           {priceSource(fcn.price_source)}
+                        </div>
+                      )}
+                      {fcnUnderlyingList(fcn).length > 0 && (
+                        <div className="mt-2 grid gap-2 border-t border-zinc-800 pt-2">
+                          {fcnUnderlyingList(fcn).map((underlying, underlyingIndex) => (
+                            <div
+                              className="rounded-md bg-zinc-950 p-2 text-xs text-zinc-300"
+                              key={`${textValue(underlying.symbol, "underlying")}-${underlyingIndex}`}
+                            >
+                              <div className="font-semibold text-white">
+                                {textValue(underlying.symbol, "UNDERLYING")}
+                              </div>
+                              <div>Current: {priceMoney(underlying.current_price)}</div>
+                              <div>
+                                Performance:{" "}
+                                {percentValue(
+                                  underlying.performance ||
+                                    underlying.distance_to_KI ||
+                                    underlying.distance_to_ki_pct,
+                                )}
+                              </div>
+                              {priceSource(underlying.price_source) && (
+                                <div className="text-zinc-500">
+                                  {priceSource(underlying.price_source)}
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -481,10 +626,10 @@ export default function DashboardPage() {
                       <div>Avg Price: {priceMoney(item.avg_price)}</div>
                       <div>Current Price: {priceMoney(item.current_price)}</div>
                       <div>Leverage: {textValue(item.leverage, "-")}</div>
-                      <div>Current Value: {money(item.current_value)}</div>
-                      {priceSource(item.price_source) && (
+                      <div>Current Value: {cryptoCurrentValue(item)}</div>
+                      {cryptoPriceSource(item) && (
                         <div className="text-xs text-zinc-500">
-                          {priceSource(item.price_source)}
+                          {cryptoPriceSource(item)}
                         </div>
                       )}
                     </div>
