@@ -388,6 +388,13 @@ export default function DashboardPage() {
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
+              className="w-full rounded-xl border border-blue-400/50 px-4 py-3 text-center text-sm font-semibold text-blue-200 transition hover:bg-blue-400/10 md:w-auto"
+              onClick={() => router.push("/import")}
+              type="button"
+            >
+              Import CSV
+            </button>
+            <button
               className="w-full rounded-xl border border-emerald-400/50 px-4 py-3 text-center text-sm font-semibold text-emerald-200 transition hover:bg-emerald-400/10 md:w-auto"
               onClick={() => router.push("/input")}
               type="button"

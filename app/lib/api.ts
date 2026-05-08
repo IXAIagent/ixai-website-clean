@@ -165,6 +165,19 @@ export type AssetResolveResponse = AssetCandidate & {
   candidates?: AssetCandidate[] | null;
 };
 
+export type ImportErrorItem = {
+  row?: number | string | null;
+  error?: string | null;
+};
+
+export type PortfolioCsvImportResponse = {
+  status?: string | null;
+  imported?: number | string | null;
+  updated?: number | string | null;
+  skipped?: number | string | null;
+  errors?: ImportErrorItem[] | null;
+};
+
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -235,8 +248,10 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const { skipAuthRedirect, ...fetchInit } = init;
   const headers = authHeaders(fetchInit.headers);
+  const isFormData =
+    typeof FormData !== "undefined" && fetchInit.body instanceof FormData;
 
-  if (fetchInit.body && !headers.has("Content-Type")) {
+  if (fetchInit.body && !headers.has("Content-Type") && !isFormData) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -327,4 +342,15 @@ export function resolveAsset(query: string, assetType = "stock") {
   return apiFetch<AssetResolveResponse>(
     `/api/v1/assets/resolve?${params.toString()}`,
   );
+}
+
+export function uploadPortfolioCsv(file: File, signal?: AbortSignal) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiFetch<PortfolioCsvImportResponse>("/api/v1/imports/portfolio-csv", {
+    method: "POST",
+    body: formData,
+    signal,
+  });
 }
