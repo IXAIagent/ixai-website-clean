@@ -7,7 +7,10 @@ import { useRouter } from "next/navigation";
 import {
   getToken,
   ImportErrorItem,
+  PortfolioCsvPreviewResponse,
+  PortfolioCsvPreviewRow,
   PortfolioCsvImportResponse,
+  previewPortfolioCsv,
   uploadPortfolioCsv,
 } from "../lib/api";
 
@@ -28,6 +31,19 @@ const PREVIEW_COLUMNS = [
   "avg_price",
   "currency",
   "amount",
+] as const;
+
+const BACKEND_PREVIEW_COLUMNS = [
+  "row",
+  "asset_type",
+  "input_symbol",
+  "canonical_symbol",
+  "display_name",
+  "action",
+  "quantity",
+  "avg_price",
+  "amount",
+  "errors",
 ] as const;
 
 function fileSizeLabel(size: number) {
@@ -104,8 +120,10 @@ export default function ImportPage() {
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([]);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [backendPreview, setBackendPreview] = useState<PortfolioCsvPreviewResponse | null>(null);
   const [result, setResult] = useState<PortfolioCsvImportResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
@@ -114,10 +132,18 @@ export default function ImportPage() {
     }
   }, [router]);
 
-  const canImport = useMemo(() => Boolean(file) && !loading, [file, loading]);
+  const canPreview = useMemo(
+    () => Boolean(file) && !loading && !previewLoading,
+    [file, loading, previewLoading],
+  );
+  const canConfirm = useMemo(
+    () => Boolean(file && backendPreview) && !loading && !previewLoading,
+    [backendPreview, file, loading, previewLoading],
+  );
 
   async function handleFile(nextFile: File | undefined) {
     setResult(null);
+    setBackendPreview(null);
     setError("");
     setStatus("");
 
@@ -162,11 +188,11 @@ export default function ImportPage() {
   }
 
   async function handleImport() {
-    if (!file) return;
+    if (!file || !backendPreview) return;
 
     setLoading(true);
     setError("");
-    setStatus("匯入中...");
+    setStatus("Confirm import 執行中...");
     setResult(null);
 
     const controller = new AbortController();
@@ -189,9 +215,55 @@ export default function ImportPage() {
     }
   }
 
+  async function handlePreview() {
+    if (!file) return;
+
+    setPreviewLoading(true);
+    setError("");
+    setStatus("Preview / Validate 執行中...");
+    setBackendPreview(null);
+    setResult(null);
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 30000);
+
+    try {
+      const response = await previewPortfolioCsv(file, controller.signal);
+      setBackendPreview(response);
+      setStatus("Preview 完成，請確認後執行 Confirm Import。");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("Preview 逾時，請稍後再試。");
+      } else {
+        setError(err instanceof Error ? err.message : "CSV preview 失敗。");
+      }
+      setStatus("");
+    } finally {
+      window.clearTimeout(timeout);
+      setPreviewLoading(false);
+    }
+  }
+
   const errors: ImportErrorItem[] = Array.isArray(result?.errors)
     ? result.errors
     : [];
+  const backendPreviewRows: PortfolioCsvPreviewRow[] = Array.isArray(backendPreview?.rows)
+    ? backendPreview.rows
+    : [];
+
+  function previewActionClass(action: unknown) {
+    const value = String(action || "").toLowerCase();
+    if (value === "import") return "text-emerald-300";
+    if (value === "update") return "text-blue-300";
+    if (value === "skip") return "text-yellow-300";
+    return "text-zinc-300";
+  }
+
+  function previewErrors(row: PortfolioCsvPreviewRow) {
+    return Array.isArray(row.errors) && row.errors.length > 0
+      ? row.errors.join("; ")
+      : "-";
+  }
 
   return (
     <main className="min-h-screen bg-black px-5 py-8 text-white">
@@ -264,17 +336,27 @@ export default function ImportPage() {
             <div>
               <h2 className="text-xl font-semibold">Preview</h2>
               <p className="mt-1 text-sm text-zinc-400">
-                最多顯示前 10 筆。完整驗證會在匯入時由 backend 處理。
+                先做本地快速預覽，再呼叫 backend Preview / Validate 判斷 action。
               </p>
             </div>
-            <button
-              className="rounded-xl border border-emerald-400/50 px-4 py-3 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:text-zinc-600"
-              disabled={!canImport}
-              onClick={handleImport}
-              type="button"
-            >
-              {loading ? "Importing..." : "Import CSV"}
-            </button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                className="rounded-xl border border-blue-400/50 px-4 py-3 text-sm font-semibold text-blue-200 transition hover:bg-blue-400/10 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:text-zinc-600"
+                disabled={!canPreview}
+                onClick={handlePreview}
+                type="button"
+              >
+                {previewLoading ? "Previewing..." : "Preview"}
+              </button>
+              <button
+                className="rounded-xl border border-emerald-400/50 px-4 py-3 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-400/10 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:text-zinc-600"
+                disabled={!canConfirm}
+                onClick={handleImport}
+                type="button"
+              >
+                {loading ? "Importing..." : "Confirm Import"}
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-800">
@@ -305,6 +387,84 @@ export default function ImportPage() {
                         {row[column] || "-"}
                       </td>
                     ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Backend Preview / Validate</h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                顯示 resolver 結果、import/update/skip 判斷與 row-level errors。
+              </p>
+            </div>
+            {backendPreview?.summary && (
+              <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2">
+                  <div className="text-zinc-500">import</div>
+                  <div className="font-semibold text-emerald-300">
+                    {numberText(backendPreview.summary.will_import)}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2">
+                  <div className="text-zinc-500">update</div>
+                  <div className="font-semibold text-blue-300">
+                    {numberText(backendPreview.summary.will_update)}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2">
+                  <div className="text-zinc-500">skip</div>
+                  <div className="font-semibold text-yellow-300">
+                    {numberText(backendPreview.summary.will_skip)}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2">
+                  <div className="text-zinc-500">errors</div>
+                  <div className="font-semibold text-red-300">
+                    {numberText(backendPreview.summary.errors)}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-800">
+            <table className="w-full min-w-[1040px] border-collapse text-left text-sm">
+              <thead className="bg-zinc-900 text-zinc-400">
+                <tr>
+                  {BACKEND_PREVIEW_COLUMNS.map((column) => (
+                    <th className="px-4 py-3" key={column}>
+                      {column}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800">
+                {backendPreviewRows.length === 0 && (
+                  <tr>
+                    <td className="px-4 py-5 text-zinc-400" colSpan={10}>
+                      尚未執行 backend preview。
+                    </td>
+                  </tr>
+                )}
+                {backendPreviewRows.map((row, index) => (
+                  <tr className="bg-black/20 text-zinc-200" key={`${numberText(row.row, "row")}-${index}`}>
+                    <td className="px-4 py-3 text-zinc-500">{numberText(row.row, "-")}</td>
+                    <td className="px-4 py-3">{row.asset_type || "-"}</td>
+                    <td className="px-4 py-3">{row.input_symbol || "-"}</td>
+                    <td className="px-4 py-3">{row.canonical_symbol || "-"}</td>
+                    <td className="px-4 py-3">{row.display_name || "-"}</td>
+                    <td className={`px-4 py-3 font-semibold ${previewActionClass(row.action)}`}>
+                      {row.action || "-"}
+                    </td>
+                    <td className="px-4 py-3">{numberText(row.quantity, "-")}</td>
+                    <td className="px-4 py-3">{numberText(row.avg_price, "-")}</td>
+                    <td className="px-4 py-3">{numberText(row.amount, "-")}</td>
+                    <td className="px-4 py-3 text-red-200">{previewErrors(row)}</td>
                   </tr>
                 ))}
               </tbody>

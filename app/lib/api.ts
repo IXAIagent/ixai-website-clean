@@ -178,6 +178,32 @@ export type PortfolioCsvImportResponse = {
   errors?: ImportErrorItem[] | null;
 };
 
+export type PortfolioCsvPreviewRow = {
+  row?: number | string | null;
+  asset_type?: string | null;
+  input_symbol?: string | null;
+  canonical_symbol?: string | null;
+  display_name?: string | null;
+  action?: "import" | "update" | "skip" | string | null;
+  quantity?: number | string | null;
+  avg_price?: number | string | null;
+  current_price?: number | string | null;
+  currency?: string | null;
+  amount?: number | string | null;
+  errors?: string[] | null;
+};
+
+export type PortfolioCsvPreviewResponse = {
+  status?: "preview" | string | null;
+  rows?: PortfolioCsvPreviewRow[] | null;
+  summary?: {
+    will_import?: number | string | null;
+    will_update?: number | string | null;
+    will_skip?: number | string | null;
+    errors?: number | string | null;
+  } | null;
+};
+
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -353,4 +379,18 @@ export function uploadPortfolioCsv(file: File, signal?: AbortSignal) {
     body: formData,
     signal,
   });
+}
+
+export function previewPortfolioCsv(file: File, signal?: AbortSignal) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiFetch<PortfolioCsvPreviewResponse>(
+    "/api/v1/imports/portfolio-csv/preview",
+    {
+      method: "POST",
+      body: formData,
+      signal,
+    },
+  );
 }
