@@ -4,7 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
-import { ApiError, apiFetch, getToken, logout } from "../lib/api";
+import {
+  ApiError,
+  apiFetch,
+  AssetCandidate,
+  getToken,
+  logout,
+  searchAssets,
+} from "../lib/api";
 
 type Stock = {
   id?: string | number | null;
@@ -237,6 +244,10 @@ export default function InputPage() {
   const [token, setToken] = useState<string | null>(null);
   const [activeAsset, setActiveAsset] = useState<AssetMode>("stock");
   const [symbol, setSymbol] = useState("");
+  const [selectedStock, setSelectedStock] = useState<AssetCandidate | null>(null);
+  const [stockCandidates, setStockCandidates] = useState<AssetCandidate[]>([]);
+  const [stockSearchLoading, setStockSearchLoading] = useState(false);
+  const [stockSearchStatus, setStockSearchStatus] = useState("");
   const [quantity, setQuantity] = useState("");
   const [avgPrice, setAvgPrice] = useState("");
   const [currentPrice, setCurrentPrice] = useState("");
@@ -255,6 +266,25 @@ export default function InputPage() {
 
   function returnToDashboard() {
     router.push("/dashboard");
+  }
+
+  function updateStockSymbol(value: string) {
+    setSymbol(value);
+    setSelectedStock(null);
+    if (value.trim().length < 2) {
+      setStockCandidates([]);
+      setStockSearchLoading(false);
+      setStockSearchStatus("");
+    }
+  }
+
+  function selectStockCandidate(candidate: AssetCandidate) {
+    const canonicalSymbol = textValue(candidate.canonical_symbol, "");
+    if (!canonicalSymbol) return;
+    setSymbol(canonicalSymbol);
+    setSelectedStock(candidate);
+    setStockCandidates([]);
+    setStockSearchStatus("");
   }
 
   function updateFcnField(
@@ -396,6 +426,9 @@ export default function InputPage() {
 
       setNotice({ type: "success", message: "股票已新增。" });
       setSymbol("");
+      setSelectedStock(null);
+      setStockCandidates([]);
+      setStockSearchStatus("");
       setQuantity("");
       setAvgPrice("");
       setCurrentPrice("");
@@ -638,6 +671,46 @@ export default function InputPage() {
     return () => window.clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    const query = symbol.trim();
+    if (activeAsset !== "stock" || query.length < 2 || selectedStock) {
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setStockSearchLoading(true);
+      setStockSearchStatus("");
+
+      void searchAssets(query, "stock")
+        .then((candidates) => {
+          if (cancelled) return;
+          const safeCandidates = Array.isArray(candidates) ? candidates : [];
+          setStockCandidates(safeCandidates);
+          setStockSearchStatus(
+            safeCandidates.length === 0
+              ? "找不到匹配資產，將以原輸入送出"
+              : "",
+          );
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setStockCandidates([]);
+          setStockSearchStatus("找不到匹配資產，將以原輸入送出");
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setStockSearchLoading(false);
+          }
+        });
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [activeAsset, selectedStock, symbol]);
+
   const activeMode =
     assetModes.find((mode) => mode.id === activeAsset) || assetModes[0];
   const activeCount =
@@ -792,8 +865,46 @@ export default function InputPage() {
                   label="股票代號"
                   placeholder="AAPL"
                   value={symbol}
-                  onChange={setSymbol}
+                  onChange={updateStockSymbol}
                 />
+                <div className="rounded-lg border border-gray-800 bg-black/40 p-3">
+                  {selectedStock ? (
+                    <div className="text-sm text-green-300">
+                      已選擇：{textValue(selectedStock.display_name)}{" "}
+                      {textValue(selectedStock.canonical_symbol)}
+                    </div>
+                  ) : stockSearchLoading ? (
+                    <div className="text-sm text-gray-400">搜尋資產中...</div>
+                  ) : stockCandidates.length > 0 ? (
+                    <div className="space-y-2">
+                      {stockCandidates.slice(0, 6).map((candidate, index) => (
+                        <button
+                          className="w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-3 text-left transition hover:border-gray-500"
+                          key={`${textValue(candidate.canonical_symbol, "asset")}-${index}`}
+                          onClick={() => selectStockCandidate(candidate)}
+                          type="button"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="font-semibold text-white">
+                              {textValue(candidate.display_name, "Asset")}
+                            </div>
+                            <div className="text-sm text-gray-300">
+                              {textValue(candidate.canonical_symbol)}
+                            </div>
+                          </div>
+                          <div className="mt-1 text-xs text-gray-500">
+                            {textValue(candidate.market, "market")} · confidence{" "}
+                            {numberValue(candidate.confidence).toFixed(2)}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500">
+                      {stockSearchStatus || "可輸入股票代號或名稱搜尋候選資產"}
+                    </div>
+                  )}
+                </div>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <Field
                     label="股數"

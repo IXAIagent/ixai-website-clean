@@ -149,6 +149,22 @@ export type CashPositionResponse = {
   amount?: number | string | null;
 };
 
+export type AssetCandidate = {
+  canonical_symbol?: string | null;
+  display_name?: string | null;
+  asset_type?: string | null;
+  market?: string | null;
+  currency?: string | null;
+  confidence?: number | string | null;
+  match_type?: string | null;
+  source?: string | null;
+};
+
+export type AssetResolveResponse = AssetCandidate & {
+  input?: string | null;
+  candidates?: AssetCandidate[] | null;
+};
+
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -293,4 +309,22 @@ export function getCrypto() {
 
 export function getCash() {
   return apiFetch<CashPositionResponse[]>("/api/v1/portfolio/cash");
+}
+
+export function searchAssets(query: string, assetType = "stock") {
+  const params = new URLSearchParams({
+    query,
+    asset_type: assetType,
+  });
+  return apiFetch<AssetCandidate[]>(`/api/v1/assets/search?${params.toString()}`);
+}
+
+export function resolveAsset(query: string, assetType = "stock") {
+  const params = new URLSearchParams({
+    query,
+    asset_type: assetType,
+  });
+  return apiFetch<AssetResolveResponse>(
+    `/api/v1/assets/resolve?${params.toString()}`,
+  );
 }
