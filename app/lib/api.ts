@@ -176,6 +176,7 @@ export type PortfolioCsvImportResponse = {
   updated?: number | string | null;
   skipped?: number | string | null;
   errors?: ImportErrorItem[] | null;
+  batch_id?: string | number | null;
 };
 
 export type PortfolioCsvPreviewRow = {
@@ -202,6 +203,36 @@ export type PortfolioCsvPreviewResponse = {
     will_skip?: number | string | null;
     errors?: number | string | null;
   } | null;
+};
+
+export type ImportHistoryItem = {
+  id?: string | number | null;
+  import_type?: string | null;
+  file_name?: string | null;
+  imported?: number | string | null;
+  updated?: number | string | null;
+  skipped?: number | string | null;
+  errors_count?: number | string | null;
+  status?: string | null;
+  created_at?: string | null;
+};
+
+export type ImportAuditRow = {
+  row_number?: number | string | null;
+  asset_type?: string | null;
+  input_symbol?: string | null;
+  canonical_symbol?: string | null;
+  action?: string | null;
+  status?: string | null;
+  error_message?: string | null;
+};
+
+export type ImportHistoryResponse = {
+  items?: ImportHistoryItem[] | null;
+};
+
+export type ImportHistoryDetailResponse = ImportHistoryItem & {
+  rows?: ImportAuditRow[] | null;
 };
 
 export class ApiError extends Error {
@@ -392,5 +423,15 @@ export function previewPortfolioCsv(file: File, signal?: AbortSignal) {
       body: formData,
       signal,
     },
+  );
+}
+
+export function getImportHistory() {
+  return apiFetch<ImportHistoryResponse>("/api/v1/imports/history");
+}
+
+export function getImportHistoryDetail(batchId: string | number) {
+  return apiFetch<ImportHistoryDetailResponse>(
+    `/api/v1/imports/history/${encodeURIComponent(String(batchId))}`,
   );
 }

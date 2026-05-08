@@ -5,7 +5,11 @@ import { ChangeEvent, DragEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
+  getImportHistory,
+  getImportHistoryDetail,
   getToken,
+  ImportHistoryDetailResponse,
+  ImportHistoryItem,
   ImportErrorItem,
   PortfolioCsvPreviewResponse,
   PortfolioCsvPreviewRow,
@@ -122,14 +126,20 @@ export default function ImportPage() {
   const [error, setError] = useState("");
   const [backendPreview, setBackendPreview] = useState<PortfolioCsvPreviewResponse | null>(null);
   const [result, setResult] = useState<PortfolioCsvImportResponse | null>(null);
+  const [history, setHistory] = useState<ImportHistoryItem[]>([]);
+  const [historyDetail, setHistoryDetail] = useState<ImportHistoryDetailResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     if (!getToken()) {
       router.replace("/login");
+      return;
     }
+
+    void loadHistory();
   }, [router]);
 
   const canPreview = useMemo(
@@ -202,6 +212,10 @@ export default function ImportPage() {
       const response = await uploadPortfolioCsv(file, controller.signal);
       setResult(response);
       setStatus("CSV 匯入完成。");
+      await loadHistory();
+      if (response.batch_id) {
+        await loadHistoryDetail(response.batch_id);
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         setError("匯入逾時，請稍後再試。");
@@ -264,6 +278,48 @@ export default function ImportPage() {
       ? row.errors.join("; ")
       : "-";
   }
+
+  async function loadHistory() {
+    setHistoryLoading(true);
+    try {
+      const response = await getImportHistory();
+      setHistory(Array.isArray(response.items) ? response.items : []);
+    } catch {
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function loadHistoryDetail(batchId: string | number | null | undefined) {
+    if (!batchId) return;
+    setHistoryLoading(true);
+    try {
+      const response = await getImportHistoryDetail(batchId);
+      setHistoryDetail(response);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Import history detail 載入失敗。");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  function dateText(value: unknown) {
+    if (typeof value !== "string" || !value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString();
+  }
+
+  function statusClass(value: unknown) {
+    const statusValue = String(value || "").toLowerCase();
+    if (statusValue === "completed") return "text-emerald-300";
+    if (statusValue === "completed_with_errors") return "text-yellow-300";
+    if (statusValue === "failed" || statusValue === "error") return "text-red-300";
+    return "text-zinc-300";
+  }
+
+  const detailRows = Array.isArray(historyDetail?.rows) ? historyDetail.rows : [];
 
   return (
     <main className="min-h-screen bg-black px-5 py-8 text-white">
@@ -515,6 +571,129 @@ export default function ImportPage() {
             </div>
           </section>
         )}
+
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Recent Imports</h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                最近 CSV import batch 與 row-level audit trail。
+              </p>
+            </div>
+            <button
+              className="rounded-xl border border-zinc-700 px-4 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-900 disabled:cursor-not-allowed disabled:text-zinc-600"
+              disabled={historyLoading}
+              onClick={() => void loadHistory()}
+              type="button"
+            >
+              {historyLoading ? "Loading..." : "Refresh"}
+            </button>
+          </div>
+
+          <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-800">
+            <table className="w-full min-w-[920px] border-collapse text-left text-sm">
+              <thead className="bg-zinc-900 text-zinc-400">
+                <tr>
+                  <th className="px-4 py-3">created_at</th>
+                  <th className="px-4 py-3">file_name</th>
+                  <th className="px-4 py-3">imported</th>
+                  <th className="px-4 py-3">updated</th>
+                  <th className="px-4 py-3">skipped</th>
+                  <th className="px-4 py-3">errors</th>
+                  <th className="px-4 py-3">status</th>
+                  <th className="px-4 py-3">detail</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800">
+                {history.length === 0 && (
+                  <tr>
+                    <td className="px-4 py-5 text-zinc-400" colSpan={8}>
+                      尚無 import history。
+                    </td>
+                  </tr>
+                )}
+                {history.map((item, index) => (
+                  <tr className="bg-black/20 text-zinc-200" key={`${item.id || "batch"}-${index}`}>
+                    <td className="px-4 py-3 text-zinc-400">{dateText(item.created_at)}</td>
+                    <td className="px-4 py-3">{item.file_name || "-"}</td>
+                    <td className="px-4 py-3 text-emerald-300">{numberText(item.imported)}</td>
+                    <td className="px-4 py-3 text-blue-300">{numberText(item.updated)}</td>
+                    <td className="px-4 py-3 text-yellow-300">{numberText(item.skipped)}</td>
+                    <td className="px-4 py-3 text-red-300">{numberText(item.errors_count)}</td>
+                    <td className={`px-4 py-3 font-semibold ${statusClass(item.status)}`}>
+                      {item.status || "-"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-900"
+                        onClick={() => void loadHistoryDetail(item.id)}
+                        type="button"
+                      >
+                        View rows
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {historyDetail && (
+            <div className="mt-5 rounded-xl border border-zinc-800 bg-black/30 p-4">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="font-semibold text-white">Import Rows</div>
+                  <div className="mt-1 text-sm text-zinc-400">
+                    {historyDetail.file_name || "-"} · {dateText(historyDetail.created_at)}
+                  </div>
+                </div>
+                <div className={`text-sm font-semibold ${statusClass(historyDetail.status)}`}>
+                  {historyDetail.status || "-"}
+                </div>
+              </div>
+
+              <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-800">
+                <table className="w-full min-w-[920px] border-collapse text-left text-sm">
+                  <thead className="bg-zinc-900 text-zinc-400">
+                    <tr>
+                      <th className="px-4 py-3">row_number</th>
+                      <th className="px-4 py-3">asset_type</th>
+                      <th className="px-4 py-3">input_symbol</th>
+                      <th className="px-4 py-3">canonical_symbol</th>
+                      <th className="px-4 py-3">action</th>
+                      <th className="px-4 py-3">status</th>
+                      <th className="px-4 py-3">error_message</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-800">
+                    {detailRows.length === 0 && (
+                      <tr>
+                        <td className="px-4 py-5 text-zinc-400" colSpan={7}>
+                          No row audit data.
+                        </td>
+                      </tr>
+                    )}
+                    {detailRows.map((row, index) => (
+                      <tr className="bg-black/20 text-zinc-200" key={`${numberText(row.row_number, "row")}-${index}`}>
+                        <td className="px-4 py-3 text-zinc-500">{numberText(row.row_number, "-")}</td>
+                        <td className="px-4 py-3">{row.asset_type || "-"}</td>
+                        <td className="px-4 py-3">{row.input_symbol || "-"}</td>
+                        <td className="px-4 py-3">{row.canonical_symbol || "-"}</td>
+                        <td className={`px-4 py-3 font-semibold ${previewActionClass(row.action)}`}>
+                          {row.action || "-"}
+                        </td>
+                        <td className={`px-4 py-3 font-semibold ${statusClass(row.status)}`}>
+                          {row.status || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-red-200">{row.error_message || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
