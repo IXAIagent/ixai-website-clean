@@ -149,6 +149,22 @@ export type CashPositionResponse = {
   amount?: number | string | null;
 };
 
+export type StockUpdatePayload = {
+  quantity?: number | null;
+  avg_price?: number | null;
+  current_price?: number | null;
+};
+
+export type CryptoUpdatePayload = StockUpdatePayload & {
+  leverage?: number | null;
+  grid_lower?: number | null;
+  grid_upper?: number | null;
+};
+
+export type CashUpdatePayload = {
+  amount?: number | null;
+};
+
 export type AssetCandidate = {
   canonical_symbol?: string | null;
   display_name?: string | null;
@@ -381,6 +397,36 @@ export function getCrypto() {
 
 export function getCash() {
   return apiFetch<CashPositionResponse[]>("/api/v1/portfolio/cash");
+}
+
+export function updateStock(id: string | number, payload: StockUpdatePayload) {
+  return apiFetch<{ status?: string; message?: string; id?: string | number }>(
+    `/api/v1/portfolio/stock/${encodeURIComponent(String(id))}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export function updateCrypto(id: string | number, payload: CryptoUpdatePayload) {
+  return apiFetch<{ status?: string; message?: string; id?: string | number }>(
+    `/api/v1/portfolio/crypto/${encodeURIComponent(String(id))}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export function updateCash(id: string | number, payload: CashUpdatePayload) {
+  return apiFetch<{ status?: string; message?: string; id?: string | number }>(
+    `/api/v1/portfolio/cash/${encodeURIComponent(String(id))}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export function searchAssets(query: string, assetType = "stock") {

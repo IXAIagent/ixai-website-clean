@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useState } from "react";
 
 import {
   ApiError,
@@ -11,6 +11,9 @@ import {
   getToken,
   logout,
   searchAssets,
+  updateCash,
+  updateCrypto,
+  updateStock,
 } from "../lib/api";
 
 type Stock = {
@@ -92,6 +95,18 @@ type CryptoForm = {
 type CashForm = {
   currency: string;
   amount: string;
+};
+
+type EditFormState = {
+  id: string;
+  type: "stock" | "crypto" | "cash";
+  quantity?: string;
+  avg_price?: string;
+  current_price?: string;
+  leverage?: string;
+  grid_lower?: string;
+  grid_upper?: string;
+  amount?: string;
 };
 
 const emptyFcnForm: FCNForm = {
@@ -262,6 +277,9 @@ export default function InputPage() {
   const [loadingAssets, setLoadingAssets] = useState(false);
   const [savingAsset, setSavingAsset] = useState<AssetMode | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [editingPosition, setEditingPosition] = useState<EditFormState | null>(null);
+  const [savingEditId, setSavingEditId] = useState<string | null>(null);
   const parsedUnderlyings = parseFcnUnderlyings(fcnForm.underlyings);
 
   function returnToDashboard() {
@@ -635,6 +653,108 @@ export default function InputPage() {
     }
   }
 
+  function startEditStock(stock: Stock) {
+    const id = String(stock.id || "");
+    if (!id) return;
+    setEditingPosition({
+      id,
+      type: "stock",
+      quantity: String(stock.quantity ?? ""),
+      avg_price: String(stock.avg_price ?? ""),
+      current_price: String(stock.current_price ?? ""),
+    });
+    setConfirmingDeleteId(null);
+  }
+
+  function startEditCrypto(crypto: Crypto) {
+    const id = String(crypto.id || "");
+    if (!id) return;
+    setEditingPosition({
+      id,
+      type: "crypto",
+      quantity: String(crypto.quantity ?? ""),
+      avg_price: String(crypto.avg_price ?? ""),
+      current_price: String(crypto.current_price ?? ""),
+      leverage: String(crypto.leverage ?? ""),
+      grid_lower: String(crypto.grid_lower ?? ""),
+      grid_upper: String(crypto.grid_upper ?? ""),
+    });
+    setConfirmingDeleteId(null);
+  }
+
+  function startEditCash(cash: Cash) {
+    const id = String(cash.id || "");
+    if (!id) return;
+    setEditingPosition({
+      id,
+      type: "cash",
+      amount: String(cash.amount ?? ""),
+    });
+    setConfirmingDeleteId(null);
+  }
+
+  function updateEditField(key: keyof EditFormState, value: string) {
+    setEditingPosition((current) =>
+      current ? { ...current, [key]: value } : current,
+    );
+  }
+
+  function editNumber(value: string, field: string, allowBlank = false) {
+    if (allowBlank && !value.trim()) return null;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new Error(`${field} 必須是有效數字。`);
+    }
+    return parsed;
+  }
+
+  async function saveEdit() {
+    if (!editingPosition) return;
+
+    setSavingEditId(`${editingPosition.type}:${editingPosition.id}`);
+    setNotice(null);
+
+    try {
+      if (editingPosition.type === "stock") {
+        await updateStock(editingPosition.id, {
+          quantity: editNumber(editingPosition.quantity || "", "Quantity"),
+          avg_price: editNumber(editingPosition.avg_price || "", "Avg price"),
+          current_price: editNumber(editingPosition.current_price || "", "Current price"),
+        });
+      } else if (editingPosition.type === "crypto") {
+        await updateCrypto(editingPosition.id, {
+          quantity: editNumber(editingPosition.quantity || "", "Quantity"),
+          avg_price: editNumber(editingPosition.avg_price || "", "Avg price", true),
+          current_price: editNumber(editingPosition.current_price || "", "Current price"),
+          leverage: editNumber(editingPosition.leverage || "", "Leverage", true),
+          grid_lower: editNumber(editingPosition.grid_lower || "", "Grid lower", true),
+          grid_upper: editNumber(editingPosition.grid_upper || "", "Grid upper", true),
+        });
+      } else {
+        await updateCash(editingPosition.id, {
+          amount: editNumber(editingPosition.amount || "", "Amount"),
+        });
+      }
+
+      setNotice({ type: "success", message: "部位已更新。" });
+      setEditingPosition(null);
+      await loadAssets();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setToken(null);
+      }
+      setNotice({
+        type: "error",
+        message:
+          err instanceof Error
+            ? err.message
+            : apiMessage(err, "更新部位失敗，請稍後再試。"),
+      });
+    } finally {
+      setSavingEditId(null);
+    }
+  }
+
   async function deleteAsset(path: string, id: string, label: string) {
     setDeletingId(`${label}:${id}`);
     setNotice(null);
@@ -642,8 +762,9 @@ export default function InputPage() {
     try {
       await apiFetch(path, { method: "DELETE" });
       setNotice({ type: "success", message: `${label} 已刪除。` });
+      setConfirmingDeleteId(null);
+      setEditingPosition(null);
       await loadAssets();
-      returnToDashboard();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setToken(null);
@@ -1177,22 +1298,41 @@ export default function InputPage() {
                 <div className="space-y-4">
                   {stocks.map((s, index) => {
                     const id = String(s.id || "");
+                    const rowKey = `股票:${id}`;
                     return (
                       <AssetRow
                         key={id || `${s.symbol || "stock"}-${index}`}
                         title={textValue(s.symbol)}
                         detail={`股數：${numberValue(s.quantity)} | 成本：${money(s.avg_price)} | 現價：${money(s.current_price)}`}
                         subDetail={`市值：${money(s.current_value)}`}
-                        deleting={deletingId === `股票:${id}`}
+                        deleting={deletingId === rowKey}
+                        confirmingDelete={confirmingDeleteId === rowKey}
                         disabled={!id}
-                        onDelete={() =>
+                        onEdit={() => startEditStock(s)}
+                        onDelete={() => setConfirmingDeleteId(rowKey)}
+                        onCancelDelete={() => setConfirmingDeleteId(null)}
+                        onConfirmDelete={() =>
                           void deleteAsset(
                             `/api/v1/portfolio/stock/${id}`,
                             id,
                             "股票",
                           )
                         }
-                      />
+                      >
+                        {editingPosition?.type === "stock" && editingPosition.id === id && (
+                          <EditPanel
+                            fields={[
+                              { key: "quantity", label: "Quantity", value: editingPosition.quantity || "" },
+                              { key: "avg_price", label: "Avg price", value: editingPosition.avg_price || "" },
+                              { key: "current_price", label: "Current price", value: editingPosition.current_price || "" },
+                            ]}
+                            saving={savingEditId === `stock:${id}`}
+                            onChange={updateEditField}
+                            onCancel={() => setEditingPosition(null)}
+                            onSave={() => void saveEdit()}
+                          />
+                        )}
+                      </AssetRow>
                     );
                   })}
                 </div>
@@ -1205,22 +1345,39 @@ export default function InputPage() {
                   {cashPositions.map((cash, index) => {
                     const id = String(cash.id || "");
                     const currency = textValue(cash.currency, "USD");
+                    const rowKey = `Cash:${id}`;
                     return (
                       <AssetRow
                         key={id || `${currency}-${index}`}
                         title={`${currency} Cash`}
                         detail={`金額：${money(cash.amount)}`}
                         subDetail="Cash 會納入總資產與風險分母。"
-                        deleting={deletingId === `Cash:${id}`}
+                        deleting={deletingId === rowKey}
+                        confirmingDelete={confirmingDeleteId === rowKey}
                         disabled={!id}
-                        onDelete={() =>
+                        onEdit={() => startEditCash(cash)}
+                        onDelete={() => setConfirmingDeleteId(rowKey)}
+                        onCancelDelete={() => setConfirmingDeleteId(null)}
+                        onConfirmDelete={() =>
                           void deleteAsset(
                             `/api/v1/portfolio/cash/${id}`,
                             id,
                             "Cash",
                           )
                         }
-                      />
+                      >
+                        {editingPosition?.type === "cash" && editingPosition.id === id && (
+                          <EditPanel
+                            fields={[
+                              { key: "amount", label: "Amount", value: editingPosition.amount || "" },
+                            ]}
+                            saving={savingEditId === `cash:${id}`}
+                            onChange={updateEditField}
+                            onCancel={() => setEditingPosition(null)}
+                            onSave={() => void saveEdit()}
+                          />
+                        )}
+                      </AssetRow>
                     );
                   })}
                 </div>
@@ -1236,15 +1393,19 @@ export default function InputPage() {
                       f.fcn_code || f.code || f.name,
                       "FCN",
                     );
+                    const rowKey = `FCN:${id}`;
                     return (
                       <AssetRow
                         key={id || `${code}-${index}`}
                         title={code}
                         detail={`本金：${money(f.notional_amount ?? f.notional)} | Worst-of：${textValue(f.worst_of_symbol || f.worst_of)}`}
                         subDetail={`KI 距離：${percent(f.distance_to_ki_pct)} | KO 距離：${percent(f.distance_to_ko_pct)} | 風險：${textValue(f.risk_level)}`}
-                        deleting={deletingId === `FCN:${id}`}
+                        deleting={deletingId === rowKey}
+                        confirmingDelete={confirmingDeleteId === rowKey}
                         disabled={!id}
-                        onDelete={() =>
+                        onDelete={() => setConfirmingDeleteId(rowKey)}
+                        onCancelDelete={() => setConfirmingDeleteId(null)}
+                        onConfirmDelete={() =>
                           void deleteAsset(
                             `/api/v1/portfolio/fcn/${id}`,
                             id,
@@ -1264,22 +1425,44 @@ export default function InputPage() {
               <div className="space-y-4">
                 {cryptos.map((c, index) => {
                   const id = String(c.id || "");
+                  const rowKey = `Crypto:${id}`;
                   return (
                     <AssetRow
                       key={id || `${c.symbol || "crypto"}-${index}`}
                       title={`${textValue(c.symbol, "CRYPTO")} · ${textValue(c.asset_type, "crypto")}`}
                       detail={`數量：${numberValue(c.quantity)} | 均價：${money(c.avg_price)} | 現價：${money(c.current_price)}`}
                       subDetail={`市值：${money(c.current_value)} | 槓桿：${numberValue(c.leverage)}x | Grid：${money(c.grid_lower)} - ${money(c.grid_upper)}`}
-                      deleting={deletingId === `Crypto:${id}`}
+                      deleting={deletingId === rowKey}
+                      confirmingDelete={confirmingDeleteId === rowKey}
                       disabled={!id}
-                      onDelete={() =>
+                      onEdit={() => startEditCrypto(c)}
+                      onDelete={() => setConfirmingDeleteId(rowKey)}
+                      onCancelDelete={() => setConfirmingDeleteId(null)}
+                      onConfirmDelete={() =>
                         void deleteAsset(
                           `/api/v1/portfolio/crypto/${id}`,
                           id,
                           "Crypto",
                         )
                       }
-                    />
+                    >
+                      {editingPosition?.type === "crypto" && editingPosition.id === id && (
+                        <EditPanel
+                          fields={[
+                            { key: "quantity", label: "Quantity", value: editingPosition.quantity || "" },
+                            { key: "avg_price", label: "Avg price", value: editingPosition.avg_price || "" },
+                            { key: "current_price", label: "Current price", value: editingPosition.current_price || "" },
+                            { key: "leverage", label: "Leverage", value: editingPosition.leverage || "" },
+                            { key: "grid_lower", label: "Grid lower", value: editingPosition.grid_lower || "" },
+                            { key: "grid_upper", label: "Grid upper", value: editingPosition.grid_upper || "" },
+                          ]}
+                          saving={savingEditId === `crypto:${id}`}
+                          onChange={updateEditField}
+                          onCancel={() => setEditingPosition(null)}
+                          onSave={() => void saveEdit()}
+                        />
+                      )}
+                    </AssetRow>
                   );
                 })}
               </div>
@@ -1338,20 +1521,77 @@ function SubmitButton({
   );
 }
 
+function EditPanel({
+  fields,
+  saving,
+  onChange,
+  onCancel,
+  onSave,
+}: {
+  fields: Array<{ key: keyof EditFormState; label: string; value: string }>;
+  saving: boolean;
+  onChange: (key: keyof EditFormState, value: string) => void;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <div className="mt-4 rounded-lg border border-gray-800 bg-gray-950 p-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        {fields.map((field) => (
+          <Field
+            inputMode="decimal"
+            key={String(field.key)}
+            label={field.label}
+            value={field.value}
+            onChange={(value) => onChange(field.key, value)}
+          />
+        ))}
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          className="rounded-lg border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-200 transition hover:bg-white hover:text-black"
+          onClick={onCancel}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="rounded-lg border border-green-500/70 px-4 py-2 text-sm font-semibold text-green-200 transition hover:bg-green-500 hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={saving}
+          onClick={onSave}
+          type="button"
+        >
+          {saving ? "Saving..." : "Save Changes"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AssetRow({
   title,
   detail,
   subDetail,
   deleting,
+  confirmingDelete,
   disabled,
+  onEdit,
   onDelete,
+  onCancelDelete,
+  onConfirmDelete,
+  children,
 }: {
   title: string;
   detail: string;
   subDetail: string;
   deleting: boolean;
+  confirmingDelete: boolean;
   disabled: boolean;
+  onEdit?: () => void;
   onDelete: () => void;
+  onCancelDelete: () => void;
+  onConfirmDelete: () => void;
+  children?: ReactNode;
 }) {
   return (
     <div className="rounded-lg border border-gray-800 bg-black p-4">
@@ -1364,15 +1604,50 @@ function AssetRow({
           </div>
         </div>
 
-        <button
-          onClick={onDelete}
-          className="rounded-lg border border-red-500/70 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={disabled || deleting}
-          type="button"
-        >
-          {deleting ? "刪除中..." : "刪除"}
-        </button>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="rounded-lg border border-gray-600 px-3 py-2 text-sm font-semibold text-gray-200 transition hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={disabled || deleting}
+              type="button"
+            >
+              Edit
+            </button>
+          )}
+          <button
+            onClick={onDelete}
+            className="rounded-lg border border-red-500/70 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={disabled || deleting}
+            type="button"
+          >
+            {deleting ? "刪除中..." : "Delete"}
+          </button>
+        </div>
       </div>
+      {confirmingDelete && (
+        <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3">
+          <div className="text-sm text-red-100">確認刪除此部位？此動作目前會 hard delete。</div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              className="rounded-lg border border-gray-700 px-3 py-2 text-sm font-semibold text-gray-200 transition hover:bg-white hover:text-black"
+              onClick={onCancelDelete}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              className="rounded-lg border border-red-500/70 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={deleting}
+              onClick={onConfirmDelete}
+              type="button"
+            >
+              {deleting ? "Deleting..." : "Confirm Delete"}
+            </button>
+          </div>
+        </div>
+      )}
+      {children}
     </div>
   );
 }
