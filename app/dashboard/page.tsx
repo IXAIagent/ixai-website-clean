@@ -92,13 +92,12 @@ function textValue(value: unknown, fallback = "-") {
   return fallback;
 }
 
-function stockDisplayName(value: unknown) {
-  const symbol = textValue(value, "STOCK").toUpperCase();
-  const labels: Record<string, string> = {
-    "2330.TW": "台積電 2330.TW",
-    "2454.TW": "聯發科 2454.TW",
-  };
-  return labels[symbol] || symbol;
+function assetDisplayName(displayName: unknown, symbol: unknown, fallback: string) {
+  const symbolText = textValue(symbol, fallback).toUpperCase();
+  const displayText = textValue(displayName, "");
+  if (!displayText) return symbolText;
+  if (displayText.toUpperCase().includes(symbolText)) return displayText;
+  return `${displayText} ${symbolText}`;
 }
 
 function listValue<T>(value: T[] | null | undefined): T[] {
@@ -518,7 +517,7 @@ export default function DashboardPage() {
                     key={`${textValue(stock.id || stock.symbol, "stock")}-${index}`}
                   >
                     <div className="font-semibold text-white">
-                      {stockDisplayName(stock.symbol)}
+                      {assetDisplayName(stock.display_name, stock.symbol, "STOCK")}
                     </div>
                     <div className="mt-2 grid gap-1 text-sm text-zinc-300">
                       <div>Quantity: {textValue(stock.quantity, "0")}</div>
@@ -618,7 +617,7 @@ export default function DashboardPage() {
                     key={`${textValue(item.id || item.symbol, "crypto")}-${index}`}
                   >
                     <div className="font-semibold text-white">
-                      {textValue(item.symbol, "CRYPTO")}
+                      {assetDisplayName(item.display_name, item.symbol, "CRYPTO")}
                     </div>
                     <div className="mt-2 grid gap-1 text-sm text-zinc-300">
                       <div>Type: {textValue(item.asset_type, "crypto")}</div>

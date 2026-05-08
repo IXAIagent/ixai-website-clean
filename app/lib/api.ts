@@ -103,6 +103,7 @@ export type RiskOverviewResponse = {
 export type StockPositionResponse = {
   id?: string | number | null;
   symbol?: string | null;
+  display_name?: string | null;
   quantity?: number | string | null;
   avg_price?: number | string | null;
   current_price?: number | string | null;
@@ -132,6 +133,7 @@ export type FCNPositionResponse = {
 export type CryptoPositionResponse = {
   id?: string | number | null;
   symbol?: string | null;
+  display_name?: string | null;
   asset_type?: string | null;
   quantity?: number | string | null;
   avg_price?: number | string | null;
