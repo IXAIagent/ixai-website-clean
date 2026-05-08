@@ -70,6 +70,10 @@ function listValue<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
 }
 
+function firstNonEmpty<T>(...lists: T[][]): T[] {
+  return lists.find((items) => items.length > 0) || [];
+}
+
 function riskBadgeClass(level: unknown) {
   const normalized = String(level || "").toLowerCase();
   if (normalized === "high") return "bg-red-500 text-white";
@@ -127,6 +131,11 @@ function underlyingsText(value: unknown) {
 
 function positionCardClass() {
   return "rounded-xl border border-zinc-800 bg-zinc-900 p-4";
+}
+
+function priceSource(value: unknown) {
+  const source = textValue(value, "");
+  return source ? `source: ${source}` : "";
 }
 
 export default function DashboardPage() {
@@ -221,10 +230,25 @@ export default function DashboardPage() {
   const allocationItems = listValue(data.allocation.items);
   const decisionCards = listValue(data.risk.decision_cards);
   const alerts = listValue(data.risk.alerts);
-  const stocks = listValue(data.stocks);
-  const fcns = listValue(data.fcns);
-  const crypto = listValue(data.crypto);
-  const cash = listValue(data.cash);
+  const stocks = firstNonEmpty(
+    listValue(data.summary.stock_positions),
+    listValue(data.summary.stocks),
+    listValue(data.stocks),
+  );
+  const fcns = firstNonEmpty(
+    listValue(data.summary.fcn_analysis),
+    listValue(data.summary.fcn_positions),
+    listValue(data.summary.fcn_summary),
+    listValue(data.fcns),
+  );
+  const crypto = firstNonEmpty(
+    listValue(data.summary.crypto_positions),
+    listValue(data.crypto),
+  );
+  const cash = firstNonEmpty(
+    listValue(data.summary.cash_summary),
+    listValue(data.cash),
+  );
   const riskLevel = data.risk.risk_level || data.summary.risk_level || "unknown";
   const totalValue = data.summary.total_value ?? data.allocation.total_value;
   const hasPortfolioAssets =
@@ -383,6 +407,11 @@ export default function DashboardPage() {
                       <div>Avg Price: {priceMoney(stock.avg_price)}</div>
                       <div>Current Price: {priceMoney(stock.current_price)}</div>
                       <div>Current Value: {money(stock.current_value)}</div>
+                      {priceSource(stock.price_source) && (
+                        <div className="text-xs text-zinc-500">
+                          {priceSource(stock.price_source)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -402,7 +431,7 @@ export default function DashboardPage() {
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="font-semibold text-white">
-                        {textValue(fcn.name || fcn.fcn_code, "FCN")}
+                        {textValue(fcn.name || fcn.fcn_code || fcn.code, "FCN")}
                       </div>
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${riskBadgeClass(fcn.risk_level)}`}
@@ -412,9 +441,20 @@ export default function DashboardPage() {
                     </div>
                     <div className="mt-2 grid gap-1 text-sm text-zinc-300">
                       <div>Notional: {money(fcn.notional_amount || fcn.notional)}</div>
-                      <div>Underlyings: {underlyingsText(fcn.underlyings)}</div>
+                      <div>
+                        Underlyings:{" "}
+                        {textValue(
+                          fcn.worst_symbol || fcn.worst_of,
+                          underlyingsText(fcn.underlyings),
+                        )}
+                      </div>
                       <div>KI Level: {textValue(fcn.ki_level)}</div>
                       <div>KO Level: {textValue(fcn.ko_level)}</div>
+                      {priceSource(fcn.price_source) && (
+                        <div className="text-xs text-zinc-500">
+                          {priceSource(fcn.price_source)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -442,6 +482,11 @@ export default function DashboardPage() {
                       <div>Current Price: {priceMoney(item.current_price)}</div>
                       <div>Leverage: {textValue(item.leverage, "-")}</div>
                       <div>Current Value: {money(item.current_value)}</div>
+                      {priceSource(item.price_source) && (
+                        <div className="text-xs text-zinc-500">
+                          {priceSource(item.price_source)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

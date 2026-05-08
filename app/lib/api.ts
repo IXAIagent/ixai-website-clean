@@ -49,6 +49,13 @@ export type SummaryResponse = {
   risk_level?: string | null;
   top_risk?: string | null;
   ai_advice?: string | null;
+  stock_positions?: StockPositionResponse[] | null;
+  stocks?: StockPositionResponse[] | null;
+  fcn_analysis?: FCNPositionResponse[] | null;
+  fcn_positions?: FCNPositionResponse[] | null;
+  fcn_summary?: FCNPositionResponse[] | null;
+  crypto_positions?: CryptoPositionResponse[] | null;
+  cash_summary?: CashPositionResponse[] | null;
 };
 
 export type AllocationItem = {
@@ -100,18 +107,26 @@ export type StockPositionResponse = {
   avg_price?: number | string | null;
   current_price?: number | string | null;
   current_value?: number | string | null;
+  price_source?: string | null;
 };
 
 export type FCNPositionResponse = {
   id?: string | number | null;
   name?: string | null;
   fcn_code?: string | null;
+  code?: string | null;
   notional_amount?: number | string | null;
   notional?: number | string | null;
   underlyings?: string | null;
   ki_level?: number | string | null;
   ko_level?: number | string | null;
   risk_level?: string | null;
+  worst_symbol?: string | null;
+  worst_of?: string | null;
+  worst_performance?: number | string | null;
+  distance_to_KI?: number | string | null;
+  distance_to_KO?: number | string | null;
+  price_source?: string | null;
 };
 
 export type CryptoPositionResponse = {
@@ -123,6 +138,7 @@ export type CryptoPositionResponse = {
   current_price?: number | string | null;
   current_value?: number | string | null;
   leverage?: number | string | null;
+  price_source?: string | null;
 };
 
 export type CashPositionResponse = {
