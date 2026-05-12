@@ -244,13 +244,20 @@ function apiMessage(err: unknown, fallback: string) {
 
 function noticeClass(type: Notice["type"]) {
   if (type === "success")
-    return "border-green-500/50 bg-green-500/10 text-green-200";
-  if (type === "error") return "border-red-500/50 bg-red-500/10 text-red-200";
-  return "border-gray-700 bg-gray-900 text-gray-300";
+    return "border-emerald-500/50 bg-emerald-500/10 text-emerald-100";
+  if (type === "error") return "border-red-500/50 bg-red-500/10 text-red-100";
+  return "border-zinc-700 bg-zinc-900 text-zinc-300";
 }
 
 function inputClass() {
   return "w-full rounded-lg border border-gray-700 bg-black px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-white";
+}
+
+function emptyAssetMessage(asset: AssetMode) {
+  if (asset === "stock") return "No stock positions yet";
+  if (asset === "crypto") return "No crypto positions yet";
+  if (asset === "cash") return "No cash positions yet";
+  return "No FCN positions yet";
 }
 
 export default function InputPage() {
@@ -367,9 +374,18 @@ export default function InputPage() {
     setCashForm((current) => ({ ...current, [key]: value }));
   }
 
-  async function loadAssets() {
+  function assetCount(asset: AssetMode) {
+    if (asset === "stock") return stocks.length;
+    if (asset === "cash") return cashPositions.length;
+    if (asset === "fcn") return fcns.length;
+    return cryptos.length;
+  }
+
+  async function loadAssets(options: { clearNotice?: boolean } = {}) {
     setLoadingAssets(true);
-    setNotice(null);
+    if (options.clearNotice ?? true) {
+      setNotice(null);
+    }
 
     try {
       const [stockData, cashData, fcnData, cryptoData] = await Promise.all([
@@ -450,7 +466,7 @@ export default function InputPage() {
       setQuantity("");
       setAvgPrice("");
       setCurrentPrice("");
-      await loadAssets();
+      await loadAssets({ clearNotice: false });
       returnToDashboard();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -490,7 +506,7 @@ export default function InputPage() {
 
       setNotice({ type: "success", message: "Cash 已更新。" });
       setCashForm({ ...emptyCashForm });
-      await loadAssets();
+      await loadAssets({ clearNotice: false });
       returnToDashboard();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -569,7 +585,7 @@ export default function InputPage() {
           ...item,
         })),
       });
-      await loadAssets();
+      await loadAssets({ clearNotice: false });
       returnToDashboard();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -638,7 +654,7 @@ export default function InputPage() {
 
       setNotice({ type: "success", message: "Crypto / Grid 已新增。" });
       setCryptoForm({ ...emptyCryptoForm });
-      await loadAssets();
+      await loadAssets({ clearNotice: false });
       returnToDashboard();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -738,7 +754,7 @@ export default function InputPage() {
 
       setNotice({ type: "success", message: "部位已更新。" });
       setEditingPosition(null);
-      await loadAssets();
+      await loadAssets({ clearNotice: false });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setToken(null);
@@ -764,7 +780,7 @@ export default function InputPage() {
       setNotice({ type: "success", message: `${label} 已刪除。` });
       setConfirmingDeleteId(null);
       setEditingPosition(null);
-      await loadAssets();
+      await loadAssets({ clearNotice: false });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setToken(null);
@@ -785,7 +801,7 @@ export default function InputPage() {
       setCheckedAuth(true);
 
       if (storedToken) {
-        void loadAssets();
+        void loadAssets({ clearNotice: false });
       }
     }, 0);
 
@@ -919,7 +935,7 @@ export default function InputPage() {
 
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={loadAssets}
+              onClick={() => void loadAssets()}
               className="rounded-lg border border-gray-700 px-5 py-3 font-semibold transition hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loadingAssets}
               type="button"
@@ -937,9 +953,18 @@ export default function InputPage() {
 
         {notice && (
           <div
-            className={`mb-6 rounded-lg border p-4 text-sm leading-6 ${noticeClass(notice.type)}`}
+            className={`mb-6 rounded-xl border p-4 text-sm leading-6 shadow-lg ${noticeClass(notice.type)}`}
           >
-            {notice.message}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <span className="font-medium">{notice.message}</span>
+              <button
+                className="w-fit rounded-lg border border-current/30 px-3 py-1 text-xs font-semibold opacity-80 transition hover:opacity-100"
+                onClick={() => setNotice(null)}
+                type="button"
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         )}
 
@@ -948,16 +973,27 @@ export default function InputPage() {
             {assetModes.map((mode) => (
               <button
                 key={mode.id}
-                className={`rounded-lg border p-4 text-left transition ${
+                className={`rounded-xl border p-4 text-left shadow-lg transition ${
                   activeAsset === mode.id
-                    ? "border-white bg-white text-black"
+                    ? "border-emerald-400 bg-emerald-400/10 text-white"
                     : "border-gray-800 bg-gray-950 text-gray-300 hover:border-gray-500"
                 }`}
                 onClick={() => setActiveAsset(mode.id)}
                 type="button"
               >
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
-                  {mode.label}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">
+                    {mode.label}
+                  </div>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                      activeAsset === mode.id
+                        ? "border-emerald-300/50 text-emerald-100"
+                        : "border-gray-700 text-gray-500"
+                    }`}
+                  >
+                    {assetCount(mode.id)}
+                  </span>
                 </div>
                 <div className="mt-2 font-bold">{mode.title}</div>
                 <div className="mt-2 text-sm leading-6 opacity-70">
@@ -967,7 +1003,7 @@ export default function InputPage() {
             ))}
           </nav>
 
-          <section className="rounded-lg border border-gray-800 bg-gray-950 p-6">
+          <section className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow-xl">
             <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <div className="text-sm font-semibold uppercase tracking-[0.18em] text-gray-500">
@@ -1283,17 +1319,26 @@ export default function InputPage() {
             )}
           </section>
 
-          <section className="rounded-lg border border-gray-800 bg-gray-950 p-6">
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <h2 className="text-xl font-bold">{activeMode.title}清單</h2>
-              <span className="text-sm text-gray-500">{activeCount} 筆</span>
+          <section className="rounded-2xl border border-gray-800 bg-gray-950 p-6 shadow-xl">
+            <div className="mb-5 flex flex-col gap-2 border-b border-gray-800 pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+                  Positions
+                </div>
+                <h2 className="mt-1 text-xl font-bold">{activeMode.title}清單</h2>
+              </div>
+              <span className="w-fit rounded-full border border-gray-700 px-3 py-1 text-sm font-semibold text-gray-400">
+                {activeCount} positions
+              </span>
             </div>
 
             {loadingAssets ? (
-              <p className="text-gray-400">清單載入中...</p>
+              <div className="rounded-xl border border-gray-800 bg-black/40 p-5 text-gray-400">
+                清單載入中...
+              </div>
             ) : activeAsset === "stock" ? (
               stocks.length === 0 ? (
-                <p className="leading-7 text-gray-400">目前沒有股票資料</p>
+                <EmptyAssetState message={emptyAssetMessage("stock")} />
               ) : (
                 <div className="space-y-4">
                   {stocks.map((s, index) => {
@@ -1308,6 +1353,7 @@ export default function InputPage() {
                         deleting={deletingId === rowKey}
                         confirmingDelete={confirmingDeleteId === rowKey}
                         disabled={!id}
+                        editing={editingPosition?.type === "stock" && editingPosition.id === id}
                         onEdit={() => startEditStock(s)}
                         onDelete={() => setConfirmingDeleteId(rowKey)}
                         onCancelDelete={() => setConfirmingDeleteId(null)}
@@ -1339,7 +1385,7 @@ export default function InputPage() {
               )
             ) : activeAsset === "cash" ? (
               cashPositions.length === 0 ? (
-                <p className="leading-7 text-gray-400">目前沒有 Cash 資料</p>
+                <EmptyAssetState message={emptyAssetMessage("cash")} />
               ) : (
                 <div className="space-y-4">
                   {cashPositions.map((cash, index) => {
@@ -1355,6 +1401,7 @@ export default function InputPage() {
                         deleting={deletingId === rowKey}
                         confirmingDelete={confirmingDeleteId === rowKey}
                         disabled={!id}
+                        editing={editingPosition?.type === "cash" && editingPosition.id === id}
                         onEdit={() => startEditCash(cash)}
                         onDelete={() => setConfirmingDeleteId(rowKey)}
                         onCancelDelete={() => setConfirmingDeleteId(null)}
@@ -1384,7 +1431,7 @@ export default function InputPage() {
               )
             ) : activeAsset === "fcn" ? (
               fcns.length === 0 ? (
-                <p className="leading-7 text-gray-400">目前沒有 FCN 資料</p>
+                <EmptyAssetState message={emptyAssetMessage("fcn")} />
               ) : (
                 <div className="space-y-4">
                   {fcns.map((f, index) => {
@@ -1403,6 +1450,7 @@ export default function InputPage() {
                         deleting={deletingId === rowKey}
                         confirmingDelete={confirmingDeleteId === rowKey}
                         disabled={!id}
+                        editing={false}
                         onDelete={() => setConfirmingDeleteId(rowKey)}
                         onCancelDelete={() => setConfirmingDeleteId(null)}
                         onConfirmDelete={() =>
@@ -1418,9 +1466,7 @@ export default function InputPage() {
                 </div>
               )
             ) : cryptos.length === 0 ? (
-              <p className="leading-7 text-gray-400">
-                目前沒有 Crypto / Grid 資料
-              </p>
+              <EmptyAssetState message={emptyAssetMessage("crypto")} />
             ) : (
               <div className="space-y-4">
                 {cryptos.map((c, index) => {
@@ -1435,6 +1481,7 @@ export default function InputPage() {
                       deleting={deletingId === rowKey}
                       confirmingDelete={confirmingDeleteId === rowKey}
                       disabled={!id}
+                      editing={editingPosition?.type === "crypto" && editingPosition.id === id}
                       onEdit={() => startEditCrypto(c)}
                       onDelete={() => setConfirmingDeleteId(rowKey)}
                       onCancelDelete={() => setConfirmingDeleteId(null)}
@@ -1535,8 +1582,18 @@ function EditPanel({
   onSave: () => void;
 }) {
   return (
-    <div className="mt-4 rounded-lg border border-gray-800 bg-gray-950 p-4">
-      <div className="grid gap-3 sm:grid-cols-3">
+    <div className="mt-5 rounded-xl border border-emerald-400/50 bg-emerald-400/10 p-4 shadow-lg shadow-emerald-950/20">
+      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+            Editing position
+          </div>
+          <div className="mt-1 text-sm text-emerald-100">
+            Update the fields below, then save or cancel.
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {fields.map((field) => (
           <Field
             inputMode="decimal"
@@ -1547,16 +1604,16 @@ function EditPanel({
           />
         ))}
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap gap-3">
         <button
-          className="rounded-lg border border-gray-700 px-4 py-2 text-sm font-semibold text-gray-200 transition hover:bg-white hover:text-black"
+          className="rounded-xl border border-gray-600 px-4 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white hover:text-black"
           onClick={onCancel}
           type="button"
         >
           Cancel
         </button>
         <button
-          className="rounded-lg border border-green-500/70 px-4 py-2 text-sm font-semibold text-green-200 transition hover:bg-green-500 hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-xl border border-emerald-400 bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={saving}
           onClick={onSave}
           type="button"
@@ -1575,6 +1632,7 @@ function AssetRow({
   deleting,
   confirmingDelete,
   disabled,
+  editing,
   onEdit,
   onDelete,
   onCancelDelete,
@@ -1587,6 +1645,7 @@ function AssetRow({
   deleting: boolean;
   confirmingDelete: boolean;
   disabled: boolean;
+  editing: boolean;
   onEdit?: () => void;
   onDelete: () => void;
   onCancelDelete: () => void;
@@ -1594,30 +1653,43 @@ function AssetRow({
   children?: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-gray-800 bg-black p-4">
+    <div
+      className={`rounded-xl border p-5 transition ${
+        editing
+          ? "border-emerald-400/70 bg-emerald-400/5 shadow-lg shadow-emerald-950/20"
+          : "border-gray-800 bg-black"
+      }`}
+    >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <div className="break-words text-lg font-bold">{title}</div>
-          <div className="mt-2 text-sm leading-6 text-gray-400">{detail}</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="break-words text-lg font-bold text-white">{title}</div>
+            {editing && (
+              <span className="rounded-full border border-emerald-400/50 bg-emerald-400/10 px-2 py-0.5 text-xs font-semibold text-emerald-200">
+                Editing
+              </span>
+            )}
+          </div>
+          <div className="mt-3 text-sm leading-6 text-gray-300">{detail}</div>
           <div className="mt-1 text-sm leading-6 text-gray-400">
             {subDetail}
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
           {onEdit && (
             <button
               onClick={onEdit}
-              className="rounded-lg border border-gray-600 px-3 py-2 text-sm font-semibold text-gray-200 transition hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl border border-gray-600 px-3 py-2 text-sm font-semibold text-gray-200 transition hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-60"
               disabled={disabled || deleting}
               type="button"
             >
-              Edit
+              {editing ? "Editing" : "Edit"}
             </button>
           )}
           <button
             onClick={onDelete}
-            className="rounded-lg border border-red-500/70 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl border border-red-500/70 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
             disabled={disabled || deleting}
             type="button"
           >
@@ -1626,18 +1698,26 @@ function AssetRow({
         </div>
       </div>
       {confirmingDelete && (
-        <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3">
-          <div className="text-sm text-red-100">確認刪除此部位？此動作目前會 hard delete。</div>
-          <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-5 rounded-xl border border-red-500/50 bg-red-500/10 p-4 shadow-lg shadow-red-950/20">
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">
+            Delete confirmation
+          </div>
+          <div className="mt-2 text-sm font-semibold text-red-100">
+            Are you sure you want to delete this position?
+          </div>
+          <div className="mt-1 text-sm leading-6 text-red-100/80">
+            This action removes the position from your portfolio and cannot be undone in this MVP.
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3">
             <button
-              className="rounded-lg border border-gray-700 px-3 py-2 text-sm font-semibold text-gray-200 transition hover:bg-white hover:text-black"
+              className="rounded-xl border border-gray-700 px-3 py-2 text-sm font-semibold text-gray-200 transition hover:bg-white hover:text-black"
               onClick={onCancelDelete}
               type="button"
             >
               Cancel
             </button>
             <button
-              className="rounded-lg border border-red-500/70 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl border border-red-500 bg-red-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={deleting}
               onClick={onConfirmDelete}
               type="button"
@@ -1648,6 +1728,20 @@ function AssetRow({
         </div>
       )}
       {children}
+    </div>
+  );
+}
+
+function EmptyAssetState({ message }: { message: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-gray-800 bg-black/40 p-6 text-center">
+      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl border border-gray-700 text-lg text-gray-500">
+        +
+      </div>
+      <div className="mt-3 font-semibold text-gray-200">{message}</div>
+      <div className="mt-2 text-sm leading-6 text-gray-500">
+        Use the asset ticket to add the first position in this section.
+      </div>
     </div>
   );
 }
