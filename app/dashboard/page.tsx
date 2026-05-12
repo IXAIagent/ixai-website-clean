@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -255,15 +255,88 @@ function fcnUnderlyingsLabel(fcn: FCNDetail) {
   );
 }
 
+function SkeletonBlock({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse rounded-xl bg-zinc-800/80 ${className}`} />;
+}
+
+function DashboardSkeleton() {
+  return (
+    <main className="min-h-screen bg-black px-5 py-8 text-white">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <header className="flex flex-col gap-4 border-b border-zinc-800 pb-6 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-3">
+            <SkeletonBlock className="h-4 w-40" />
+            <SkeletonBlock className="h-9 w-72" />
+            <SkeletonBlock className="h-5 w-52" />
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <SkeletonBlock className="h-12 w-28" />
+            <SkeletonBlock className="h-12 w-36" />
+            <SkeletonBlock className="h-12 w-24" />
+          </div>
+        </header>
+
+        <section className="grid gap-4 md:grid-cols-3">
+          {[0, 1, 2].map((item) => (
+            <div
+              className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl"
+              key={item}
+            >
+              <SkeletonBlock className="h-4 w-24" />
+              <SkeletonBlock className="mt-4 h-9 w-36" />
+            </div>
+          ))}
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((item) => (
+            <div
+              className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl"
+              key={item}
+            >
+              <div className="flex items-center justify-between">
+                <SkeletonBlock className="h-4 w-20" />
+                <SkeletonBlock className="h-3 w-3 rounded-full" />
+              </div>
+              <SkeletonBlock className="mt-4 h-8 w-28" />
+              <SkeletonBlock className="mt-4 h-2 w-full" />
+              <SkeletonBlock className="mt-3 h-4 w-14" />
+            </div>
+          ))}
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+            <SkeletonBlock className="h-6 w-36" />
+            <SkeletonBlock className="mt-5 h-24 w-full" />
+            <SkeletonBlock className="mt-4 h-20 w-full" />
+            <SkeletonBlock className="mt-3 h-20 w-full" />
+          </div>
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+            <SkeletonBlock className="h-6 w-28" />
+            <SkeletonBlock className="mt-5 h-40 w-full" />
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<DashboardState | null>(null);
+  const dataRef = useRef<DashboardState | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadDashboard = useCallback(async (showLoading = false) => {
-    if (showLoading) {
+    const hasExistingData = Boolean(dataRef.current);
+
+    if (showLoading || !hasExistingData) {
       setLoading(true);
+    } else {
+      setRefreshing(true);
     }
 
     try {
@@ -278,7 +351,7 @@ export default function DashboardPage() {
         getCrypto(),
         getCash(),
       ]);
-      setData({
+      const nextData = {
         summary,
         allocation,
         risk,
@@ -286,11 +359,14 @@ export default function DashboardPage() {
         fcns: Array.isArray(fcns) ? fcns : [],
         crypto: Array.isArray(crypto) ? crypto : [],
         cash: Array.isArray(cash) ? cash : [],
-      });
+      };
+      dataRef.current = nextData;
+      setData(nextData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Dashboard 載入失敗。");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -322,21 +398,28 @@ export default function DashboardPage() {
     router.replace("/login");
   }
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-black px-5 py-8 text-white">
-        <div className="mx-auto max-w-6xl rounded-2xl border border-zinc-800 bg-zinc-950 p-6 text-zinc-300">
-          Loading dashboard...
-        </div>
-      </main>
-    );
-  }
+  if (loading && !data) return <DashboardSkeleton />;
 
-  if (error) {
+  if (error && !data) {
     return (
       <main className="min-h-screen bg-black px-5 py-8 text-white">
-        <div className="mx-auto max-w-6xl rounded-2xl border border-red-500/50 bg-red-500/10 p-6 text-red-200">
-          {error}
+        <div className="mx-auto flex min-h-[60vh] max-w-4xl items-center justify-center">
+          <div className="w-full rounded-2xl border border-red-500/50 bg-red-500/10 p-8 text-center shadow-xl shadow-red-950/20">
+            <div className="text-sm font-semibold uppercase tracking-wide text-red-300">
+              Dashboard Error
+            </div>
+            <h1 className="mt-3 text-2xl font-bold text-white">
+              Failed to load dashboard
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-red-100">{error}</p>
+            <button
+              className="mt-6 rounded-xl border border-red-300/60 px-5 py-3 text-sm font-semibold text-red-100 transition hover:bg-red-500/10"
+              onClick={() => void loadDashboard(true)}
+              type="button"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </main>
     );
@@ -369,8 +452,10 @@ export default function DashboardPage() {
   const riskLevel = data.risk.risk_level || data.summary.risk_level || "unknown";
   const totalValue = data.summary.total_value ?? data.allocation.total_value;
   const hasPortfolioAssets =
-    allocationItems.some((item) => Number(item.value) > 0) ||
-    Number(totalValue || 0) > 0;
+    stocks.length > 0 ||
+    fcns.length > 0 ||
+    crypto.length > 0 ||
+    cash.length > 0;
 
   return (
     <main className="min-h-screen bg-black px-5 py-8 text-white">
@@ -387,6 +472,12 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
+            {refreshing && (
+              <div className="flex items-center justify-center gap-2 rounded-xl border border-zinc-800 px-4 py-3 text-sm text-zinc-400">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
+                Refreshing
+              </div>
+            )}
             <button
               className="w-full rounded-xl border border-blue-400/50 px-4 py-3 text-center text-sm font-semibold text-blue-200 transition hover:bg-blue-400/10 md:w-auto"
               onClick={() => router.push("/import")}
@@ -411,13 +502,50 @@ export default function DashboardPage() {
           </div>
         </header>
 
+        {error && (
+          <section className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="font-semibold text-white">Failed to load dashboard</div>
+                <div className="mt-1 text-red-100/80">{error}</div>
+              </div>
+              <button
+                className="rounded-xl border border-red-300/60 px-4 py-2 text-sm font-semibold text-red-100 transition hover:bg-red-500/10"
+                onClick={() => void loadDashboard(false)}
+                type="button"
+              >
+                Retry
+              </button>
+            </div>
+          </section>
+        )}
+
         {!hasPortfolioAssets && (
-          <Link
-            className="block rounded-2xl border border-dashed border-emerald-400/50 bg-emerald-400/10 p-6 text-center text-lg font-semibold text-emerald-100 transition hover:bg-emerald-400/15"
-            href="/input"
-          >
-            尚未新增資產，點此新增
-          </Link>
+          <section className="rounded-2xl border border-dashed border-emerald-400/50 bg-emerald-400/10 p-8 text-center shadow-xl shadow-emerald-950/10">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-400/40 bg-black/30 text-3xl">
+              +
+            </div>
+            <h2 className="mt-5 text-2xl font-bold text-white">
+              No portfolio positions yet
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-zinc-300">
+              Add positions manually or import a CSV portfolio template.
+            </p>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link
+                className="rounded-xl border border-emerald-400/60 px-5 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/10"
+                href="/input"
+              >
+                Go to Input
+              </Link>
+              <Link
+                className="rounded-xl border border-blue-400/60 px-5 py-3 text-sm font-semibold text-blue-100 transition hover:bg-blue-400/10"
+                href="/import"
+              >
+                Go to Import
+              </Link>
+            </div>
+          </section>
         )}
 
         <section className="grid gap-4 md:grid-cols-3">
