@@ -50,6 +50,17 @@ const BACKEND_PREVIEW_COLUMNS = [
   "errors",
 ] as const;
 
+const CSV_TEMPLATE = [
+  "asset_type,symbol,quantity,avg_price,current_price,currency,amount",
+  "stock,AAPL,10,180,,,",
+  "stock,南亞科,1000,65,,,",
+  "stock,2330,50,950,,,",
+  "crypto,BTC,0.25,60000,,,",
+  "crypto,ETH,2,2800,,,",
+  "cash,,0,,,USD,10000",
+  "cash,,0,,,TWD,500000",
+].join("\n");
+
 function fileSizeLabel(size: number) {
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
@@ -195,6 +206,20 @@ export default function ImportPage() {
     event.preventDefault();
     setDragActive(false);
     void handleFile(event.dataTransfer.files?.[0]);
+  }
+
+  function handleDownloadTemplate() {
+    const blob = new Blob([`\uFEFF${CSV_TEMPLATE}`], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "ixai_portfolio_template.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   }
 
   async function handleImport() {
@@ -344,6 +369,21 @@ export default function ImportPage() {
         </header>
 
         <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl shadow-emerald-950/10">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Upload CSV</h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                下載標準欄位範本，填寫後再上傳 preview。
+              </p>
+            </div>
+            <button
+              className="rounded-xl border border-emerald-400/50 px-4 py-3 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-400/10"
+              onClick={handleDownloadTemplate}
+              type="button"
+            >
+              Download CSV Template
+            </button>
+          </div>
           <label
             className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed p-8 text-center transition ${
               dragActive
