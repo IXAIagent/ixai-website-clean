@@ -341,6 +341,38 @@ export default function InputPage() {
     setFcnForm((current) => ({ ...current, [key]: value }));
   }
 
+  function addMonthsToDate(value: string, months: number) {
+    if (!value || months <= 0) return "";
+    const date = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return "";
+    date.setMonth(date.getMonth() + months);
+    return date.toISOString().slice(0, 10);
+  }
+
+  function updateFcnIssueDate(value: string) {
+    setFcnForm((current) => {
+      const tenor = Number(current.tenor_months);
+      return {
+        ...current,
+        issue_date: value,
+        maturity_date:
+          value && Number.isFinite(tenor) && tenor > 0
+            ? addMonthsToDate(value, tenor)
+            : current.maturity_date,
+      };
+    });
+  }
+
+  function setFcnTenor(months: number) {
+    setFcnForm((current) => ({
+      ...current,
+      tenor_months: String(months),
+      maturity_date: current.issue_date
+        ? addMonthsToDate(current.issue_date, months)
+        : current.maturity_date,
+    }));
+  }
+
   function updateFcnUnderlying(
     index: number,
     key: keyof FCNUnderlying,
@@ -1152,7 +1184,10 @@ export default function InputPage() {
             {activeAsset === "fcn" && (
               <form className="space-y-5" onSubmit={addFcn}>
                 <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4">
-                  <div className="text-sm font-semibold text-emerald-100">
+                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
+                    1. Basic terms
+                  </div>
+                  <div className="mt-2 text-sm font-semibold text-emerald-100">
                     Quick Add
                   </div>
                   <div className="mt-1 text-xs leading-5 text-emerald-100/70">
@@ -1174,6 +1209,30 @@ export default function InputPage() {
                       updateFcnField("fcn_code", v.toUpperCase())
                     }
                   />
+                </div>
+                <div className="rounded-xl border border-gray-800 bg-black/40 p-4">
+                  <div className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+                    Tenor presets
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {[3, 6, 9, 12].map((months) => (
+                      <button
+                        className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                          fcnForm.tenor_months === String(months)
+                            ? "border-emerald-400 bg-emerald-400 text-black"
+                            : "border-gray-700 text-gray-300 hover:border-emerald-400 hover:text-emerald-200"
+                        }`}
+                        key={months}
+                        onClick={() => setFcnTenor(months)}
+                        type="button"
+                      >
+                        {months}M
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-xs leading-5 text-gray-500">
+                    若 Advanced 裡已填 issue date，選擇 tenor 會自動預填 maturity date。
+                  </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <Field
@@ -1197,34 +1256,47 @@ export default function InputPage() {
                     onChange={(v) => updateFcnField("maturity_date", v)}
                   />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <Field
-                    label="KI level"
-                    inputMode="decimal"
-                    placeholder="65"
-                    value={fcnForm.ki_level}
-                    onChange={(v) => updateFcnField("ki_level", v)}
-                  />
-                  <Field
-                    label="KO level"
-                    inputMode="decimal"
-                    placeholder="100"
-                    value={fcnForm.ko_level}
-                    onChange={(v) => updateFcnField("ko_level", v)}
-                  />
-                  <Field
-                    label="Strike level"
-                    inputMode="decimal"
-                    placeholder="95"
-                    value={fcnForm.strike_level}
-                    onChange={(v) => updateFcnField("strike_level", v)}
-                  />
+                <div className="rounded-xl border border-gray-800 bg-black/40 p-4">
+                  <div className="mb-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+                      3. Barrier / Strike
+                    </div>
+                    <div className="mt-1 text-xs leading-5 text-gray-500">
+                      KI/KO/Strike 以初始價格百分比輸入，例如 65 代表 65%。
+                    </div>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Field
+                      label="KI level"
+                      inputMode="decimal"
+                      placeholder="65"
+                      value={fcnForm.ki_level}
+                      onChange={(v) => updateFcnField("ki_level", v)}
+                    />
+                    <Field
+                      label="KO level"
+                      inputMode="decimal"
+                      placeholder="100"
+                      value={fcnForm.ko_level}
+                      onChange={(v) => updateFcnField("ko_level", v)}
+                    />
+                    <Field
+                      label="Strike level"
+                      inputMode="decimal"
+                      placeholder="95"
+                      value={fcnForm.strike_level}
+                      onChange={(v) => updateFcnField("strike_level", v)}
+                    />
+                  </div>
                 </div>
 
                 <div className="rounded-lg border border-gray-800 bg-black p-4">
                   <div className="mb-4 flex items-center justify-between gap-4">
                     <div>
-                      <div className="text-sm font-semibold text-white">
+                      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+                        2. Underlyings
+                      </div>
+                      <div className="mt-2 text-sm font-semibold text-white">
                         標的與進場價格
                       </div>
                       <div className="mt-1 text-xs leading-5 text-gray-500">
@@ -1240,11 +1312,16 @@ export default function InputPage() {
                     </button>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1fr)_80px] gap-3 border-b border-gray-800 pb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 sm:grid">
+                    <div>Symbol</div>
+                    <div>Initial Price</div>
+                    <div>Action</div>
+                  </div>
+                  <div className="space-y-3 pt-3">
                     {parsedUnderlyings.map((underlying, index) => (
                       <div
                         key={index}
-                        className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_80px]"
+                        className="rounded-lg border border-gray-800 bg-gray-950/60 p-3 sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_80px] sm:gap-3 sm:border-0 sm:bg-transparent sm:p-0"
                       >
                         <Field
                           label={`標的 ${index + 1}`}
@@ -1327,7 +1404,7 @@ export default function InputPage() {
                           label="Issue date"
                           type="date"
                           value={fcnForm.issue_date}
-                          onChange={(v) => updateFcnField("issue_date", v)}
+                          onChange={updateFcnIssueDate}
                         />
                         <Field
                           label="Next observation date"
@@ -1348,6 +1425,11 @@ export default function InputPage() {
                         value={fcnForm.coupon_frequency}
                         onChange={(v) => updateFcnField("coupon_frequency", v)}
                       />
+                      <div className="rounded-lg border border-gray-800 bg-black/30 p-3 text-xs leading-5 text-gray-500">
+                        issuer / settlement / coupon frequency 是 optional product
+                        metadata；next observation / next coupon 是 optional monitoring
+                        shortcut；JSON schedule 欄位是 optional technical schedule fields。
+                      </div>
                       <TextareaField
                         label="Observation dates JSON"
                         placeholder='["2026-06-13","2026-07-13"]'
