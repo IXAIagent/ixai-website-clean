@@ -92,6 +92,12 @@ function textValue(value: unknown, fallback = "-") {
   return fallback;
 }
 
+function tenorText(value: unknown) {
+  const months = numberValue(value, NaN);
+  if (!Number.isFinite(months) || months <= 0) return "-";
+  return `${months}M`;
+}
+
 function assetDisplayName(displayName: unknown, symbol: unknown, fallback: string) {
   const symbolText = textValue(symbol, fallback).toUpperCase();
   const displayText = textValue(displayName, "");
@@ -693,13 +699,35 @@ export default function DashboardPage() {
                     </div>
                     <div className="mt-2 grid gap-1 text-sm text-zinc-300">
                       <div>Notional: {money(fcn.notional_amount || fcn.notional)}</div>
-                      <div>Underlyings: {fcnUnderlyingsLabel(fcn)}</div>
-                      <div>Worst-of: {textValue(fcn.worst_symbol || fcn.worst_of)}</div>
+                      <div>Issuer: {textValue(fcn.issuer)}</div>
                       <div>
-                        KI Distance: {percentValue(fcn.distance_to_KI || fcn.distance_to_ki_pct)}
+                        Tenor: {tenorText(fcn.tenor_months)} · Currency:{" "}
+                        {textValue(fcn.settlement_currency)}
+                      </div>
+                      <div>Maturity: {textValue(fcn.maturity_date)}</div>
+                      <div>Days to maturity: {textValue(fcn.days_to_maturity)}</div>
+                      <div>Next coupon: {textValue(fcn.next_coupon_date)}</div>
+                      <div>Next observation: {textValue(fcn.next_observation_date)}</div>
+                      <div>Underlyings: {fcnUnderlyingsLabel(fcn)}</div>
+                      <div>
+                        Worst-of:{" "}
+                        {textValue(fcn.worst_underlying || fcn.worst_symbol || fcn.worst_of)}
                       </div>
                       <div>
-                        KO Distance: {percentValue(fcn.distance_to_KO || fcn.distance_to_ko_pct)}
+                        KI Distance:{" "}
+                        {percentValue(
+                          fcn.distance_to_KI ||
+                            fcn.distance_to_ki ||
+                            fcn.distance_to_ki_pct,
+                        )}
+                      </div>
+                      <div>
+                        KO Distance:{" "}
+                        {percentValue(
+                          fcn.distance_to_KO ||
+                            fcn.distance_to_ko ||
+                            fcn.distance_to_ko_pct,
+                        )}
                       </div>
                       {priceSource(fcn.price_source) && (
                         <div className="text-xs text-zinc-500">

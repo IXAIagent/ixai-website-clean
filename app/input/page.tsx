@@ -30,8 +30,14 @@ type FCN = {
   name?: string | null;
   fcn_code?: string | null;
   code?: string | null;
+  issuer?: string | null;
   notional?: number | string | null;
   notional_amount?: number | string | null;
+  tenor_months?: number | string | null;
+  maturity_date?: string | null;
+  next_observation_date?: string | null;
+  next_coupon_date?: string | null;
+  settlement_currency?: string | null;
   worst_of_symbol?: string | null;
   worst_of?: string | null;
   distance_to_ki_pct?: number | string | null;
@@ -73,8 +79,16 @@ type FCNUnderlying = {
 type FCNForm = {
   name: string;
   fcn_code: string;
+  issuer: string;
   notional_amount: string;
   underlyings: FCNUnderlying[] | string;
+  tenor_months: string;
+  issue_date: string;
+  maturity_date: string;
+  settlement_currency: string;
+  coupon_frequency: string;
+  next_observation_date: string;
+  next_coupon_date: string;
   ki_level: string;
   ko_level: string;
   strike_level: string;
@@ -112,12 +126,20 @@ type EditFormState = {
 const emptyFcnForm: FCNForm = {
   name: "",
   fcn_code: "",
+  issuer: "",
   notional_amount: "",
   underlyings: [
     { symbol: "", initial_price: "" },
     { symbol: "", initial_price: "" },
     { symbol: "", initial_price: "" },
   ],
+  tenor_months: "",
+  issue_date: "",
+  maturity_date: "",
+  settlement_currency: "USD",
+  coupon_frequency: "monthly",
+  next_observation_date: "",
+  next_coupon_date: "",
   ki_level: "",
   ko_level: "",
   strike_level: "",
@@ -212,11 +234,6 @@ function money(v: unknown) {
   return `$${numberValue(v).toLocaleString("en-US", {
     maximumFractionDigits: 2,
   })}`;
-}
-
-function percent(v: unknown) {
-  const n = numberValue(v, NaN);
-  return Number.isFinite(n) ? `${n.toFixed(1)}%` : "-";
 }
 
 function textValue(v: unknown, fallback = "-") {
@@ -526,6 +543,7 @@ export default function InputPage() {
 
     const code = fcnForm.fcn_code.trim().toUpperCase();
     const notionalAmount = Number(fcnForm.notional_amount);
+    const tenorMonths = optionalNumber(fcnForm.tenor_months);
     const kiLevel = optionalNumber(fcnForm.ki_level);
     const koLevel = optionalNumber(fcnForm.ko_level);
     const strikeLevel = optionalNumber(fcnForm.strike_level);
@@ -566,10 +584,18 @@ export default function InputPage() {
         body: JSON.stringify({
           name: fcnForm.name.trim() || code,
           fcn_code: code,
+          issuer: fcnForm.issuer.trim() || null,
           notional_amount: notionalAmount,
           notional: notionalAmount,
           underlyings: validUnderlyings.map((item) => item.symbol).join(","),
           underlying_details: validUnderlyings,
+          tenor_months: tenorMonths,
+          issue_date: fcnForm.issue_date || null,
+          maturity_date: fcnForm.maturity_date || null,
+          settlement_currency: fcnForm.settlement_currency.trim().toUpperCase() || "USD",
+          coupon_frequency: fcnForm.coupon_frequency.trim() || null,
+          next_observation_date: fcnForm.next_observation_date || null,
+          next_coupon_date: fcnForm.next_coupon_date || null,
           initial_price: validUnderlyings[0]?.initial_price ?? null,
           ki_level: kiLevel,
           ko_level: koLevel,
@@ -1134,6 +1160,63 @@ export default function InputPage() {
                     }
                   />
                 </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field
+                    label="Issuer"
+                    placeholder="Bank / Issuer"
+                    value={fcnForm.issuer}
+                    onChange={(v) => updateFcnField("issuer", v)}
+                  />
+                  <Field
+                    label="Tenor months"
+                    inputMode="decimal"
+                    placeholder="6"
+                    value={fcnForm.tenor_months}
+                    onChange={(v) => updateFcnField("tenor_months", v)}
+                  />
+                  <Field
+                    label="Settlement currency"
+                    placeholder="USD"
+                    value={fcnForm.settlement_currency}
+                    onChange={(v) =>
+                      updateFcnField("settlement_currency", v.toUpperCase())
+                    }
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field
+                    label="Issue date"
+                    type="date"
+                    value={fcnForm.issue_date}
+                    onChange={(v) => updateFcnField("issue_date", v)}
+                  />
+                  <Field
+                    label="Maturity date"
+                    type="date"
+                    value={fcnForm.maturity_date}
+                    onChange={(v) => updateFcnField("maturity_date", v)}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field
+                    label="Coupon frequency"
+                    placeholder="monthly"
+                    value={fcnForm.coupon_frequency}
+                    onChange={(v) => updateFcnField("coupon_frequency", v)}
+                  />
+                  <Field
+                    label="Next observation date"
+                    type="date"
+                    value={fcnForm.next_observation_date}
+                    onChange={(v) => updateFcnField("next_observation_date", v)}
+                  />
+                  <Field
+                    label="Next coupon date"
+                    type="date"
+                    value={fcnForm.next_coupon_date}
+                    onChange={(v) => updateFcnField("next_coupon_date", v)}
+                  />
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field
                     label="名目本金"
@@ -1445,8 +1528,8 @@ export default function InputPage() {
                       <AssetRow
                         key={id || `${code}-${index}`}
                         title={code}
-                        detail={`本金：${money(f.notional_amount ?? f.notional)} | Worst-of：${textValue(f.worst_of_symbol || f.worst_of)}`}
-                        subDetail={`KI 距離：${percent(f.distance_to_ki_pct)} | KO 距離：${percent(f.distance_to_ko_pct)} | 風險：${textValue(f.risk_level)}`}
+                        detail={`本金：${money(f.notional_amount ?? f.notional)} | Issuer：${textValue(f.issuer)} | Tenor：${textValue(f.tenor_months, "-")}M`}
+                        subDetail={`Maturity：${textValue(f.maturity_date)} | Next obs：${textValue(f.next_observation_date)} | Next coupon：${textValue(f.next_coupon_date)} | Worst-of：${textValue(f.worst_of_symbol || f.worst_of)} | 風險：${textValue(f.risk_level)}`}
                         deleting={deletingId === rowKey}
                         confirmingDelete={confirmingDeleteId === rowKey}
                         disabled={!id}
@@ -1527,12 +1610,14 @@ function Field({
   onChange,
   placeholder,
   inputMode,
+  type = "text",
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   inputMode?: "text" | "decimal";
+  type?: "text" | "date";
 }) {
   return (
     <label className="block text-sm text-gray-400">
@@ -1541,6 +1626,7 @@ function Field({
         className={`${inputClass()} mt-2`}
         inputMode={inputMode}
         placeholder={placeholder}
+        type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
