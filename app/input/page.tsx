@@ -89,6 +89,8 @@ type FCNForm = {
   coupon_frequency: string;
   next_observation_date: string;
   next_coupon_date: string;
+  observation_dates_json: string;
+  coupon_dates_json: string;
   ki_level: string;
   ko_level: string;
   strike_level: string;
@@ -140,6 +142,8 @@ const emptyFcnForm: FCNForm = {
   coupon_frequency: "monthly",
   next_observation_date: "",
   next_coupon_date: "",
+  observation_dates_json: "",
+  coupon_dates_json: "",
   ki_level: "",
   ko_level: "",
   strike_level: "",
@@ -304,6 +308,7 @@ export default function InputPage() {
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [editingPosition, setEditingPosition] = useState<EditFormState | null>(null);
   const [savingEditId, setSavingEditId] = useState<string | null>(null);
+  const [showFcnAdvanced, setShowFcnAdvanced] = useState(false);
   const parsedUnderlyings = parseFcnUnderlyings(fcnForm.underlyings);
 
   function returnToDashboard() {
@@ -596,6 +601,8 @@ export default function InputPage() {
           coupon_frequency: fcnForm.coupon_frequency.trim() || null,
           next_observation_date: fcnForm.next_observation_date || null,
           next_coupon_date: fcnForm.next_coupon_date || null,
+          observation_dates_json: fcnForm.observation_dates_json.trim() || null,
+          coupon_dates_json: fcnForm.coupon_dates_json.trim() || null,
           initial_price: validUnderlyings[0]?.initial_price ?? null,
           ki_level: kiLevel,
           ko_level: koLevel,
@@ -1144,6 +1151,14 @@ export default function InputPage() {
 
             {activeAsset === "fcn" && (
               <form className="space-y-5" onSubmit={addFcn}>
+                <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4">
+                  <div className="text-sm font-semibold text-emerald-100">
+                    Quick Add
+                  </div>
+                  <div className="mt-1 text-xs leading-5 text-emerald-100/70">
+                    先輸入 FCN 監控需要的核心條件；進階條款可展開後補充。
+                  </div>
+                </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field
                     label="FCN 名稱"
@@ -1162,63 +1177,6 @@ export default function InputPage() {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <Field
-                    label="Issuer"
-                    placeholder="Bank / Issuer"
-                    value={fcnForm.issuer}
-                    onChange={(v) => updateFcnField("issuer", v)}
-                  />
-                  <Field
-                    label="Tenor months"
-                    inputMode="decimal"
-                    placeholder="6"
-                    value={fcnForm.tenor_months}
-                    onChange={(v) => updateFcnField("tenor_months", v)}
-                  />
-                  <Field
-                    label="Settlement currency"
-                    placeholder="USD"
-                    value={fcnForm.settlement_currency}
-                    onChange={(v) =>
-                      updateFcnField("settlement_currency", v.toUpperCase())
-                    }
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field
-                    label="Issue date"
-                    type="date"
-                    value={fcnForm.issue_date}
-                    onChange={(v) => updateFcnField("issue_date", v)}
-                  />
-                  <Field
-                    label="Maturity date"
-                    type="date"
-                    value={fcnForm.maturity_date}
-                    onChange={(v) => updateFcnField("maturity_date", v)}
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <Field
-                    label="Coupon frequency"
-                    placeholder="monthly"
-                    value={fcnForm.coupon_frequency}
-                    onChange={(v) => updateFcnField("coupon_frequency", v)}
-                  />
-                  <Field
-                    label="Next observation date"
-                    type="date"
-                    value={fcnForm.next_observation_date}
-                    onChange={(v) => updateFcnField("next_observation_date", v)}
-                  />
-                  <Field
-                    label="Next coupon date"
-                    type="date"
-                    value={fcnForm.next_coupon_date}
-                    onChange={(v) => updateFcnField("next_coupon_date", v)}
-                  />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field
                     label="名目本金"
                     inputMode="decimal"
                     placeholder="30000"
@@ -1231,6 +1189,35 @@ export default function InputPage() {
                     placeholder="0"
                     value={fcnForm.coupon_rate}
                     onChange={(v) => updateFcnField("coupon_rate", v)}
+                  />
+                  <Field
+                    label="Maturity date"
+                    type="date"
+                    value={fcnForm.maturity_date}
+                    onChange={(v) => updateFcnField("maturity_date", v)}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field
+                    label="KI level"
+                    inputMode="decimal"
+                    placeholder="65"
+                    value={fcnForm.ki_level}
+                    onChange={(v) => updateFcnField("ki_level", v)}
+                  />
+                  <Field
+                    label="KO level"
+                    inputMode="decimal"
+                    placeholder="100"
+                    value={fcnForm.ko_level}
+                    onChange={(v) => updateFcnField("ko_level", v)}
+                  />
+                  <Field
+                    label="Strike level"
+                    inputMode="decimal"
+                    placeholder="95"
+                    value={fcnForm.strike_level}
+                    onChange={(v) => updateFcnField("strike_level", v)}
                   />
                 </div>
 
@@ -1291,28 +1278,90 @@ export default function InputPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <Field
-                    label="KI level"
-                    inputMode="decimal"
-                    placeholder="65"
-                    value={fcnForm.ki_level}
-                    onChange={(v) => updateFcnField("ki_level", v)}
-                  />
-                  <Field
-                    label="KO level"
-                    inputMode="decimal"
-                    placeholder="100"
-                    value={fcnForm.ko_level}
-                    onChange={(v) => updateFcnField("ko_level", v)}
-                  />
-                  <Field
-                    label="Strike level"
-                    inputMode="decimal"
-                    placeholder="95"
-                    value={fcnForm.strike_level}
-                    onChange={(v) => updateFcnField("strike_level", v)}
-                  />
+                <div className="rounded-xl border border-gray-800 bg-black/40 p-4">
+                  <button
+                    className="flex w-full items-center justify-between gap-4 text-left"
+                    onClick={() => setShowFcnAdvanced((current) => !current)}
+                    type="button"
+                  >
+                    <span>
+                      <span className="block text-sm font-semibold text-white">
+                        Advanced terms
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-gray-500">
+                        Issuer、tenor、settlement、observation 與 coupon schedule。
+                      </span>
+                    </span>
+                    <span className="rounded-full border border-gray-700 px-3 py-1 text-xs font-semibold text-gray-300">
+                      {showFcnAdvanced ? "Hide" : "Show"}
+                    </span>
+                  </button>
+
+                  {showFcnAdvanced && (
+                    <div className="mt-4 space-y-4 border-t border-gray-800 pt-4">
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        <Field
+                          label="Issuer"
+                          placeholder="Bank / Issuer"
+                          value={fcnForm.issuer}
+                          onChange={(v) => updateFcnField("issuer", v)}
+                        />
+                        <Field
+                          label="Tenor months"
+                          inputMode="decimal"
+                          placeholder="6"
+                          value={fcnForm.tenor_months}
+                          onChange={(v) => updateFcnField("tenor_months", v)}
+                        />
+                        <Field
+                          label="Settlement currency"
+                          placeholder="USD"
+                          value={fcnForm.settlement_currency}
+                          onChange={(v) =>
+                            updateFcnField("settlement_currency", v.toUpperCase())
+                          }
+                        />
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        <Field
+                          label="Issue date"
+                          type="date"
+                          value={fcnForm.issue_date}
+                          onChange={(v) => updateFcnField("issue_date", v)}
+                        />
+                        <Field
+                          label="Next observation date"
+                          type="date"
+                          value={fcnForm.next_observation_date}
+                          onChange={(v) => updateFcnField("next_observation_date", v)}
+                        />
+                        <Field
+                          label="Next coupon date"
+                          type="date"
+                          value={fcnForm.next_coupon_date}
+                          onChange={(v) => updateFcnField("next_coupon_date", v)}
+                        />
+                      </div>
+                      <Field
+                        label="Coupon frequency"
+                        placeholder="monthly"
+                        value={fcnForm.coupon_frequency}
+                        onChange={(v) => updateFcnField("coupon_frequency", v)}
+                      />
+                      <TextareaField
+                        label="Observation dates JSON"
+                        placeholder='["2026-06-13","2026-07-13"]'
+                        value={fcnForm.observation_dates_json}
+                        onChange={(v) => updateFcnField("observation_dates_json", v)}
+                      />
+                      <TextareaField
+                        label="Coupon dates JSON"
+                        placeholder='["2026-06-15","2026-07-15"]'
+                        value={fcnForm.coupon_dates_json}
+                        onChange={(v) => updateFcnField("coupon_dates_json", v)}
+                      />
+                    </div>
+                  )}
                 </div>
                 <SubmitButton
                   loading={savingAsset === "fcn"}
@@ -1627,6 +1676,30 @@ function Field({
         inputMode={inputMode}
         placeholder={placeholder}
         type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
+  );
+}
+
+function TextareaField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="block text-sm text-gray-400">
+      {label}
+      <textarea
+        className={`${inputClass()} mt-2 min-h-24 resize-y font-mono text-sm`}
+        placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />

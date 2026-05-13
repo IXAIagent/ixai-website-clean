@@ -335,6 +335,7 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedFcnKey, setExpandedFcnKey] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async (showLoading = false) => {
     const hasExistingData = Boolean(dataRef.current);
@@ -677,94 +678,134 @@ export default function DashboardPage() {
             </div>
 
             <div className={positionCardClass()}>
-              <h3 className="font-semibold text-white">FCN</h3>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold text-white">FCN</h3>
+                <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-xs text-zinc-400">
+                  {fcns.length}
+                </span>
+              </div>
               <div className="mt-4 grid gap-3">
                 {fcns.length === 0 && (
                   <div className="text-sm text-zinc-400">尚無 FCN 部位</div>
                 )}
-                {fcns.map((fcn, index) => (
-                  <div
-                    className="rounded-lg border border-zinc-800 bg-black/30 p-3"
-                    key={`${textValue(fcn.id || fcn.fcn_code || fcn.name, "fcn")}-${index}`}
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="font-semibold text-white">
-                        {textValue(fcn.name || fcn.fcn_code || fcn.code, "FCN")}
-                      </div>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${riskBadgeClass(fcn.risk_level)}`}
+                {fcns.map((fcn, index) => {
+                  const key = positionKey(fcn) || `fcn-${index}`;
+                  const expanded = expandedFcnKey === key;
+                  const worstOf = textValue(
+                    fcn.worst_underlying || fcn.worst_symbol || fcn.worst_of,
+                  );
+                  const kiDistance = percentValue(
+                    fcn.distance_to_KI ||
+                      fcn.distance_to_ki ||
+                      fcn.distance_to_ki_pct,
+                  );
+                  const koDistance = percentValue(
+                    fcn.distance_to_KO ||
+                      fcn.distance_to_ko ||
+                      fcn.distance_to_ko_pct,
+                  );
+
+                  return (
+                    <div
+                      className={`rounded-lg border bg-black/30 transition ${
+                        expanded ? "border-emerald-400/60" : "border-zinc-800"
+                      }`}
+                      key={key}
+                    >
+                      <button
+                        className="w-full p-3 text-left"
+                        onClick={() => setExpandedFcnKey(expanded ? null : key)}
+                        type="button"
                       >
-                        {textValue(fcn.risk_level, "unknown")}
-                      </span>
-                    </div>
-                    <div className="mt-2 grid gap-1 text-sm text-zinc-300">
-                      <div>Notional: {money(fcn.notional_amount || fcn.notional)}</div>
-                      <div>Issuer: {textValue(fcn.issuer)}</div>
-                      <div>
-                        Tenor: {tenorText(fcn.tenor_months)} · Currency:{" "}
-                        {textValue(fcn.settlement_currency)}
-                      </div>
-                      <div>Maturity: {textValue(fcn.maturity_date)}</div>
-                      <div>Days to maturity: {textValue(fcn.days_to_maturity)}</div>
-                      <div>Next coupon: {textValue(fcn.next_coupon_date)}</div>
-                      <div>Next observation: {textValue(fcn.next_observation_date)}</div>
-                      <div>Underlyings: {fcnUnderlyingsLabel(fcn)}</div>
-                      <div>
-                        Worst-of:{" "}
-                        {textValue(fcn.worst_underlying || fcn.worst_symbol || fcn.worst_of)}
-                      </div>
-                      <div>
-                        KI Distance:{" "}
-                        {percentValue(
-                          fcn.distance_to_KI ||
-                            fcn.distance_to_ki ||
-                            fcn.distance_to_ki_pct,
-                        )}
-                      </div>
-                      <div>
-                        KO Distance:{" "}
-                        {percentValue(
-                          fcn.distance_to_KO ||
-                            fcn.distance_to_ko ||
-                            fcn.distance_to_ko_pct,
-                        )}
-                      </div>
-                      {priceSource(fcn.price_source) && (
-                        <div className="text-xs text-zinc-500">
-                          {priceSource(fcn.price_source)}
-                        </div>
-                      )}
-                      {fcnUnderlyingList(fcn).length > 0 && (
-                        <div className="mt-2 grid gap-2 border-t border-zinc-800 pt-2">
-                          {fcnUnderlyingList(fcn).map((underlying, underlyingIndex) => (
-                            <div
-                              className="rounded-md bg-zinc-950 p-2 text-xs text-zinc-300"
-                              key={`${textValue(underlying.symbol, "underlying")}-${underlyingIndex}`}
-                            >
-                              <div className="font-semibold text-white">
-                                {textValue(underlying.symbol, "UNDERLYING")}
-                              </div>
-                              <div>Current: {priceMoney(underlying.current_price)}</div>
-                              <div>
-                                Performance:{" "}
-                                {percentValue(
-                                  underlying.performance ||
-                                    underlying.distance_to_KI ||
-                                    underlying.distance_to_ki_pct,
-                                )}
-                              </div>
-                              {priceSource(underlying.price_source) && (
-                                <div className="text-zinc-500">
-                                  {priceSource(underlying.price_source)}
-                                </div>
-                              )}
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-white">
+                              {textValue(fcn.fcn_code || fcn.name || fcn.code, "FCN")}
                             </div>
-                          ))}
+                            <div className="mt-1 text-xs text-zinc-500">
+                              {money(fcn.notional_amount || fcn.notional)} · Worst-of {worstOf}
+                            </div>
+                          </div>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${riskBadgeClass(fcn.risk_level)}`}
+                          >
+                            {textValue(fcn.risk_level, "unknown")}
+                          </span>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-300">
+                          <div>
+                            <span className="text-zinc-500">KI</span> {kiDistance}
+                          </div>
+                          <div>
+                            <span className="text-zinc-500">KO</span> {koDistance}
+                          </div>
+                          <div>
+                            <span className="text-zinc-500">Days</span>{" "}
+                            {textValue(fcn.days_to_maturity)}
+                          </div>
+                          <div>
+                            <span className="text-zinc-500">Coupon</span>{" "}
+                            {textValue(fcn.next_coupon_date)}
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs font-semibold text-emerald-300">
+                          {expanded ? "Hide details" : "View details"}
+                        </div>
+                      </button>
+
+                      {expanded && (
+                        <div className="border-t border-zinc-800 p-3">
+                          <div className="grid gap-1 text-sm text-zinc-300">
+                            <div>Issuer: {textValue(fcn.issuer)}</div>
+                            <div>
+                              Tenor: {tenorText(fcn.tenor_months)} · Currency:{" "}
+                              {textValue(fcn.settlement_currency)}
+                            </div>
+                            <div>Maturity: {textValue(fcn.maturity_date)}</div>
+                            <div>
+                              Next observation: {textValue(fcn.next_observation_date)}
+                            </div>
+                            <div>Underlyings: {fcnUnderlyingsLabel(fcn)}</div>
+                            {priceSource(fcn.price_source) && (
+                              <div className="text-xs text-zinc-500">
+                                {priceSource(fcn.price_source)}
+                              </div>
+                            )}
+                          </div>
+
+                          {fcnUnderlyingList(fcn).length > 0 && (
+                            <div className="mt-3 grid gap-2">
+                              {fcnUnderlyingList(fcn).map((underlying, underlyingIndex) => (
+                                <div
+                                  className="rounded-md bg-zinc-950 p-2 text-xs text-zinc-300"
+                                  key={`${textValue(underlying.symbol, "underlying")}-${underlyingIndex}`}
+                                >
+                                  <div className="font-semibold text-white">
+                                    {textValue(underlying.symbol, "UNDERLYING")}
+                                  </div>
+                                  <div>Current: {priceMoney(underlying.current_price)}</div>
+                                  <div>
+                                    Performance:{" "}
+                                    {percentValue(
+                                      underlying.performance ||
+                                        underlying.distance_to_KI ||
+                                        underlying.distance_to_ki_pct,
+                                    )}
+                                  </div>
+                                  {priceSource(underlying.price_source) && (
+                                    <div className="text-zinc-500">
+                                      {priceSource(underlying.price_source)}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
