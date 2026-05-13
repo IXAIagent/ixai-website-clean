@@ -109,6 +109,7 @@ export type StockPositionResponse = {
   current_price?: number | string | null;
   current_value?: number | string | null;
   price_source?: string | null;
+  is_stale?: boolean | null;
 };
 
 export type FCNPositionResponse = {
@@ -144,6 +145,7 @@ export type FCNPositionResponse = {
   distance_to_ki_pct?: number | string | null;
   distance_to_ko_pct?: number | string | null;
   price_source?: string | null;
+  is_stale?: boolean | null;
 };
 
 export type CryptoPositionResponse = {
@@ -157,6 +159,7 @@ export type CryptoPositionResponse = {
   current_value?: number | string | null;
   leverage?: number | string | null;
   price_source?: string | null;
+  is_stale?: boolean | null;
 };
 
 export type CashPositionResponse = {

@@ -44,6 +44,7 @@ type FCNUnderlyingResult = {
   distance_to_ki_pct?: number | string | null;
   distance_to_KI?: number | string | null;
   price_source?: string | null;
+  is_stale?: boolean | null;
 };
 
 type FCNDetail = FCNPositionResponse & {
@@ -190,6 +191,42 @@ function positionCardClass() {
 function priceSource(value: unknown) {
   const source = textValue(value, "");
   return source ? `source: ${source}` : "";
+}
+
+function priceBadgeLabel(source: unknown, isStale: unknown, isInputEstimate = false) {
+  if (isStale === true) return "STALE";
+  if (isInputEstimate) return "INPUT";
+
+  const normalized = textValue(source, "").toLowerCase();
+  if (normalized.includes("yahoo") || normalized.includes("binance")) return "LIVE";
+  if (normalized.includes("stored") || normalized.includes("manual")) return "STORED";
+  if (normalized.includes("stale")) return "STALE";
+  return "UNKNOWN";
+}
+
+function priceBadgeClass(label: string) {
+  if (label === "LIVE") return "border-emerald-400/50 bg-emerald-400/10 text-emerald-300";
+  if (label === "STALE") return "border-yellow-400/50 bg-yellow-400/10 text-yellow-200";
+  return "border-zinc-700 bg-zinc-800 text-zinc-300";
+}
+
+function PriceSourceBadge({
+  source,
+  isStale,
+  inputEstimate = false,
+}: {
+  source: unknown;
+  isStale?: unknown;
+  inputEstimate?: boolean;
+}) {
+  const label = priceBadgeLabel(source, isStale, inputEstimate);
+  return (
+    <span
+      className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${priceBadgeClass(label)}`}
+    >
+      {label}
+    </span>
+  );
 }
 
 function positionKey(item: FCNDetail) {
@@ -774,8 +811,14 @@ export default function DashboardPage() {
                                     underlying.distance_to_ki_pct,
                                 )}
                               </div>
-                              <div className="text-zinc-500">
-                                {textValue(underlying.price_source, "-")}
+                      <div className="text-zinc-500">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span>{textValue(underlying.price_source, "-")}</span>
+                                  <PriceSourceBadge
+                                    isStale={underlying.is_stale}
+                                    source={underlying.price_source}
+                                  />
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -812,8 +855,12 @@ export default function DashboardPage() {
                       <div>Current Price: {priceMoney(stock.current_price)}</div>
                       <div>Current Value: {money(stock.current_value)}</div>
                       {priceSource(stock.price_source) && (
-                        <div className="text-xs text-zinc-500">
-                          {priceSource(stock.price_source)}
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                          <span>{priceSource(stock.price_source)}</span>
+                          <PriceSourceBadge
+                            isStale={stock.is_stale}
+                            source={stock.price_source}
+                          />
                         </div>
                       )}
                     </div>
@@ -875,8 +922,13 @@ export default function DashboardPage() {
                       <div>Leverage: {textValue(item.leverage, "-")}</div>
                       <div>Current Value: {cryptoCurrentValue(item)}</div>
                       {cryptoPriceSource(item) && (
-                        <div className="text-xs text-zinc-500">
-                          {cryptoPriceSource(item)}
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                          <span>{cryptoPriceSource(item)}</span>
+                          <PriceSourceBadge
+                            inputEstimate={cryptoPriceSource(item).includes("input estimate")}
+                            isStale={item.is_stale}
+                            source={item.price_source}
+                          />
                         </div>
                       )}
                     </div>
