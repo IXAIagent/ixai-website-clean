@@ -155,6 +155,21 @@ function impactBadgeClass(impact: unknown) {
   return "border-zinc-700 bg-zinc-800 text-zinc-300";
 }
 
+function attentionBadgeClass(level: unknown) {
+  const normalized = String(level || "LOW").toUpperCase();
+  if (normalized === "CRITICAL") return "animate-pulse border-red-400/70 bg-red-500/20 text-red-200";
+  if (normalized === "HIGH") return "border-red-400/50 bg-red-400/10 text-red-300";
+  if (normalized === "MEDIUM") return "border-yellow-400/50 bg-yellow-400/10 text-yellow-200";
+  return "border-zinc-700 bg-zinc-800 text-zinc-300";
+}
+
+function riskDirectionClass(direction: unknown) {
+  const normalized = String(direction || "NEUTRAL").toUpperCase();
+  if (normalized === "INCREASE") return "text-red-300";
+  if (normalized === "DECREASE") return "text-emerald-300";
+  return "text-zinc-300";
+}
+
 function allocationLabel(item: AllocationItem) {
   const labels: Record<string, string> = {
     stock: "Stocks",
@@ -838,6 +853,11 @@ export default function DashboardPage() {
                         FCN
                       </span>
                     )}
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${attentionBadgeClass(article.attention_level)}`}
+                    >
+                      {textValue(article.attention_level, "LOW")}
+                    </span>
                   </div>
                   <h3 className="mt-3 text-sm font-semibold leading-6 text-white">
                     {textValue(article.title, "Untitled news")}
@@ -853,6 +873,22 @@ export default function DashboardPage() {
                         IXAI Insight
                       </div>
                       <div>{article.narrative}</div>
+                    </div>
+                  )}
+                  {(article.portfolio_exposure || article.risk_direction || article.portfolio_impact_summary) && (
+                    <div className="mt-3 rounded-lg border border-zinc-800 bg-black/30 p-3 text-xs leading-5 text-zinc-300">
+                      <div className="font-semibold text-zinc-100">Portfolio Impact</div>
+                      <div className="mt-1 flex flex-wrap gap-3">
+                        <span>Exposure: {textValue(article.portfolio_exposure, "LOW")}</span>
+                        <span className={riskDirectionClass(article.risk_direction)}>
+                          Risk Direction: {textValue(article.risk_direction, "NEUTRAL")}
+                        </span>
+                      </div>
+                      {article.portfolio_impact_summary && (
+                        <div className="mt-2 text-zinc-400">
+                          {article.portfolio_impact_summary}
+                        </div>
+                      )}
                     </div>
                   )}
                   {article.is_fcn_related && listValue(article.related_fcn_codes).length > 0 && (

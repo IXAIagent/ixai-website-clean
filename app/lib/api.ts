@@ -285,6 +285,10 @@ export type NewsArticle = {
   is_fcn_related?: boolean | null;
   related_fcn_codes?: string[] | null;
   narrative?: string | null;
+  portfolio_exposure?: string | null;
+  risk_direction?: string | null;
+  attention_level?: string | null;
+  portfolio_impact_summary?: string | null;
 };
 
 export type PortfolioNewsResponse = {
