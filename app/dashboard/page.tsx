@@ -247,6 +247,163 @@ function conciseIntelligenceInsight(article: NewsArticle) {
   return `${text.slice(0, 90).trimEnd()}...`;
 }
 
+function whyItMatters(article: NewsArticle) {
+  const text = textValue(
+    article.ai_summary ||
+      article.narrative ||
+      article.portfolio_impact_summary ||
+      article.impact_reason,
+    "",
+  );
+  if (!text) return "";
+  const limit = /[^\x00-\x7F]/.test(text) ? 70 : 120;
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit).trimEnd()}...`;
+}
+
+function articleAgeMinutes(article: NewsArticle) {
+  const publishedAt = textValue(article.published_at, "");
+  if (!publishedAt) return null;
+  const date = new Date(publishedAt);
+  if (Number.isNaN(date.getTime())) return null;
+  return (Date.now() - date.getTime()) / 60000;
+}
+
+function articleDecayClass(article: NewsArticle) {
+  const age = articleAgeMinutes(article);
+  if (age === null) return "opacity-100";
+  if (age <= 30) return "opacity-100";
+  if (age <= 120) return "opacity-[0.92]";
+  if (age > 720) return "opacity-60";
+  return "opacity-80";
+}
+
+function articleIndicatorClass(article: NewsArticle) {
+  const age = articleAgeMinutes(article);
+  if (age !== null && age <= 30) return "bg-emerald-400/70";
+  return "bg-zinc-800";
+}
+
+function articleMetadataClass(article: NewsArticle) {
+  const age = articleAgeMinutes(article);
+  if (age !== null && age > 720) return "text-zinc-600";
+  return "text-zinc-500";
+}
+
+function actionType(article: NewsArticle) {
+  const title = textValue(article.title, "").toLowerCase();
+  const impact = textValue(article.impact, "").toLowerCase();
+  const symbol = textValue(article.symbol, "").toLowerCase();
+  if (
+    impact === "negative" ||
+    ["lawsuit", "downgrade", "warning", "weak", "miss"].some((term) =>
+      title.includes(term),
+    )
+  ) {
+    return "RISK";
+  }
+  if (["earnings", "guidance", "revenue"].some((term) => title.includes(term))) {
+    return "EVENT";
+  }
+  if (article.is_fcn_related) return "FCN";
+  if (title.includes("volatility") || symbol.includes("btc") || symbol.includes("eth")) {
+    return "VOL";
+  }
+  return "WATCH";
+}
+
+function actionTypeClass(type: string) {
+  if (type === "RISK") return "text-red-300";
+  if (type === "EVENT") return "text-yellow-300";
+  if (type === "FCN") return "text-zinc-300";
+  if (type === "VOL") return "text-yellow-400";
+  return "text-zinc-500";
+}
+
+function marketPulseValueClass(value: string) {
+  if (value.startsWith("+")) return "text-emerald-300";
+  if (value.startsWith("-")) return "text-red-300";
+  if (value.includes("HIGH")) return "text-yellow-300";
+  if (value.includes("RISK-ON") || value.includes("STABLE")) return "text-emerald-300";
+  return "text-zinc-300";
+}
+
+function positionMarketValue(position: StockPositionResponse | CryptoPositionResponse) {
+  const directValue = numberValue(position.current_value, NaN);
+  if (Number.isFinite(directValue) && directValue > 0) return directValue;
+  const quantity = numberValue(position.quantity, NaN);
+  const price = numberValue(position.current_price, NaN);
+  const avgPrice = numberValue(position.avg_price, NaN);
+  if (Number.isFinite(quantity) && Number.isFinite(price) && price > 0) {
+    return quantity * price;
+  }
+  if (Number.isFinite(quantity) && Number.isFinite(avgPrice) && avgPrice > 0) {
+    return quantity * avgPrice;
+  }
+  return 0;
+}
+
+function buildConcentrationRadar(
+  stocks: StockPositionResponse[],
+  fcns: FCNDetail[],
+  crypto: CryptoPositionResponse[],
+  totalValue: unknown,
+) {
+  const total = numberValue(totalValue, 0);
+  const aiChipSymbols = new Set([
+    "NVDA",
+    "AMD",
+    "TSM",
+    "TSM.US",
+    "2330.TW",
+    "AVGO",
+    "MRVL",
+    "MDB",
+    "MSFT",
+    "AAPL",
+    "PLTR",
+    "TSLA",
+  ]);
+  let aiChipValue = 0;
+  let cryptoValue = 0;
+  let fcnLinkedValue = 0;
+  let topName = "-";
+  let topValue = 0;
+
+  for (const stock of stocks) {
+    const symbol = textValue(stock.symbol, "").toUpperCase();
+    const value = positionMarketValue(stock);
+    if (aiChipSymbols.has(symbol)) aiChipValue += value;
+    if (value > topValue) {
+      topValue = value;
+      topName = symbol || "STOCK";
+    }
+  }
+
+  for (const item of crypto) {
+    const symbol = textValue(item.symbol, "").toUpperCase();
+    const value = positionMarketValue(item);
+    cryptoValue += value;
+    if (value > topValue) {
+      topValue = value;
+      topName = symbol || "CRYPTO";
+    }
+  }
+
+  for (const fcn of fcns) {
+    fcnLinkedValue += numberValue(fcn.notional_amount || fcn.notional, 0);
+  }
+
+  const pct = (value: number) => (total > 0 ? `${((value / total) * 100).toFixed(0)}%` : "0%");
+
+  return {
+    aiChip: pct(aiChipValue),
+    fcnLinked: pct(fcnLinkedValue),
+    crypto: pct(cryptoValue),
+    topSingle: `${topName} ${pct(topValue)}`,
+  };
+}
+
 function allocationLabel(item: AllocationItem) {
   const labels: Record<string, string> = {
     stock: "Stocks",
@@ -720,6 +877,18 @@ export default function DashboardPage() {
     crypto,
     riskLevel,
   );
+  const marketPulse = [
+    { label: "SPX", value: "+0.4%" },
+    { label: "NASDAQ", value: "+1.1%" },
+    { label: "BTC", value: "-2.4%" },
+    { label: "ETH", value: "-1.8%" },
+    { label: "VIX", value: "18.2" },
+    { label: "USD/TWD", value: "32.38" },
+    { label: "AI SENTIMENT", value: "RISK-ON" },
+    { label: "FCN TEMP", value: "STABLE" },
+    { label: "CRYPTO VOL", value: "HIGH" },
+  ];
+  const concentrationRadar = buildConcentrationRadar(stocks, fcns, crypto, totalValue);
 
   return (
     <main className="min-h-screen bg-black px-5 py-8 text-white">
@@ -811,6 +980,18 @@ export default function DashboardPage() {
             </div>
           </section>
         )}
+
+        <section className="overflow-hidden border-y border-zinc-800 bg-black/20 py-2 font-mono text-[11px] uppercase tracking-wide">
+          <div className="flex gap-5 overflow-x-auto whitespace-nowrap">
+            <span className="shrink-0 text-zinc-500">Market Pulse</span>
+            {marketPulse.map((item) => (
+              <span className="shrink-0" key={item.label}>
+                <span className="text-zinc-500">{item.label}</span>{" "}
+                <span className={marketPulseValueClass(item.value)}>{item.value}</span>
+              </span>
+            ))}
+          </div>
+        </section>
 
         <section className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
@@ -930,16 +1111,22 @@ export default function DashboardPage() {
 
           {topPriorityAlerts.length > 0 && (
             <div className="mt-3 divide-y divide-zinc-800 overflow-hidden border border-zinc-800">
-              {topPriorityAlerts.map((alert, index) => (
+              {topPriorityAlerts.map((alert, index) => {
+                const type = actionType(alert);
+
+                return (
                 <article
                   className={`border-l-4 bg-black/20 px-3 py-2 ${priorityRowBorder(alert.priority_level)}`}
                   key={`${textValue(alert.link || alert.title, "priority")}-${index}`}
                 >
-                  <div className="grid gap-1.5 md:grid-cols-[auto_auto_minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] md:items-center">
+                  <div className="grid gap-1.5 md:grid-cols-[auto_auto_auto_minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] md:items-center">
                     <span
-                        className={`w-fit rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${priorityBadgeClass(alert.priority_level)}`}
+                      className={`w-fit rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${priorityBadgeClass(alert.priority_level)}`}
                     >
                       {textValue(alert.priority_level, "LOW")}
+                    </span>
+                    <span className={`w-fit font-mono text-[11px] font-semibold ${actionTypeClass(type)}`}>
+                      [{type}]
                     </span>
                     <span className="w-fit font-mono text-xs font-semibold text-emerald-300">
                       {textValue(alert.symbol, "NEWS")}
@@ -955,7 +1142,7 @@ export default function DashboardPage() {
                     </span>
                     {alert.link && (
                       <a
-                      className="text-xs font-semibold text-zinc-400 transition hover:text-emerald-300"
+                        className="text-xs font-semibold text-zinc-400 transition hover:text-emerald-300"
                         href={alert.link}
                         rel="noopener noreferrer"
                         target="_blank"
@@ -965,7 +1152,8 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -1024,12 +1212,17 @@ export default function DashboardPage() {
             <div className="mt-3 divide-y divide-zinc-800 overflow-hidden border border-zinc-800">
               {newsArticles.map((article: NewsArticle, index) => {
                 const insight = conciseIntelligenceInsight(article);
+                const why = whyItMatters(article);
+                const metadataClass = articleMetadataClass(article);
 
                 return (
                 <article
-                  className="bg-black/20 px-3 py-2.5 transition hover:bg-zinc-900/50"
+                  className={`relative bg-black/20 px-3 py-2.5 pl-5 transition hover:bg-zinc-900/50 ${articleDecayClass(article)}`}
                   key={`${textValue(article.link || article.title, "news")}-${index}`}
                 >
+                  <span
+                    className={`absolute left-0 top-0 h-full w-1 ${articleIndicatorClass(article)}`}
+                  />
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                     <span className="rounded border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-emerald-300">
                       {textValue(article.symbol, "NEWS")}
@@ -1058,8 +1251,14 @@ export default function DashboardPage() {
                       {insight}
                     </p>
                   )}
+                  {why && (
+                    <p className="mt-1 max-h-10 overflow-hidden font-mono text-[11px] leading-5 text-zinc-500">
+                      <span className="text-zinc-600">WHY IT MATTERS:</span>{" "}
+                      {why}
+                    </p>
+                  )}
 
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
+                  <div className={`mt-1.5 flex flex-wrap items-center gap-2 text-[11px] ${metadataClass}`}>
                     <span>{textValue(article.publisher, "Unknown publisher")}</span>
                     <span>·</span>
                     <span>{formatDateTime(article.published_at)}</span>
@@ -1107,6 +1306,30 @@ export default function DashboardPage() {
               )}
             </div>
           )}
+        </section>
+
+        <section className="border-y border-zinc-800 bg-black/20 py-3 font-mono text-xs">
+          <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">
+            Portfolio Concentration
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <span className="text-zinc-500">AI/CHIP:</span>{" "}
+              <span className="text-zinc-200">{concentrationRadar.aiChip}</span>
+            </div>
+            <div>
+              <span className="text-zinc-500">FCN-LINKED:</span>{" "}
+              <span className="text-zinc-200">{concentrationRadar.fcnLinked}</span>
+            </div>
+            <div>
+              <span className="text-zinc-500">CRYPTO:</span>{" "}
+              <span className="text-zinc-200">{concentrationRadar.crypto}</span>
+            </div>
+            <div>
+              <span className="text-zinc-500">TOP SINGLE:</span>{" "}
+              <span className="text-zinc-200">{concentrationRadar.topSingle}</span>
+            </div>
+          </div>
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
