@@ -278,6 +278,12 @@ export type NewsArticle = {
   published_at?: string | null;
   related_tickers?: string[] | null;
   source?: string | null;
+  relevance_score?: number | string | null;
+  relevance_level?: "LOW" | "MEDIUM" | "HIGH" | string | null;
+  impact?: "positive" | "negative" | "neutral" | string | null;
+  impact_reason?: string | null;
+  is_fcn_related?: boolean | null;
+  related_fcn_codes?: string[] | null;
 };
 
 export type PortfolioNewsResponse = {

@@ -141,6 +141,20 @@ function riskBadgeClass(level: unknown) {
   return "bg-zinc-700 text-zinc-200";
 }
 
+function relevanceBadgeClass(level: unknown) {
+  const normalized = String(level || "LOW").toUpperCase();
+  if (normalized === "HIGH") return "border-red-400/50 bg-red-400/10 text-red-300";
+  if (normalized === "MEDIUM") return "border-yellow-400/50 bg-yellow-400/10 text-yellow-200";
+  return "border-zinc-700 bg-zinc-800 text-zinc-300";
+}
+
+function impactBadgeClass(impact: unknown) {
+  const normalized = String(impact || "neutral").toLowerCase();
+  if (normalized === "positive") return "border-emerald-400/50 bg-emerald-400/10 text-emerald-300";
+  if (normalized === "negative") return "border-red-400/50 bg-red-400/10 text-red-300";
+  return "border-zinc-700 bg-zinc-800 text-zinc-300";
+}
+
 function allocationLabel(item: AllocationItem) {
   const labels: Record<string, string> = {
     stock: "Stocks",
@@ -806,10 +820,45 @@ export default function DashboardPage() {
                     <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-xs font-semibold uppercase text-zinc-300">
                       {textValue(article.source, "yfinance")}
                     </span>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${relevanceBadgeClass(article.relevance_level)}`}
+                    >
+                      {textValue(article.relevance_level, "LOW")}
+                      {article.relevance_score !== null &&
+                        article.relevance_score !== undefined &&
+                        ` ${numberValue(article.relevance_score).toFixed(0)}`}
+                    </span>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-xs font-semibold capitalize ${impactBadgeClass(article.impact)}`}
+                    >
+                      {textValue(article.impact, "neutral")}
+                    </span>
+                    {article.is_fcn_related && (
+                      <span className="rounded-full border border-blue-400/40 bg-blue-400/10 px-2 py-0.5 text-xs font-semibold text-blue-200">
+                        FCN
+                      </span>
+                    )}
                   </div>
                   <h3 className="mt-3 text-sm font-semibold leading-6 text-white">
                     {textValue(article.title, "Untitled news")}
                   </h3>
+                  {article.impact_reason && (
+                    <p className="mt-2 text-xs leading-5 text-zinc-300">
+                      {article.impact_reason}
+                    </p>
+                  )}
+                  {article.is_fcn_related && listValue(article.related_fcn_codes).length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {listValue(article.related_fcn_codes).map((code) => (
+                        <span
+                          className="rounded-full border border-blue-400/30 bg-blue-400/5 px-2 py-0.5 text-[11px] font-semibold text-blue-200"
+                          key={code}
+                        >
+                          {code}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-500">
                     <span>{textValue(article.publisher, "Unknown publisher")}</span>
                     <span>·</span>
