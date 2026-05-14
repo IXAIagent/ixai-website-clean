@@ -167,6 +167,14 @@ function priorityBadgeClass(level: unknown) {
   return "border-zinc-700 bg-zinc-800 text-zinc-300";
 }
 
+function priorityRowBorder(level: unknown) {
+  const normalized = String(level || "LOW").toUpperCase();
+  if (normalized === "CRITICAL") return "border-l-red-500";
+  if (normalized === "HIGH") return "border-l-yellow-400";
+  if (normalized === "MEDIUM") return "border-l-yellow-700";
+  return "border-l-zinc-700";
+}
+
 function riskDirectionClass(direction: unknown) {
   const normalized = String(direction || "NEUTRAL").toUpperCase();
   if (normalized === "INCREASE") return "text-red-300";
@@ -184,6 +192,66 @@ function newsArticleKey(article: NewsArticle, index: number) {
   return `${textValue(article.link || article.title || article.symbol, "news")}-${index}`;
 }
 
+function buildTodayBrief(
+  priorityAlerts: NewsArticle[],
+  articles: NewsArticle[],
+  fcns: FCNDetail[],
+  crypto: CryptoPositionResponse[],
+  riskLevel: unknown,
+) {
+  const lines: string[] = [];
+  const normalizedRisk = String(riskLevel || "").toLowerCase();
+  const highAttention = articles.filter((article) =>
+    ["HIGH", "CRITICAL"].includes(String(article.attention_level || "").toUpperCase()),
+  );
+  const negative = articles.filter((article) => String(article.impact || "").toLowerCase() === "negative");
+  const positive = articles.filter((article) => String(article.impact || "").toLowerCase() === "positive");
+  const fcnRelated = articles.filter((article) => article.is_fcn_related);
+  const riskyFcns = fcns.filter((fcn) =>
+    ["high", "medium"].includes(String(fcn.risk_level || "").toLowerCase()),
+  );
+  const leveragedCrypto = crypto.filter((item) => numberValue(item.leverage, 0) > 1);
+
+  if (normalizedRisk === "high") {
+    lines.push("目前組合風險偏高，請優先檢視高優先級事件與 FCN KI/KO 距離。");
+  } else if (normalizedRisk === "medium") {
+    lines.push("今日組合風險維持中等，建議持續觀察高曝險標的與新聞變化。");
+  } else if (normalizedRisk === "low") {
+    lines.push("目前組合風險偏低，尚未偵測到急迫性風險升溫。");
+  }
+
+  if (priorityAlerts.length > 0) {
+    const symbols = priorityAlerts
+      .map((alert) => textValue(alert.symbol, ""))
+      .filter(Boolean)
+      .slice(0, 3)
+      .join("、");
+    lines.push(`${symbols || "部分持倉"} 出現較高優先級事件，建議先查看 Top Portfolio Alerts。`);
+  }
+
+  if (negative.length > positive.length && negative.length > 0) {
+    lines.push("今日新聞情緒偏保守，負面事件數量高於正面事件。");
+  } else if (positive.length > negative.length && positive.length > 0) {
+    lines.push("今日新聞情緒略偏正面，部分持倉出現支撐性消息。");
+  } else if (articles.length > 0) {
+    lines.push("今日市場情緒偏中性，資訊流仍以觀察型事件為主。");
+  }
+
+  if (fcnRelated.length > 0 || riskyFcns.length > 0) {
+    lines.push("FCN underlying 相關消息仍需留意，尤其是 worst-of 與 KI/KO 風險變化。");
+  }
+
+  if (leveragedCrypto.length > 0) {
+    lines.push("Crypto 部位含槓桿或高波動曝險，需留意區間與清算風險。");
+  }
+
+  if (highAttention.length > 0 && lines.length < 5) {
+    lines.push("部分新聞已進入高注意等級，建議搭配價格變化追蹤。");
+  }
+
+  return lines.length > 0 ? lines.slice(0, 5) : ["目前未偵測到重大組合風險事件。"];
+}
+
 function allocationLabel(item: AllocationItem) {
   const labels: Record<string, string> = {
     stock: "Stocks",
@@ -195,9 +263,9 @@ function allocationLabel(item: AllocationItem) {
 }
 
 function allocationAccent(assetClass: string) {
-  if (assetClass === "stock") return "bg-blue-400";
+  if (assetClass === "stock") return "bg-zinc-400";
   if (assetClass === "fcn") return "bg-red-400";
-  if (assetClass === "crypto") return "bg-violet-400";
+  if (assetClass === "crypto") return "bg-yellow-400";
   if (assetClass === "cash") return "bg-emerald-400";
   return "bg-zinc-400";
 }
@@ -656,7 +724,8 @@ export default function DashboardPage() {
   );
   const allNewsArticles = listValue(data.news?.articles);
   const newsArticles = allNewsArticles.slice(0, visibleNewsCount);
-  const priorityAlerts = listValue(data.priority?.top_alerts).slice(0, 5);
+  const priorityAlerts = listValue(data.priority?.top_alerts);
+  const topPriorityAlerts = priorityAlerts.slice(0, 3);
   const criticalCount = numberValue(data.priority?.critical_count, 0);
   const highCount = numberValue(data.priority?.high_count, 0);
   const riskLevel = data.risk.risk_level || data.summary.risk_level || "unknown";
@@ -666,6 +735,13 @@ export default function DashboardPage() {
     fcns.length > 0 ||
     crypto.length > 0 ||
     cash.length > 0;
+  const todayBriefLines = buildTodayBrief(
+    priorityAlerts,
+    allNewsArticles,
+    fcns,
+    crypto,
+    riskLevel,
+  );
 
   return (
     <main className="min-h-screen bg-black px-5 py-8 text-white">
@@ -689,7 +765,7 @@ export default function DashboardPage() {
               </div>
             )}
             <button
-              className="w-full rounded-xl border border-blue-400/50 px-4 py-3 text-center text-sm font-semibold text-blue-200 transition hover:bg-blue-400/10 md:w-auto"
+              className="w-full rounded-xl border border-zinc-700 px-4 py-3 text-center text-sm font-semibold text-zinc-200 transition hover:bg-zinc-900 md:w-auto"
               onClick={() => router.push("/import")}
               type="button"
             >
@@ -749,7 +825,7 @@ export default function DashboardPage() {
                 Go to Input
               </Link>
               <Link
-                className="rounded-xl border border-blue-400/60 px-5 py-3 text-sm font-semibold text-blue-100 transition hover:bg-blue-400/10"
+                className="rounded-xl border border-zinc-700 px-5 py-3 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-900"
                 href="/import"
               >
                 Go to Import
@@ -805,54 +881,34 @@ export default function DashboardPage() {
           ))}
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
-            <h2 className="text-xl font-semibold">Risk Overview</h2>
-            <div className="mt-4 rounded-xl border border-zinc-800 bg-black/40 p-4">
-              <div className="text-sm text-zinc-400">Top Risk</div>
-              <div className="mt-2 text-lg font-semibold text-red-300">
-                {textValue(data.risk.top_risk || data.summary.top_risk, "No major risk")}
-              </div>
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Today&apos;s IXAI Brief</h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Rule-based portfolio brief from alerts, FCN risk and intelligence flow.
+              </p>
             </div>
-
-            <div className="mt-4 grid gap-3">
-              {decisionCards.map((card: DecisionCard, index) => (
-                <div
-                  className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
-                  key={`${textValue(card.title, "decision")}-${index}`}
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="font-semibold text-white">
-                      {textValue(card.title, "Decision")}
-                    </div>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${riskBadgeClass(card.level)}`}
-                    >
-                      {textValue(card.level, "info")}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-zinc-300">
-                    {textValue(card.message)}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <span className="text-xs uppercase tracking-wide text-zinc-500">
+              live portfolio context
+            </span>
           </div>
-
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
-            <h2 className="text-xl font-semibold">AI Advice</h2>
-            <p className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-7 text-zinc-200">
-              {textValue(data.risk.ai_advice || data.summary.ai_advice, "No advice available.")}
-            </p>
+          <div className="mt-4 rounded-xl border border-zinc-800 bg-black/40 px-4 py-3 font-mono text-sm leading-7 text-zinc-300">
+            {todayBriefLines.map((line, index) => (
+              <div className="flex gap-3" key={`${line}-${index}`}>
+                <span className="shrink-0 text-emerald-400">{">"}</span>
+                <span>{line}</span>
+              </div>
+            ))}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 shadow-xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold">Top Portfolio Alerts</h2>
               <p className="mt-1 text-sm text-zinc-400">
-                Highest priority events across holdings, FCN underlyings and market risk.
+                Highest priority events across holdings and FCN underlyings.
               </p>
             </div>
             <button
@@ -865,7 +921,7 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          <div className="mt-4 rounded-xl border border-zinc-800 bg-black/30 p-4 text-sm text-zinc-300">
+          <div className="mt-3 text-sm text-zinc-400">
             {priorityLoading && !data.priority ? (
               <div className="text-zinc-400">Loading priority alerts...</div>
             ) : priorityError ? (
@@ -880,80 +936,56 @@ export default function DashboardPage() {
                 </button>
               </div>
             ) : criticalCount > 0 ? (
-              <div className="font-semibold text-red-200">
-                {criticalCount} Critical Alert{criticalCount > 1 ? "s" : ""}
-              </div>
+              <div>{criticalCount} Critical Alert{criticalCount > 1 ? "s" : ""}</div>
             ) : highCount > 0 ? (
-              <div className="font-semibold text-red-200">
-                {highCount} High Priority Event{highCount > 1 ? "s" : ""}
-              </div>
+              <div>{highCount} High Priority Event{highCount > 1 ? "s" : ""}</div>
             ) : (
-              <div className="text-zinc-400">No critical portfolio alerts</div>
+              <div>No critical portfolio alerts</div>
             )}
           </div>
 
-          {!priorityError && !priorityLoading && priorityAlerts.length === 0 && (
-            <div className="mt-4 rounded-xl border border-dashed border-zinc-700 p-5 text-sm text-zinc-400">
+          {!priorityError && !priorityLoading && topPriorityAlerts.length === 0 && (
+            <div className="mt-3 rounded-xl border border-dashed border-zinc-700 p-4 text-sm text-zinc-400">
               No critical portfolio alerts
             </div>
           )}
 
-          {priorityAlerts.length > 0 && (
-            <div className="mt-4 grid gap-3">
-              {priorityAlerts.map((alert, index) => (
+          {topPriorityAlerts.length > 0 && (
+            <div className="mt-3 divide-y divide-zinc-800 overflow-hidden rounded-xl border border-zinc-800">
+              {topPriorityAlerts.map((alert, index) => (
                 <article
-                  className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+                  className={`border-l-4 bg-black/25 px-3 py-3 ${priorityRowBorder(alert.priority_level)}`}
                   key={`${textValue(alert.link || alert.title, "priority")}-${index}`}
                 >
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="grid gap-2 md:grid-cols-[auto_auto_minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] md:items-center">
                     <span
-                      className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${priorityBadgeClass(alert.priority_level)}`}
+                      className={`w-fit rounded-full border px-2 py-0.5 text-[11px] font-semibold ${priorityBadgeClass(alert.priority_level)}`}
                     >
                       {textValue(alert.priority_level, "LOW")}
-                      {alert.priority_score !== null &&
-                        alert.priority_score !== undefined &&
-                        ` ${numberValue(alert.priority_score).toFixed(0)}`}
                     </span>
-                    <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                    <span className="w-fit font-mono text-xs font-semibold text-emerald-300">
                       {textValue(alert.symbol, "NEWS")}
                     </span>
-                    {alert.is_fcn_related && (
-                      <span className="rounded-full border border-blue-400/40 bg-blue-400/10 px-2 py-0.5 text-xs font-semibold text-blue-200">
-                        FCN
-                      </span>
+                    <h3 className="min-w-0 truncate text-sm font-semibold text-zinc-100">
+                      {textValue(alert.title, "Untitled alert")}
+                    </h3>
+                    <p className="min-w-0 truncate text-xs text-zinc-400">
+                      {textValue(alert.alert_summary, "此事件可能影響相關持倉，建議持續觀察。")}
+                    </p>
+                    <span className="text-xs text-zinc-500">
+                      {formatDateTime(alert.published_at)}
+                    </span>
+                    {alert.link && (
+                      <a
+                        className="text-xs font-semibold text-emerald-300 transition hover:text-emerald-200"
+                        href={alert.link}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        View
+                      </a>
                     )}
                   </div>
-                  <h3 className="mt-3 text-sm font-semibold leading-6 text-white">
-                    {textValue(alert.title, "Untitled alert")}
-                  </h3>
-                  <p className="mt-2 text-xs leading-5 text-zinc-300">
-                    {textValue(alert.alert_summary, "此事件可能影響相關持倉，建議持續觀察。")}
-                  </p>
-                  {alert.is_fcn_related && listValue(alert.related_fcn_codes).length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {listValue(alert.related_fcn_codes).map((code) => (
-                        <span
-                          className="rounded-full border border-blue-400/30 bg-blue-400/5 px-2 py-0.5 text-[11px] font-semibold text-blue-200"
-                          key={code}
-                        >
-                          {code}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
-                    <span>{formatDateTime(alert.published_at)}</span>
-                  </div>
-                  {alert.link && (
-                    <a
-                      className="mt-3 inline-flex text-xs font-semibold text-emerald-300 transition hover:text-emerald-200"
-                      href={alert.link}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      View link ↗
-                    </a>
-                  )}
                 </article>
               ))}
             </div>
@@ -963,9 +995,9 @@ export default function DashboardPage() {
         <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Portfolio Intelligence</h2>
+              <h2 className="text-lg font-semibold">Portfolio Intelligence Stream</h2>
               <p className="mt-1 text-sm text-zinc-400">
-                Compact feed of latest news related to your holdings and FCN underlyings.
+                Compact market flow related to your holdings and FCN underlyings.
               </p>
             </div>
             <button
@@ -1011,7 +1043,7 @@ export default function DashboardPage() {
           )}
 
           {newsArticles.length > 0 && (
-            <div className="mt-4 grid gap-2">
+            <div className="mt-4 divide-y divide-zinc-800 overflow-hidden rounded-xl border border-zinc-800">
               {newsArticles.map((article: NewsArticle, index) => {
                 const key = newsArticleKey(article, index);
                 const aiExpanded = expandedAiKeys.has(key);
@@ -1024,7 +1056,7 @@ export default function DashboardPage() {
 
                 return (
                 <article
-                  className="rounded-xl border border-zinc-800 bg-black/25 p-3 transition hover:bg-zinc-900/60"
+                  className="bg-black/25 px-3 py-3 transition hover:bg-zinc-900/60"
                   key={key}
                 >
                   <div className="flex flex-wrap items-center gap-2">
@@ -1045,7 +1077,7 @@ export default function DashboardPage() {
                       {textValue(article.impact, "neutral")}
                     </span>
                     {article.is_fcn_related && (
-                      <span className="rounded-full border border-blue-400/40 bg-blue-400/10 px-2 py-0.5 text-xs font-semibold text-blue-200">
+                      <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-xs font-semibold text-zinc-300">
                         FCN
                       </span>
                     )}
@@ -1079,7 +1111,7 @@ export default function DashboardPage() {
                     <div className="mt-3 flex flex-wrap gap-2">
                       {article.ai_summary && (
                         <button
-                          className="rounded-lg border border-violet-400/30 px-2.5 py-1 text-xs font-semibold text-violet-200 transition hover:bg-violet-400/10"
+                          className="rounded-lg border border-zinc-700 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:bg-zinc-800"
                           onClick={() => toggleExpandedKey(key, setExpandedAiKeys)}
                           type="button"
                         >
@@ -1099,12 +1131,12 @@ export default function DashboardPage() {
                   )}
 
                   {aiExpanded && article.ai_summary && (
-                    <div className="mt-3 rounded-lg border border-violet-400/20 bg-violet-400/10 p-3 text-xs leading-5 text-violet-50/85">
-                      <div className="mb-1 font-semibold text-violet-200">
+                    <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900/70 p-3 text-xs leading-5 text-zinc-300">
+                      <div className="mb-1 font-semibold text-zinc-100">
                         AI Analysis
                       </div>
                       <div>{article.ai_summary}</div>
-                      <div className="mt-2 text-[11px] text-violet-200/60">
+                      <div className="mt-2 text-[11px] text-zinc-500">
                         AI-generated analysis, not trading advice.
                       </div>
                     </div>
@@ -1159,7 +1191,49 @@ export default function DashboardPage() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+            <h2 className="text-xl font-semibold">Risk Overview</h2>
+            <div className="mt-4 rounded-xl border border-zinc-800 bg-black/40 p-4">
+              <div className="text-sm text-zinc-400">Top Risk</div>
+              <div className="mt-2 text-lg font-semibold text-red-300">
+                {textValue(data.risk.top_risk || data.summary.top_risk, "No major risk")}
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3">
+              {decisionCards.map((card: DecisionCard, index) => (
+                <div
+                  className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+                  key={`${textValue(card.title, "decision")}-${index}`}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="font-semibold text-white">
+                      {textValue(card.title, "Decision")}
+                    </div>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold uppercase ${riskBadgeClass(card.level)}`}
+                    >
+                      {textValue(card.level, "info")}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-zinc-300">
+                    {textValue(card.message)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+            <h2 className="text-xl font-semibold">AI Advice</h2>
+            <p className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-7 text-zinc-200">
+              {textValue(data.risk.ai_advice || data.summary.ai_advice, "No advice available.")}
+            </p>
+          </div>
+        </section>
+
+        <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold">FCN Risk Monitor</h2>
@@ -1426,7 +1500,7 @@ export default function DashboardPage() {
         </section>
 
         <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
-          <h2 className="text-xl font-semibold">Alerts</h2>
+          <h2 className="text-xl font-semibold">Portfolio Health</h2>
           <div className="mt-4 grid gap-3">
             {alerts.length === 0 && (
               <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-zinc-400">
