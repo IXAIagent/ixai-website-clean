@@ -1042,6 +1042,17 @@ export default function DashboardPage() {
                       <div>{article.narrative}</div>
                     </div>
                   )}
+                  {article.ai_summary && (
+                    <div className="mt-3 rounded-lg border border-violet-400/20 bg-violet-400/10 p-3 text-xs leading-5 text-violet-50/85">
+                      <div className="mb-1 font-semibold text-violet-200">
+                        AI Analysis
+                      </div>
+                      <div>{article.ai_summary}</div>
+                      <div className="mt-2 text-[11px] text-violet-200/60">
+                        AI-generated analysis, not trading advice.
+                      </div>
+                    </div>
+                  )}
                   {(article.portfolio_exposure || article.risk_direction || article.portfolio_impact_summary) && (
                     <div className="mt-3 rounded-lg border border-zinc-800 bg-black/30 p-3 text-xs leading-5 text-zinc-300">
                       <div className="font-semibold text-zinc-100">Portfolio Impact</div>

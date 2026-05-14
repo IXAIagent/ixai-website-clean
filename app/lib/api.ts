@@ -292,6 +292,7 @@ export type NewsArticle = {
   priority_score?: number | string | null;
   priority_level?: string | null;
   alert_summary?: string | null;
+  ai_summary?: string | null;
 };
 
 export type PortfolioNewsResponse = {
