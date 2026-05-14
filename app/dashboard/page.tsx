@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -152,18 +151,18 @@ function relevanceBadgeClass(level: unknown) {
   return "border-zinc-700 bg-zinc-800 text-zinc-300";
 }
 
-function impactBadgeClass(impact: unknown) {
+function impactTextClass(impact: unknown) {
   const normalized = String(impact || "neutral").toLowerCase();
-  if (normalized === "positive") return "border-emerald-400/50 bg-emerald-400/10 text-emerald-300";
-  if (normalized === "negative") return "border-red-400/50 bg-red-400/10 text-red-300";
-  return "border-zinc-700 bg-zinc-800 text-zinc-300";
+  if (normalized === "positive") return "text-emerald-300";
+  if (normalized === "negative") return "text-red-300";
+  return "text-zinc-400";
 }
 
 function priorityBadgeClass(level: unknown) {
   const normalized = String(level || "LOW").toUpperCase();
-  if (normalized === "CRITICAL") return "animate-pulse border-red-400/70 bg-red-500/20 text-red-200";
-  if (normalized === "HIGH") return "border-red-400/50 bg-red-400/10 text-red-300";
-  if (normalized === "MEDIUM") return "border-yellow-400/50 bg-yellow-400/10 text-yellow-200";
+  if (normalized === "CRITICAL") return "animate-pulse border-red-400/60 bg-red-500/10 text-red-200";
+  if (normalized === "HIGH") return "border-yellow-400/50 bg-yellow-400/10 text-yellow-200";
+  if (normalized === "MEDIUM") return "border-yellow-700 bg-yellow-950/20 text-yellow-300";
   return "border-zinc-700 bg-zinc-800 text-zinc-300";
 }
 
@@ -173,23 +172,6 @@ function priorityRowBorder(level: unknown) {
   if (normalized === "HIGH") return "border-l-yellow-400";
   if (normalized === "MEDIUM") return "border-l-yellow-700";
   return "border-l-zinc-700";
-}
-
-function riskDirectionClass(direction: unknown) {
-  const normalized = String(direction || "NEUTRAL").toUpperCase();
-  if (normalized === "INCREASE") return "text-red-300";
-  if (normalized === "DECREASE") return "text-emerald-300";
-  return "text-zinc-300";
-}
-
-function shouldShowPortfolioImpactToggle(article: NewsArticle) {
-  const attention = String(article.attention_level || "").toUpperCase();
-  const exposure = String(article.portfolio_exposure || "").toUpperCase();
-  return attention === "HIGH" || attention === "CRITICAL" || exposure === "HIGH";
-}
-
-function newsArticleKey(article: NewsArticle, index: number) {
-  return `${textValue(article.link || article.title || article.symbol, "news")}-${index}`;
 }
 
 function buildTodayBrief(
@@ -250,6 +232,19 @@ function buildTodayBrief(
   }
 
   return lines.length > 0 ? lines.slice(0, 5) : ["目前未偵測到重大組合風險事件。"];
+}
+
+function conciseIntelligenceInsight(article: NewsArticle) {
+  const text = textValue(
+    article.ai_summary ||
+      article.narrative ||
+      article.portfolio_impact_summary ||
+      article.impact_reason,
+    "",
+  );
+  if (!text) return "";
+  if (text.length <= 90) return text;
+  return `${text.slice(0, 90).trimEnd()}...`;
 }
 
 function allocationLabel(item: AllocationItem) {
@@ -519,8 +514,6 @@ export default function DashboardPage() {
   const [priorityError, setPriorityError] = useState("");
   const [expandedFcnKey, setExpandedFcnKey] = useState<string | null>(null);
   const [visibleNewsCount, setVisibleNewsCount] = useState(6);
-  const [expandedAiKeys, setExpandedAiKeys] = useState<Set<string>>(new Set());
-  const [expandedImpactKeys, setExpandedImpactKeys] = useState<Set<string>>(new Set());
 
   const loadPortfolioNews = useCallback(async () => {
     setNewsLoading(true);
@@ -654,21 +647,6 @@ export default function DashboardPage() {
   function handleLogout() {
     logout();
     router.replace("/login");
-  }
-
-  function toggleExpandedKey(
-    key: string,
-    setter: Dispatch<SetStateAction<Set<string>>>,
-  ) {
-    setter((current) => {
-      const next = new Set(current);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
   }
 
   if (loading && !data) return <DashboardSkeleton />;
@@ -881,10 +859,10 @@ export default function DashboardPage() {
           ))}
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+        <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Today&apos;s IXAI Brief</h2>
+              <h2 className="text-lg font-semibold">Today&apos;s IXAI Brief</h2>
               <p className="mt-1 text-sm text-zinc-500">
                 Rule-based portfolio brief from alerts, FCN risk and intelligence flow.
               </p>
@@ -893,7 +871,7 @@ export default function DashboardPage() {
               live portfolio context
             </span>
           </div>
-          <div className="mt-4 rounded-xl border border-zinc-800 bg-black/40 px-4 py-3 font-mono text-sm leading-7 text-zinc-300">
+          <div className="mt-3 border-l border-zinc-700 bg-black/30 px-3 py-2 font-mono text-xs leading-6 text-zinc-300">
             {todayBriefLines.map((line, index) => (
               <div className="flex gap-3" key={`${line}-${index}`}>
                 <span className="shrink-0 text-emerald-400">{">"}</span>
@@ -903,10 +881,10 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 shadow-xl">
+        <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Top Portfolio Alerts</h2>
+              <h2 className="text-lg font-semibold">Top Portfolio Alerts</h2>
               <p className="mt-1 text-sm text-zinc-400">
                 Highest priority events across holdings and FCN underlyings.
               </p>
@@ -951,15 +929,15 @@ export default function DashboardPage() {
           )}
 
           {topPriorityAlerts.length > 0 && (
-            <div className="mt-3 divide-y divide-zinc-800 overflow-hidden rounded-xl border border-zinc-800">
+            <div className="mt-3 divide-y divide-zinc-800 overflow-hidden border border-zinc-800">
               {topPriorityAlerts.map((alert, index) => (
                 <article
-                  className={`border-l-4 bg-black/25 px-3 py-3 ${priorityRowBorder(alert.priority_level)}`}
+                  className={`border-l-4 bg-black/20 px-3 py-2 ${priorityRowBorder(alert.priority_level)}`}
                   key={`${textValue(alert.link || alert.title, "priority")}-${index}`}
                 >
-                  <div className="grid gap-2 md:grid-cols-[auto_auto_minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] md:items-center">
+                  <div className="grid gap-1.5 md:grid-cols-[auto_auto_minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] md:items-center">
                     <span
-                      className={`w-fit rounded-full border px-2 py-0.5 text-[11px] font-semibold ${priorityBadgeClass(alert.priority_level)}`}
+                        className={`w-fit rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${priorityBadgeClass(alert.priority_level)}`}
                     >
                       {textValue(alert.priority_level, "LOW")}
                     </span>
@@ -977,7 +955,7 @@ export default function DashboardPage() {
                     </span>
                     {alert.link && (
                       <a
-                        className="text-xs font-semibold text-emerald-300 transition hover:text-emerald-200"
+                      className="text-xs font-semibold text-zinc-400 transition hover:text-emerald-300"
                         href={alert.link}
                         rel="noopener noreferrer"
                         target="_blank"
@@ -992,7 +970,7 @@ export default function DashboardPage() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+        <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Portfolio Intelligence Stream</h2>
@@ -1010,7 +988,7 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          <div className="mt-4 rounded-xl border border-zinc-800 bg-black/30 p-4 text-sm text-zinc-300">
+          <div className="mt-3 border-y border-zinc-800 bg-black/20 py-2 text-xs text-zinc-400">
             {newsLoading && !data.news ? (
               <div className="text-zinc-400">Loading intelligence feed...</div>
             ) : newsError ? (
@@ -1043,61 +1021,53 @@ export default function DashboardPage() {
           )}
 
           {newsArticles.length > 0 && (
-            <div className="mt-4 divide-y divide-zinc-800 overflow-hidden rounded-xl border border-zinc-800">
+            <div className="mt-3 divide-y divide-zinc-800 overflow-hidden border border-zinc-800">
               {newsArticles.map((article: NewsArticle, index) => {
-                const key = newsArticleKey(article, index);
-                const aiExpanded = expandedAiKeys.has(key);
-                const impactExpanded = expandedImpactKeys.has(key);
-                const narrative = textValue(
-                  article.narrative || article.impact_reason || article.portfolio_impact_summary,
-                  "",
-                );
-                const showImpactToggle = shouldShowPortfolioImpactToggle(article);
+                const insight = conciseIntelligenceInsight(article);
 
                 return (
                 <article
-                  className="bg-black/25 px-3 py-3 transition hover:bg-zinc-900/60"
-                  key={key}
+                  className="bg-black/20 px-3 py-2.5 transition hover:bg-zinc-900/50"
+                  key={`${textValue(article.link || article.title, "news")}-${index}`}
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="rounded border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-emerald-300">
                       {textValue(article.symbol, "NEWS")}
                     </span>
                     <span
-                      className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${relevanceBadgeClass(article.relevance_level)}`}
+                      className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${relevanceBadgeClass(article.relevance_level)}`}
                     >
                       {textValue(article.relevance_level, "LOW")}
-                      {article.relevance_score !== null &&
-                        article.relevance_score !== undefined &&
-                        ` ${numberValue(article.relevance_score).toFixed(0)}`}
                     </span>
                     <span
-                      className={`rounded-full border px-2 py-0.5 text-xs font-semibold capitalize ${impactBadgeClass(article.impact)}`}
+                      className={`text-xs font-semibold capitalize ${impactTextClass(article.impact)}`}
                     >
                       {textValue(article.impact, "neutral")}
                     </span>
                     {article.is_fcn_related && (
-                      <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-xs font-semibold text-zinc-300">
+                      <span className="rounded border border-zinc-700 bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-300">
                         FCN
                       </span>
                     )}
+                    <h3 className="min-w-0 flex-1 text-sm font-semibold leading-5 text-zinc-100 md:truncate">
+                      {textValue(article.title, "Untitled news")}
+                    </h3>
                   </div>
-                  <h3 className="mt-2 text-sm font-semibold leading-6 text-zinc-100">
-                    {textValue(article.title, "Untitled news")}
-                  </h3>
-                  {narrative && (
+                  {insight && (
                     <p className="mt-1 max-h-10 overflow-hidden text-xs leading-5 text-zinc-400">
-                      {narrative}
+                      {insight}
                     </p>
                   )}
 
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
                     <span>{textValue(article.publisher, "Unknown publisher")}</span>
+                    <span>·</span>
                     <span>{formatDateTime(article.published_at)}</span>
-                    <span>source: {textValue(article.source, "yfinance")}</span>
+                    <span>·</span>
+                    <span>{textValue(article.source, "yfinance")}</span>
                     {article.link && (
                       <a
-                        className="font-semibold text-emerald-300 transition hover:text-emerald-200"
+                        className="font-semibold text-zinc-400 transition hover:text-emerald-300"
                         href={article.link}
                         rel="noopener noreferrer"
                         target="_blank"
@@ -1106,58 +1076,6 @@ export default function DashboardPage() {
                       </a>
                     )}
                   </div>
-
-                  {(article.ai_summary || showImpactToggle) && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {article.ai_summary && (
-                        <button
-                          className="rounded-lg border border-zinc-700 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:bg-zinc-800"
-                          onClick={() => toggleExpandedKey(key, setExpandedAiKeys)}
-                          type="button"
-                        >
-                          {aiExpanded ? "Hide AI Analysis" : "Show AI Analysis"}
-                        </button>
-                      )}
-                      {showImpactToggle && (
-                        <button
-                          className="rounded-lg border border-zinc-700 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:bg-zinc-800"
-                          onClick={() => toggleExpandedKey(key, setExpandedImpactKeys)}
-                          type="button"
-                        >
-                          {impactExpanded ? "Hide Portfolio Impact" : "Show Portfolio Impact"}
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {aiExpanded && article.ai_summary && (
-                    <div className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900/70 p-3 text-xs leading-5 text-zinc-300">
-                      <div className="mb-1 font-semibold text-zinc-100">
-                        AI Analysis
-                      </div>
-                      <div>{article.ai_summary}</div>
-                      <div className="mt-2 text-[11px] text-zinc-500">
-                        AI-generated analysis, not trading advice.
-                      </div>
-                    </div>
-                  )}
-
-                  {impactExpanded && showImpactToggle && (
-                    <div className="mt-3 rounded-lg border border-zinc-800 bg-black/30 p-3 text-xs leading-5 text-zinc-300">
-                      <div className="font-semibold text-zinc-100">Portfolio Impact</div>
-                      <div className="mt-1 flex flex-wrap gap-3">
-                        <span>Exposure: {textValue(article.portfolio_exposure, "LOW")}</span>
-                        <span className={riskDirectionClass(article.risk_direction)}>
-                          Risk Direction: {textValue(article.risk_direction, "NEUTRAL")}
-                        </span>
-                      </div>
-                      {article.portfolio_impact_summary && (
-                        <div className="mt-2 text-zinc-400">
-                          {article.portfolio_impact_summary}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </article>
                 );
               })}
