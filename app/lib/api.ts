@@ -284,6 +284,7 @@ export type NewsArticle = {
   impact_reason?: string | null;
   is_fcn_related?: boolean | null;
   related_fcn_codes?: string[] | null;
+  narrative?: string | null;
 };
 
 export type PortfolioNewsResponse = {

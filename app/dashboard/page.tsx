@@ -847,6 +847,14 @@ export default function DashboardPage() {
                       {article.impact_reason}
                     </p>
                   )}
+                  {article.narrative && (
+                    <div className="mt-3 rounded-lg border border-emerald-400/15 bg-emerald-400/5 p-3 text-xs leading-5 text-emerald-50/80">
+                      <div className="mb-1 font-semibold text-emerald-300">
+                        IXAI Insight
+                      </div>
+                      <div>{article.narrative}</div>
+                    </div>
+                  )}
                   {article.is_fcn_related && listValue(article.related_fcn_codes).length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {listValue(article.related_fcn_codes).map((code) => (
