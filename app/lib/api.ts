@@ -270,6 +270,25 @@ export type ImportHistoryDetailResponse = ImportHistoryItem & {
   rows?: ImportAuditRow[] | null;
 };
 
+export type NewsArticle = {
+  symbol?: string | null;
+  title?: string | null;
+  publisher?: string | null;
+  link?: string | null;
+  published_at?: string | null;
+  related_tickers?: string[] | null;
+  source?: string | null;
+};
+
+export type PortfolioNewsResponse = {
+  portfolio_id?: string | null;
+  portfolio_name?: string | null;
+  articles?: NewsArticle[] | null;
+  summary?: string | null;
+  fetched_at?: string | null;
+  is_stale?: boolean | null;
+};
+
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -416,6 +435,10 @@ export function getCrypto() {
 
 export function getCash() {
   return apiFetch<CashPositionResponse[]>("/api/v1/portfolio/cash");
+}
+
+export function getPortfolioNews() {
+  return apiFetch<PortfolioNewsResponse>("/api/v1/intelligence/news/portfolio");
 }
 
 export function updateStock(id: string | number, payload: StockUpdatePayload) {

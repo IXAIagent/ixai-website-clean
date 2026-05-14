@@ -18,9 +18,12 @@ import {
   getMyAssetAllocation,
   getMyRiskOverview,
   getMySummary,
+  getPortfolioNews,
   getStocks,
   getToken,
   logout,
+  NewsArticle,
+  PortfolioNewsResponse,
   RiskOverviewResponse,
   StockPositionResponse,
   SummaryResponse,
@@ -34,6 +37,7 @@ type DashboardState = {
   fcns: FCNPositionResponse[];
   crypto: CryptoPositionResponse[];
   cash: CashPositionResponse[];
+  news: PortfolioNewsResponse | null;
 };
 
 type FCNUnderlyingResult = {
@@ -229,6 +233,18 @@ function PriceSourceBadge({
   );
 }
 
+function formatDateTime(value: unknown) {
+  const text = textValue(value, "");
+  if (!text) return "-";
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return text;
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function positionKey(item: FCNDetail) {
   return textValue(
     item.fcn_id || item.id || item.fcn_code || item.code || item.name,
@@ -386,7 +402,28 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsError, setNewsError] = useState("");
   const [expandedFcnKey, setExpandedFcnKey] = useState<string | null>(null);
+
+  const loadPortfolioNews = useCallback(async () => {
+    setNewsLoading(true);
+    setNewsError("");
+
+    try {
+      const news = await getPortfolioNews();
+      setData((current) => {
+        if (!current) return current;
+        const nextData = { ...current, news };
+        dataRef.current = nextData;
+        return nextData;
+      });
+    } catch (err) {
+      setNewsError(err instanceof Error ? err.message : "Failed to load intelligence feed");
+    } finally {
+      setNewsLoading(false);
+    }
+  }, []);
 
   const loadDashboard = useCallback(async (showLoading = false) => {
     const hasExistingData = Boolean(dataRef.current);
@@ -399,7 +436,13 @@ export default function DashboardPage() {
 
     try {
       setError("");
-      const [summary, allocation, risk, stocks, fcns, crypto, cash] =
+      const newsPromise = getPortfolioNews()
+        .then((news) => ({ news, error: "" }))
+        .catch((err) => ({
+          news: null,
+          error: err instanceof Error ? err.message : "Failed to load intelligence feed",
+        }));
+      const [summary, allocation, risk, stocks, fcns, crypto, cash, newsResult] =
         await Promise.all([
         getMySummary(),
         getMyAssetAllocation(),
@@ -408,6 +451,7 @@ export default function DashboardPage() {
         getFcns(),
         getCrypto(),
         getCash(),
+        newsPromise,
       ]);
       const nextData = {
         summary,
@@ -417,7 +461,9 @@ export default function DashboardPage() {
         fcns: Array.isArray(fcns) ? fcns : [],
         crypto: Array.isArray(crypto) ? crypto : [],
         cash: Array.isArray(cash) ? cash : [],
+        news: newsResult.news,
       };
+      setNewsError(newsResult.error);
       dataRef.current = nextData;
       setData(nextData);
     } catch (err) {
@@ -507,6 +553,7 @@ export default function DashboardPage() {
     listValue(data.summary.cash_summary),
     listValue(data.cash),
   );
+  const newsArticles = listValue(data.news?.articles).slice(0, 6);
   const riskLevel = data.risk.risk_level || data.summary.risk_level || "unknown";
   const totalValue = data.summary.total_value ?? data.allocation.total_value;
   const hasPortfolioAssets =
@@ -693,6 +740,95 @@ export default function DashboardPage() {
               {textValue(data.risk.ai_advice || data.summary.ai_advice, "No advice available.")}
             </p>
           </div>
+        </section>
+
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Portfolio Intelligence</h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                Latest news related to your holdings and FCN underlyings
+              </p>
+            </div>
+            <button
+              className="w-fit rounded-xl border border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-300 transition hover:bg-zinc-900"
+              disabled={newsLoading}
+              onClick={() => void loadPortfolioNews()}
+              type="button"
+            >
+              {newsLoading ? "Loading" : "Retry"}
+            </button>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-zinc-800 bg-black/30 p-4 text-sm text-zinc-300">
+            {newsLoading && !data.news ? (
+              <div className="text-zinc-400">Loading intelligence feed...</div>
+            ) : newsError ? (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-yellow-200">Failed to load intelligence feed</div>
+                <button
+                  className="w-fit rounded-lg border border-yellow-400/50 px-3 py-2 text-xs font-semibold text-yellow-100 transition hover:bg-yellow-400/10"
+                  onClick={() => void loadPortfolioNews()}
+                  type="button"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>{textValue(data.news?.summary, "No portfolio news found yet")}</div>
+                {data.news?.fetched_at && (
+                  <div className="text-xs text-zinc-500">
+                    fetched {formatDateTime(data.news.fetched_at)}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {!newsError && !newsLoading && newsArticles.length === 0 && (
+            <div className="mt-4 rounded-xl border border-dashed border-zinc-700 p-5 text-sm text-zinc-400">
+              No portfolio news found yet
+            </div>
+          )}
+
+          {newsArticles.length > 0 && (
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              {newsArticles.map((article: NewsArticle, index) => (
+                <article
+                  className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+                  key={`${textValue(article.link || article.title, "news")}-${index}`}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                      {textValue(article.symbol, "NEWS")}
+                    </span>
+                    <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-xs font-semibold uppercase text-zinc-300">
+                      {textValue(article.source, "yfinance")}
+                    </span>
+                  </div>
+                  <h3 className="mt-3 text-sm font-semibold leading-6 text-white">
+                    {textValue(article.title, "Untitled news")}
+                  </h3>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-500">
+                    <span>{textValue(article.publisher, "Unknown publisher")}</span>
+                    <span>·</span>
+                    <span>{formatDateTime(article.published_at)}</span>
+                  </div>
+                  {article.link && (
+                    <a
+                      className="mt-3 inline-flex text-xs font-semibold text-emerald-300 transition hover:text-emerald-200"
+                      href={article.link}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      View link ↗
+                    </a>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
