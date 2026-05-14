@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -158,14 +159,6 @@ function impactBadgeClass(impact: unknown) {
   return "border-zinc-700 bg-zinc-800 text-zinc-300";
 }
 
-function attentionBadgeClass(level: unknown) {
-  const normalized = String(level || "LOW").toUpperCase();
-  if (normalized === "CRITICAL") return "animate-pulse border-red-400/70 bg-red-500/20 text-red-200";
-  if (normalized === "HIGH") return "border-red-400/50 bg-red-400/10 text-red-300";
-  if (normalized === "MEDIUM") return "border-yellow-400/50 bg-yellow-400/10 text-yellow-200";
-  return "border-zinc-700 bg-zinc-800 text-zinc-300";
-}
-
 function priorityBadgeClass(level: unknown) {
   const normalized = String(level || "LOW").toUpperCase();
   if (normalized === "CRITICAL") return "animate-pulse border-red-400/70 bg-red-500/20 text-red-200";
@@ -179,6 +172,16 @@ function riskDirectionClass(direction: unknown) {
   if (normalized === "INCREASE") return "text-red-300";
   if (normalized === "DECREASE") return "text-emerald-300";
   return "text-zinc-300";
+}
+
+function shouldShowPortfolioImpactToggle(article: NewsArticle) {
+  const attention = String(article.attention_level || "").toUpperCase();
+  const exposure = String(article.portfolio_exposure || "").toUpperCase();
+  return attention === "HIGH" || attention === "CRITICAL" || exposure === "HIGH";
+}
+
+function newsArticleKey(article: NewsArticle, index: number) {
+  return `${textValue(article.link || article.title || article.symbol, "news")}-${index}`;
 }
 
 function allocationLabel(item: AllocationItem) {
@@ -447,6 +450,9 @@ export default function DashboardPage() {
   const [priorityLoading, setPriorityLoading] = useState(false);
   const [priorityError, setPriorityError] = useState("");
   const [expandedFcnKey, setExpandedFcnKey] = useState<string | null>(null);
+  const [visibleNewsCount, setVisibleNewsCount] = useState(6);
+  const [expandedAiKeys, setExpandedAiKeys] = useState<Set<string>>(new Set());
+  const [expandedImpactKeys, setExpandedImpactKeys] = useState<Set<string>>(new Set());
 
   const loadPortfolioNews = useCallback(async () => {
     setNewsLoading(true);
@@ -582,6 +588,21 @@ export default function DashboardPage() {
     router.replace("/login");
   }
 
+  function toggleExpandedKey(
+    key: string,
+    setter: Dispatch<SetStateAction<Set<string>>>,
+  ) {
+    setter((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }
+
   if (loading && !data) return <DashboardSkeleton />;
 
   if (error && !data) {
@@ -633,7 +654,8 @@ export default function DashboardPage() {
     listValue(data.summary.cash_summary),
     listValue(data.cash),
   );
-  const newsArticles = listValue(data.news?.articles).slice(0, 6);
+  const allNewsArticles = listValue(data.news?.articles);
+  const newsArticles = allNewsArticles.slice(0, visibleNewsCount);
   const priorityAlerts = listValue(data.priority?.top_alerts).slice(0, 5);
   const criticalCount = numberValue(data.priority?.critical_count, 0);
   const highCount = numberValue(data.priority?.high_count, 0);
@@ -941,9 +963,9 @@ export default function DashboardPage() {
         <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Portfolio Intelligence</h2>
+              <h2 className="text-lg font-semibold">Portfolio Intelligence</h2>
               <p className="mt-1 text-sm text-zinc-400">
-                Latest news related to your holdings and FCN underlyings
+                Compact feed of latest news related to your holdings and FCN underlyings.
               </p>
             </div>
             <button
@@ -982,25 +1004,32 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {!newsError && !newsLoading && newsArticles.length === 0 && (
+          {!newsError && !newsLoading && allNewsArticles.length === 0 && (
             <div className="mt-4 rounded-xl border border-dashed border-zinc-700 p-5 text-sm text-zinc-400">
               No portfolio news found yet
             </div>
           )}
 
           {newsArticles.length > 0 && (
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">
-              {newsArticles.map((article: NewsArticle, index) => (
+            <div className="mt-4 grid gap-2">
+              {newsArticles.map((article: NewsArticle, index) => {
+                const key = newsArticleKey(article, index);
+                const aiExpanded = expandedAiKeys.has(key);
+                const impactExpanded = expandedImpactKeys.has(key);
+                const narrative = textValue(
+                  article.narrative || article.impact_reason || article.portfolio_impact_summary,
+                  "",
+                );
+                const showImpactToggle = shouldShowPortfolioImpactToggle(article);
+
+                return (
                 <article
-                  className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
-                  key={`${textValue(article.link || article.title, "news")}-${index}`}
+                  className="rounded-xl border border-zinc-800 bg-black/25 p-3 transition hover:bg-zinc-900/60"
+                  key={key}
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-xs font-semibold text-emerald-300">
                       {textValue(article.symbol, "NEWS")}
-                    </span>
-                    <span className="rounded-full border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-xs font-semibold uppercase text-zinc-300">
-                      {textValue(article.source, "yfinance")}
                     </span>
                     <span
                       className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${relevanceBadgeClass(article.relevance_level)}`}
@@ -1020,29 +1049,56 @@ export default function DashboardPage() {
                         FCN
                       </span>
                     )}
-                    <span
-                      className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${attentionBadgeClass(article.attention_level)}`}
-                    >
-                      {textValue(article.attention_level, "LOW")}
-                    </span>
                   </div>
-                  <h3 className="mt-3 text-sm font-semibold leading-6 text-white">
+                  <h3 className="mt-2 text-sm font-semibold leading-6 text-zinc-100">
                     {textValue(article.title, "Untitled news")}
                   </h3>
-                  {article.impact_reason && (
-                    <p className="mt-2 text-xs leading-5 text-zinc-300">
-                      {article.impact_reason}
+                  {narrative && (
+                    <p className="mt-1 max-h-10 overflow-hidden text-xs leading-5 text-zinc-400">
+                      {narrative}
                     </p>
                   )}
-                  {article.narrative && (
-                    <div className="mt-3 rounded-lg border border-emerald-400/15 bg-emerald-400/5 p-3 text-xs leading-5 text-emerald-50/80">
-                      <div className="mb-1 font-semibold text-emerald-300">
-                        IXAI Insight
-                      </div>
-                      <div>{article.narrative}</div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+                    <span>{textValue(article.publisher, "Unknown publisher")}</span>
+                    <span>{formatDateTime(article.published_at)}</span>
+                    <span>source: {textValue(article.source, "yfinance")}</span>
+                    {article.link && (
+                      <a
+                        className="font-semibold text-emerald-300 transition hover:text-emerald-200"
+                        href={article.link}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        View link ↗
+                      </a>
+                    )}
+                  </div>
+
+                  {(article.ai_summary || showImpactToggle) && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {article.ai_summary && (
+                        <button
+                          className="rounded-lg border border-violet-400/30 px-2.5 py-1 text-xs font-semibold text-violet-200 transition hover:bg-violet-400/10"
+                          onClick={() => toggleExpandedKey(key, setExpandedAiKeys)}
+                          type="button"
+                        >
+                          {aiExpanded ? "Hide AI Analysis" : "Show AI Analysis"}
+                        </button>
+                      )}
+                      {showImpactToggle && (
+                        <button
+                          className="rounded-lg border border-zinc-700 px-2.5 py-1 text-xs font-semibold text-zinc-300 transition hover:bg-zinc-800"
+                          onClick={() => toggleExpandedKey(key, setExpandedImpactKeys)}
+                          type="button"
+                        >
+                          {impactExpanded ? "Hide Portfolio Impact" : "Show Portfolio Impact"}
+                        </button>
+                      )}
                     </div>
                   )}
-                  {article.ai_summary && (
+
+                  {aiExpanded && article.ai_summary && (
                     <div className="mt-3 rounded-lg border border-violet-400/20 bg-violet-400/10 p-3 text-xs leading-5 text-violet-50/85">
                       <div className="mb-1 font-semibold text-violet-200">
                         AI Analysis
@@ -1053,7 +1109,8 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   )}
-                  {(article.portfolio_exposure || article.risk_direction || article.portfolio_impact_summary) && (
+
+                  {impactExpanded && showImpactToggle && (
                     <div className="mt-3 rounded-lg border border-zinc-800 bg-black/30 p-3 text-xs leading-5 text-zinc-300">
                       <div className="font-semibold text-zinc-100">Portfolio Impact</div>
                       <div className="mt-1 flex flex-wrap gap-3">
@@ -1069,35 +1126,35 @@ export default function DashboardPage() {
                       )}
                     </div>
                   )}
-                  {article.is_fcn_related && listValue(article.related_fcn_codes).length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {listValue(article.related_fcn_codes).map((code) => (
-                        <span
-                          className="rounded-full border border-blue-400/30 bg-blue-400/5 px-2 py-0.5 text-[11px] font-semibold text-blue-200"
-                          key={code}
-                        >
-                          {code}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-500">
-                    <span>{textValue(article.publisher, "Unknown publisher")}</span>
-                    <span>·</span>
-                    <span>{formatDateTime(article.published_at)}</span>
-                  </div>
-                  {article.link && (
-                    <a
-                      className="mt-3 inline-flex text-xs font-semibold text-emerald-300 transition hover:text-emerald-200"
-                      href={article.link}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      View link ↗
-                    </a>
-                  )}
                 </article>
-              ))}
+                );
+              })}
+            </div>
+          )}
+
+          {allNewsArticles.length > 6 && !newsError && (
+            <div className="mt-4 flex justify-center">
+              {visibleNewsCount < allNewsArticles.length ? (
+                <button
+                  className="rounded-xl border border-zinc-700 px-4 py-2 text-xs font-semibold text-zinc-300 transition hover:bg-zinc-900"
+                  onClick={() =>
+                    setVisibleNewsCount((current) =>
+                      Math.min(current + 6, allNewsArticles.length),
+                    )
+                  }
+                  type="button"
+                >
+                  Load More
+                </button>
+              ) : (
+                <button
+                  className="rounded-xl border border-zinc-700 px-4 py-2 text-xs font-semibold text-zinc-300 transition hover:bg-zinc-900"
+                  onClick={() => setVisibleNewsCount(6)}
+                  type="button"
+                >
+                  Show Less
+                </button>
+              )}
             </div>
           )}
         </section>
