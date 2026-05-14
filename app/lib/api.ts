@@ -289,6 +289,9 @@ export type NewsArticle = {
   risk_direction?: string | null;
   attention_level?: string | null;
   portfolio_impact_summary?: string | null;
+  priority_score?: number | string | null;
+  priority_level?: string | null;
+  alert_summary?: string | null;
 };
 
 export type PortfolioNewsResponse = {
@@ -297,6 +300,14 @@ export type PortfolioNewsResponse = {
   articles?: NewsArticle[] | null;
   summary?: string | null;
   fetched_at?: string | null;
+  is_stale?: boolean | null;
+};
+
+export type PortfolioPriorityResponse = {
+  top_alerts?: NewsArticle[] | null;
+  critical_count?: number | string | null;
+  high_count?: number | string | null;
+  generated_at?: string | null;
   is_stale?: boolean | null;
 };
 
@@ -450,6 +461,10 @@ export function getCash() {
 
 export function getPortfolioNews() {
   return apiFetch<PortfolioNewsResponse>("/api/v1/intelligence/news/portfolio");
+}
+
+export function getPortfolioPriority() {
+  return apiFetch<PortfolioPriorityResponse>("/api/v1/intelligence/priority");
 }
 
 export function updateStock(id: string | number, payload: StockUpdatePayload) {

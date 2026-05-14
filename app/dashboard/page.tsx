@@ -19,11 +19,13 @@ import {
   getMyRiskOverview,
   getMySummary,
   getPortfolioNews,
+  getPortfolioPriority,
   getStocks,
   getToken,
   logout,
   NewsArticle,
   PortfolioNewsResponse,
+  PortfolioPriorityResponse,
   RiskOverviewResponse,
   StockPositionResponse,
   SummaryResponse,
@@ -38,6 +40,7 @@ type DashboardState = {
   crypto: CryptoPositionResponse[];
   cash: CashPositionResponse[];
   news: PortfolioNewsResponse | null;
+  priority: PortfolioPriorityResponse | null;
 };
 
 type FCNUnderlyingResult = {
@@ -156,6 +159,14 @@ function impactBadgeClass(impact: unknown) {
 }
 
 function attentionBadgeClass(level: unknown) {
+  const normalized = String(level || "LOW").toUpperCase();
+  if (normalized === "CRITICAL") return "animate-pulse border-red-400/70 bg-red-500/20 text-red-200";
+  if (normalized === "HIGH") return "border-red-400/50 bg-red-400/10 text-red-300";
+  if (normalized === "MEDIUM") return "border-yellow-400/50 bg-yellow-400/10 text-yellow-200";
+  return "border-zinc-700 bg-zinc-800 text-zinc-300";
+}
+
+function priorityBadgeClass(level: unknown) {
   const normalized = String(level || "LOW").toUpperCase();
   if (normalized === "CRITICAL") return "animate-pulse border-red-400/70 bg-red-500/20 text-red-200";
   if (normalized === "HIGH") return "border-red-400/50 bg-red-400/10 text-red-300";
@@ -433,6 +444,8 @@ export default function DashboardPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsError, setNewsError] = useState("");
+  const [priorityLoading, setPriorityLoading] = useState(false);
+  const [priorityError, setPriorityError] = useState("");
   const [expandedFcnKey, setExpandedFcnKey] = useState<string | null>(null);
 
   const loadPortfolioNews = useCallback(async () => {
@@ -454,6 +467,25 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const loadPortfolioPriority = useCallback(async () => {
+    setPriorityLoading(true);
+    setPriorityError("");
+
+    try {
+      const priority = await getPortfolioPriority();
+      setData((current) => {
+        if (!current) return current;
+        const nextData = { ...current, priority };
+        dataRef.current = nextData;
+        return nextData;
+      });
+    } catch (err) {
+      setPriorityError(err instanceof Error ? err.message : "Failed to load priority alerts");
+    } finally {
+      setPriorityLoading(false);
+    }
+  }, []);
+
   const loadDashboard = useCallback(async (showLoading = false) => {
     const hasExistingData = Boolean(dataRef.current);
 
@@ -471,7 +503,23 @@ export default function DashboardPage() {
           news: null,
           error: err instanceof Error ? err.message : "Failed to load intelligence feed",
         }));
-      const [summary, allocation, risk, stocks, fcns, crypto, cash, newsResult] =
+      const priorityPromise = getPortfolioPriority()
+        .then((priority) => ({ priority, error: "" }))
+        .catch((err) => ({
+          priority: null,
+          error: err instanceof Error ? err.message : "Failed to load priority alerts",
+        }));
+      const [
+        summary,
+        allocation,
+        risk,
+        stocks,
+        fcns,
+        crypto,
+        cash,
+        newsResult,
+        priorityResult,
+      ] =
         await Promise.all([
         getMySummary(),
         getMyAssetAllocation(),
@@ -481,6 +529,7 @@ export default function DashboardPage() {
         getCrypto(),
         getCash(),
         newsPromise,
+        priorityPromise,
       ]);
       const nextData = {
         summary,
@@ -491,8 +540,10 @@ export default function DashboardPage() {
         crypto: Array.isArray(crypto) ? crypto : [],
         cash: Array.isArray(cash) ? cash : [],
         news: newsResult.news,
+        priority: priorityResult.priority,
       };
       setNewsError(newsResult.error);
+      setPriorityError(priorityResult.error);
       dataRef.current = nextData;
       setData(nextData);
     } catch (err) {
@@ -583,6 +634,9 @@ export default function DashboardPage() {
     listValue(data.cash),
   );
   const newsArticles = listValue(data.news?.articles).slice(0, 6);
+  const priorityAlerts = listValue(data.priority?.top_alerts).slice(0, 5);
+  const criticalCount = numberValue(data.priority?.critical_count, 0);
+  const highCount = numberValue(data.priority?.high_count, 0);
   const riskLevel = data.risk.risk_level || data.summary.risk_level || "unknown";
   const totalValue = data.summary.total_value ?? data.allocation.total_value;
   const hasPortfolioAssets =
@@ -769,6 +823,119 @@ export default function DashboardPage() {
               {textValue(data.risk.ai_advice || data.summary.ai_advice, "No advice available.")}
             </p>
           </div>
+        </section>
+
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Top Portfolio Alerts</h2>
+              <p className="mt-1 text-sm text-zinc-400">
+                Highest priority events across holdings, FCN underlyings and market risk.
+              </p>
+            </div>
+            <button
+              className="w-fit rounded-xl border border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-300 transition hover:bg-zinc-900"
+              disabled={priorityLoading}
+              onClick={() => void loadPortfolioPriority()}
+              type="button"
+            >
+              {priorityLoading ? "Loading" : "Retry"}
+            </button>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-zinc-800 bg-black/30 p-4 text-sm text-zinc-300">
+            {priorityLoading && !data.priority ? (
+              <div className="text-zinc-400">Loading priority alerts...</div>
+            ) : priorityError ? (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-yellow-200">Failed to load priority alerts</div>
+                <button
+                  className="w-fit rounded-lg border border-yellow-400/50 px-3 py-2 text-xs font-semibold text-yellow-100 transition hover:bg-yellow-400/10"
+                  onClick={() => void loadPortfolioPriority()}
+                  type="button"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : criticalCount > 0 ? (
+              <div className="font-semibold text-red-200">
+                {criticalCount} Critical Alert{criticalCount > 1 ? "s" : ""}
+              </div>
+            ) : highCount > 0 ? (
+              <div className="font-semibold text-red-200">
+                {highCount} High Priority Event{highCount > 1 ? "s" : ""}
+              </div>
+            ) : (
+              <div className="text-zinc-400">No critical portfolio alerts</div>
+            )}
+          </div>
+
+          {!priorityError && !priorityLoading && priorityAlerts.length === 0 && (
+            <div className="mt-4 rounded-xl border border-dashed border-zinc-700 p-5 text-sm text-zinc-400">
+              No critical portfolio alerts
+            </div>
+          )}
+
+          {priorityAlerts.length > 0 && (
+            <div className="mt-4 grid gap-3">
+              {priorityAlerts.map((alert, index) => (
+                <article
+                  className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+                  key={`${textValue(alert.link || alert.title, "priority")}-${index}`}
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${priorityBadgeClass(alert.priority_level)}`}
+                    >
+                      {textValue(alert.priority_level, "LOW")}
+                      {alert.priority_score !== null &&
+                        alert.priority_score !== undefined &&
+                        ` ${numberValue(alert.priority_score).toFixed(0)}`}
+                    </span>
+                    <span className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                      {textValue(alert.symbol, "NEWS")}
+                    </span>
+                    {alert.is_fcn_related && (
+                      <span className="rounded-full border border-blue-400/40 bg-blue-400/10 px-2 py-0.5 text-xs font-semibold text-blue-200">
+                        FCN
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="mt-3 text-sm font-semibold leading-6 text-white">
+                    {textValue(alert.title, "Untitled alert")}
+                  </h3>
+                  <p className="mt-2 text-xs leading-5 text-zinc-300">
+                    {textValue(alert.alert_summary, "此事件可能影響相關持倉，建議持續觀察。")}
+                  </p>
+                  {alert.is_fcn_related && listValue(alert.related_fcn_codes).length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {listValue(alert.related_fcn_codes).map((code) => (
+                        <span
+                          className="rounded-full border border-blue-400/30 bg-blue-400/5 px-2 py-0.5 text-[11px] font-semibold text-blue-200"
+                          key={code}
+                        >
+                          {code}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
+                    <span>{formatDateTime(alert.published_at)}</span>
+                  </div>
+                  {alert.link && (
+                    <a
+                      className="mt-3 inline-flex text-xs font-semibold text-emerald-300 transition hover:text-emerald-200"
+                      href={alert.link}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      View link ↗
+                    </a>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
