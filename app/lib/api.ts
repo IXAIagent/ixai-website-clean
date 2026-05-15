@@ -475,6 +475,58 @@ export type ReasoningSystemResponse = {
   is_stale?: boolean | null;
 };
 
+export type ExplainabilitySummary = {
+  why_risk_increased?: string | null;
+  what_changed_today?: string | null;
+  dominant_driver?: string | null;
+  hidden_correlation?: string | null;
+  systemic_risk?: string | null;
+};
+
+export type PortfolioSummaryV2AResponse = {
+  regime?: string | null;
+  dominant_risk?: string | null;
+  concentration_score?: number | string | null;
+  drift_summary?: string | null;
+  explainability?: ExplainabilitySummary | null;
+  top_alerts?: string[] | null;
+  intelligence_confidence?: number | string | null;
+  generated_at?: string | null;
+  is_stale?: boolean | null;
+};
+
+export type TimelineWindowResponse = {
+  window?: string | null;
+  regime_evolution?: string | null;
+  exposure_evolution?: string | null;
+  risk_score_trend?: string | null;
+  concentration_trend?: string | null;
+  volatility_trend?: string | null;
+  dominant_driver_history?: string[] | null;
+  recurring_risks?: string[] | null;
+  improving_signals?: string[] | null;
+  deteriorating_signals?: string[] | null;
+};
+
+export type TimelineIntelligenceResponse = {
+  portfolio_id?: string | null;
+  windows?: TimelineWindowResponse[] | null;
+  regime_evolution?: string | null;
+  exposure_evolution?: string | null;
+  risk_score_trend?: string | null;
+  concentration_trend?: string | null;
+  volatility_trend?: string | null;
+  dominant_driver_history?: string[] | null;
+  recurring_risks?: string[] | null;
+  improving_signals?: string[] | null;
+  deteriorating_signals?: string[] | null;
+  timeline_summary?: string | null;
+  message?: string | null;
+  confidence?: number | string | null;
+  generated_at?: string | null;
+  is_stale?: boolean | null;
+};
+
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -633,6 +685,14 @@ export function getPortfolioPriority() {
 
 export function getPortfolioIntelligence() {
   return apiFetch<PortfolioIntelligenceResponse>("/api/v1/intelligence/portfolio");
+}
+
+export function getPortfolioSummaryV2A() {
+  return apiFetch<PortfolioSummaryV2AResponse>("/api/v1/intelligence/portfolio-summary");
+}
+
+export function getIntelligenceTimeline() {
+  return apiFetch<TimelineIntelligenceResponse>("/api/v1/intelligence/timeline");
 }
 
 export function getIntelligenceScenarios() {

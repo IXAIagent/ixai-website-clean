@@ -25,6 +25,8 @@ import {
   getPortfolioIntelligence,
   getPortfolioNews,
   getPortfolioPriority,
+  getPortfolioSummaryV2A,
+  getIntelligenceTimeline,
   getStocks,
   getToken,
   logout,
@@ -32,6 +34,7 @@ import {
   PortfolioNewsResponse,
   PortfolioIntelligenceResponse,
   PortfolioPriorityResponse,
+  PortfolioSummaryV2AResponse,
   RiskOverviewResponse,
   CopilotExplainResponse,
   IntelligenceGraphResponse,
@@ -39,6 +42,8 @@ import {
   ScenarioResponse,
   StockPositionResponse,
   SummaryResponse,
+  TimelineIntelligenceResponse,
+  TimelineWindowResponse,
 } from "../lib/api";
 
 type DashboardState = {
@@ -51,6 +56,8 @@ type DashboardState = {
   cash: CashPositionResponse[];
   news: PortfolioNewsResponse | null;
   priority: PortfolioPriorityResponse | null;
+  portfolioSummaryV2A: PortfolioSummaryV2AResponse | null;
+  timelineIntelligence: TimelineIntelligenceResponse | null;
   intelligence: PortfolioIntelligenceResponse | null;
   scenarios: ScenarioResponse | null;
   graph: IntelligenceGraphResponse | null;
@@ -127,6 +134,27 @@ function textValue(value: unknown, fallback = "-") {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return fallback;
+}
+
+function compactTime(value: unknown) {
+  const text = textValue(value, "");
+  if (!text) return "pending";
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return text;
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function statusToneClass(value: unknown) {
+  const normalized = textValue(value, "").toUpperCase();
+  if (normalized.includes("RISING") || normalized.includes("HIGH") || normalized.includes("STALE")) return "text-yellow-300";
+  if (normalized.includes("COOLING") || normalized.includes("IMPROVING") || normalized.includes("CLEAR")) return "text-emerald-300";
+  if (normalized.includes("FAILED") || normalized.includes("CRITICAL")) return "text-red-300";
+  return "text-zinc-300";
 }
 
 function tenorText(value: unknown) {
@@ -1220,6 +1248,12 @@ export default function DashboardPage() {
           intelligence: null,
           error: "Failed to load portfolio intelligence",
         }));
+      const portfolioSummaryV2APromise = getPortfolioSummaryV2A()
+        .then((portfolioSummaryV2A) => portfolioSummaryV2A)
+        .catch(() => null);
+      const timelineIntelligencePromise = getIntelligenceTimeline()
+        .then((timelineIntelligence) => timelineIntelligence)
+        .catch(() => null);
       const scenariosPromise = getIntelligenceScenarios()
         .then((scenarios) => scenarios)
         .catch(() => null);
@@ -1243,6 +1277,8 @@ export default function DashboardPage() {
         newsResult,
         priorityResult,
         intelligenceResult,
+        portfolioSummaryV2A,
+        timelineIntelligence,
         scenarios,
         graph,
         reasoning,
@@ -1259,6 +1295,8 @@ export default function DashboardPage() {
         newsPromise,
         priorityPromise,
         intelligencePromise,
+        portfolioSummaryV2APromise,
+        timelineIntelligencePromise,
         scenariosPromise,
         graphPromise,
         reasoningPromise,
@@ -1274,6 +1312,8 @@ export default function DashboardPage() {
         cash: Array.isArray(cash) ? cash : [],
         news: newsResult.news,
         priority: priorityResult.priority,
+        portfolioSummaryV2A,
+        timelineIntelligence,
         intelligence: intelligenceResult.intelligence,
         scenarios,
         graph,
@@ -1474,6 +1514,23 @@ export default function DashboardPage() {
   const correlatedRisks = listValue(data.graph?.top_correlated_risks).slice(0, 4);
   const copilotInsight = textValue(data.copilot?.answer, "");
   const reasoningData = data.reasoning;
+  const portfolioSummaryV2A = data.portfolioSummaryV2A;
+  const timelineData = data.timelineIntelligence;
+  const timelineWindows = listValue<TimelineWindowResponse>(timelineData?.windows);
+  const explainability = portfolioSummaryV2A?.explainability;
+  const schedulerGeneratedAt =
+    portfolioSummaryV2A?.generated_at ||
+    timelineData?.generated_at ||
+    data.intelligence?.generated_at ||
+    data.news?.fetched_at;
+  const memoryConfidence = numberValue(
+    timelineData?.confidence ?? portfolioSummaryV2A?.intelligence_confidence,
+    NaN,
+  );
+  const memoryIsStale =
+    timelineData?.is_stale === true ||
+    portfolioSummaryV2A?.is_stale === true ||
+    (!timelineData && !portfolioSummaryV2A);
   const reasoningTopRisks = listValue(reasoningData?.reasoning?.top_risks).slice(0, 3);
   const reasoningTopStrengths = listValue(reasoningData?.reasoning?.top_strengths).slice(0, 2);
   const themeDominant = listValue(reasoningData?.themes?.dominant_themes).slice(0, 3);
@@ -2197,6 +2254,157 @@ export default function DashboardPage() {
               {persistentThemes.length > 0 ? `Persistent: ${persistentThemes.join(" · ")}` : "Persistent themes pending"}
             </div>
           </div>
+        </section>
+
+        <section className="grid gap-3 lg:grid-cols-[0.85fr_1.15fr]">
+          <div className="border-y border-zinc-800 bg-black/20 px-3 py-3 font-mono text-xs">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] uppercase tracking-wide text-zinc-500">
+                Scheduler Status / Memory Freshness
+              </span>
+              <span className={memoryIsStale ? "text-yellow-300" : "text-emerald-300"}>
+                {memoryIsStale ? "STALE / BUILDING" : "FRESH"}
+              </span>
+            </div>
+            <div className="grid gap-1.5 text-zinc-300">
+              <div className="flex justify-between gap-4">
+                <span className="text-zinc-600">LAST GENERATED</span>
+                <span className="text-right">{compactTime(schedulerGeneratedAt)}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-zinc-600">CONFIDENCE</span>
+                <span className={Number.isFinite(memoryConfidence) && memoryConfidence >= 45 ? "text-emerald-300" : "text-yellow-300"}>
+                  {Number.isFinite(memoryConfidence) ? `${memoryConfidence.toFixed(0)}%` : "pending"}
+                </span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-zinc-600">REGIME</span>
+                <span className="text-right">{textValue(portfolioSummaryV2A?.regime, workspaceMode)}</span>
+              </div>
+              <div className="pt-1 text-zinc-500">
+                {textValue(timelineData?.message, "Waiting for scheduler history")}
+              </div>
+            </div>
+          </div>
+
+          <div className="border-y border-zinc-800 bg-black/20 px-3 py-3 font-mono text-xs">
+            <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">
+              Explainability Panel
+            </div>
+            <div className="grid gap-1.5 text-zinc-300">
+              <div>
+                <span className="text-zinc-600">WHY RISK:</span>{" "}
+                {textValue(explainability?.why_risk_increased, "No elevated risk explanation yet.")}
+              </div>
+              <div>
+                <span className="text-zinc-600">CHANGED:</span>{" "}
+                {textValue(explainability?.what_changed_today, portfolioSummaryV2A?.drift_summary || "No material change detected.")}
+              </div>
+              <div>
+                <span className="text-zinc-600">DRIVER:</span>{" "}
+                <span className={statusToneClass(explainability?.dominant_driver)}>
+                  {textValue(explainability?.dominant_driver, portfolioSummaryV2A?.dominant_risk || "No dominant driver")}
+                </span>
+              </div>
+              <div>
+                <span className="text-zinc-600">HIDDEN CORR:</span>{" "}
+                {textValue(explainability?.hidden_correlation, "No hidden correlation flagged.")}
+              </div>
+              <div>
+                <span className="text-zinc-600">SYSTEMIC:</span>{" "}
+                {textValue(explainability?.systemic_risk, "No systemic risk cluster detected.")}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border border-zinc-800 bg-zinc-950 p-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-base font-semibold">Intelligence Timeline</h2>
+              <p className="mt-1 text-xs text-zinc-500">
+                7d / 30d / 90d regime, exposure and drift memory from scheduled snapshots.
+              </p>
+            </div>
+            <span className={memoryIsStale ? "font-mono text-xs text-yellow-300" : "font-mono text-xs text-emerald-300"}>
+              {memoryIsStale ? "history building" : "memory active"}
+            </span>
+          </div>
+
+          {!timelineData ? (
+            <div className="mt-3 border border-dashed border-zinc-700 px-3 py-2 font-mono text-xs text-zinc-500">
+              Timeline unavailable / Waiting for scheduler history
+            </div>
+          ) : (
+            <>
+              <div className="mt-3 border-l border-zinc-700 bg-black/30 px-3 py-2 font-mono text-xs text-zinc-300">
+                {textValue(timelineData.timeline_summary, "歷史資料仍在累積")}
+              </div>
+              <div className="mt-3 overflow-x-auto">
+                <div className="min-w-[900px] divide-y divide-zinc-800 border border-zinc-800 font-mono text-xs">
+                  <div className="grid grid-cols-[0.45fr_1fr_0.9fr_1fr_1fr] gap-3 bg-zinc-900 px-3 py-1.5 text-[10px] uppercase tracking-wide text-zinc-600">
+                    <div>Window</div>
+                    <div>Regime</div>
+                    <div>Risk</div>
+                    <div>Concentration</div>
+                    <div>Volatility</div>
+                  </div>
+                  {timelineWindows.length === 0 && (
+                    <div className="px-3 py-2 text-zinc-500">歷史資料仍在累積</div>
+                  )}
+                  {timelineWindows.map((windowItem) => (
+                    <div
+                      className="grid grid-cols-[0.45fr_1fr_0.9fr_1fr_1fr] gap-3 px-3 py-2"
+                      key={textValue(windowItem.window, "window")}
+                    >
+                      <span className="font-semibold text-zinc-200">
+                        {textValue(windowItem.window, "-").toUpperCase()}
+                      </span>
+                      <span className={statusToneClass(windowItem.regime_evolution)}>
+                        {textValue(windowItem.regime_evolution)}
+                      </span>
+                      <span className={statusToneClass(windowItem.risk_score_trend)}>
+                        {textValue(windowItem.risk_score_trend)}
+                      </span>
+                      <span className={statusToneClass(windowItem.concentration_trend)}>
+                        {textValue(windowItem.concentration_trend)}
+                      </span>
+                      <span className={statusToneClass(windowItem.volatility_trend)}>
+                        {textValue(windowItem.volatility_trend)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <div className="border border-zinc-800 bg-black/20 p-2 font-mono text-xs">
+                  <div className="mb-1 text-[10px] uppercase tracking-wide text-zinc-600">Recurring Risks</div>
+                  <div className="text-zinc-300">
+                    {listValue(timelineData.recurring_risks).length > 0
+                      ? listValue(timelineData.recurring_risks).slice(0, 4).join(" · ")
+                      : "None detected yet"}
+                  </div>
+                </div>
+                <div className="border border-zinc-800 bg-black/20 p-2 font-mono text-xs">
+                  <div className="mb-1 text-[10px] uppercase tracking-wide text-zinc-600">Improving Signals</div>
+                  <div className="text-emerald-300">
+                    {listValue(timelineData.improving_signals).length > 0
+                      ? listValue(timelineData.improving_signals).slice(0, 4).join(" · ")
+                      : "Pending"}
+                  </div>
+                </div>
+                <div className="border border-zinc-800 bg-black/20 p-2 font-mono text-xs">
+                  <div className="mb-1 text-[10px] uppercase tracking-wide text-zinc-600">Deteriorating Signals</div>
+                  <div className="text-yellow-300">
+                    {listValue(timelineData.deteriorating_signals).length > 0
+                      ? listValue(timelineData.deteriorating_signals).slice(0, 4).join(" · ")
+                      : "Pending"}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </section>
 
         <section className="border-y border-zinc-800 bg-black/20 py-3 font-mono text-xs">
