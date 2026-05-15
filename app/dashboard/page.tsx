@@ -732,6 +732,146 @@ function buildUpcomingEvents(fcns: FCNDetail[]) {
   return { next48h: next48h.slice(0, 4), next7d: next7d.slice(0, 4) };
 }
 
+type WorkspaceMode = "FCN_RISK" | "CRYPTO_VOL" | "AI_MOMENTUM" | "DEFENSIVE" | "BALANCED";
+
+function buildWorkspaceMode(
+  fcns: FCNDetail[],
+  crypto: CryptoPositionResponse[],
+  concentration: ReturnType<typeof buildConcentrationRadar>,
+  marketRegime: ReturnType<typeof buildMarketRegime>,
+  riskDrift: ReturnType<typeof buildRiskDrift>,
+  priorityAlerts: NewsArticle[],
+) {
+  const fcnKiRisk = fcns.some((fcn) => {
+    const risk = textValue(fcn.risk_level, "").toLowerCase();
+    const ki = percentNumber(fcn.distance_to_KI || fcn.distance_to_ki || fcn.distance_to_ki_pct);
+    return risk === "high" || (Number.isFinite(ki) && ki < 8);
+  });
+  const fcnAlert = priorityAlerts.some((article) => article.is_fcn_related);
+  const cryptoPct = percentToNumber(concentration.crypto);
+  const cryptoLeveraged = crypto.some((item) => numberValue(item.leverage, 0) > 1);
+  const aiPct = percentToNumber(concentration.aiChip);
+  const defensive = riskDrift.direction === "↑" || textValue(marketRegime.label, "").includes("DEFENSIVE");
+
+  if (fcnKiRisk || fcnAlert || marketRegime.label.includes("FCN")) return "FCN_RISK";
+  if (cryptoPct >= 15 || cryptoLeveraged || marketRegime.label.includes("CRYPTO")) return "CRYPTO_VOL";
+  if (aiPct >= 35 || marketRegime.label.includes("AI")) return "AI_MOMENTUM";
+  if (defensive) return "DEFENSIVE";
+  return "BALANCED";
+}
+
+function workspaceContext(mode: WorkspaceMode) {
+  const contexts: Record<WorkspaceMode, { context: string; chips: string[] }> = {
+    FCN_RISK: {
+      context: "FCN sensitivity elevated near KI thresholds",
+      chips: ["FOCUS: FCN", "KI/KO", "COUPON"],
+    },
+    CRYPTO_VOL: {
+      context: "Crypto volatility expanding across positions",
+      chips: ["FOCUS: CRYPTO", "VOL", "BTC/ETH"],
+    },
+    AI_MOMENTUM: {
+      context: "AI/chip momentum dominating portfolio flow",
+      chips: ["FOCUS: AI", "MOMENTUM", "SEMIS"],
+    },
+    DEFENSIVE: {
+      context: "Portfolio risk is drifting defensive",
+      chips: ["FOCUS: DEFENSE", "CASH", "DOWNSIDE"],
+    },
+    BALANCED: {
+      context: "Portfolio signals are balanced across risk factors",
+      chips: ["FOCUS: BALANCED", "WATCH", "FLOW"],
+    },
+  };
+  return contexts[mode];
+}
+
+function articleWorkspaceScore(article: NewsArticle, mode: WorkspaceMode) {
+  const symbol = textValue(article.symbol, "").toUpperCase();
+  const title = textValue(article.title, "").toLowerCase();
+  let score = numberValue(article.relevance_score, 0);
+
+  if (mode === "FCN_RISK" && article.is_fcn_related) score += 50;
+  if (
+    mode === "CRYPTO_VOL" &&
+    (["BTC", "BTC-USD", "ETH", "ETH-USD"].includes(symbol) ||
+      title.includes("crypto") ||
+      title.includes("volatility"))
+  ) {
+    score += 50;
+  }
+  if (
+    mode === "AI_MOMENTUM" &&
+    (["NVDA", "MSFT", "TSM", "2330.TW", "AAPL", "AMD", "AVGO", "MRVL", "PLTR"].includes(symbol) ||
+      title.includes("ai") ||
+      title.includes("chip"))
+  ) {
+    score += 50;
+  }
+  if (
+    mode === "DEFENSIVE" &&
+    (title.includes("macro") ||
+      title.includes("risk") ||
+      title.includes("liquidity") ||
+      title.includes("cash") ||
+      textValue(article.impact, "").toLowerCase() === "negative")
+  ) {
+    score += 50;
+  }
+
+  return score;
+}
+
+function sortArticlesByWorkspace(articles: NewsArticle[], mode: WorkspaceMode) {
+  return [...articles].sort((a, b) => {
+    const scoreDiff = articleWorkspaceScore(b, mode) - articleWorkspaceScore(a, mode);
+    if (scoreDiff !== 0) return scoreDiff;
+    return textValue(b.published_at, "").localeCompare(textValue(a.published_at, ""));
+  });
+}
+
+function sortHeatmapByWorkspace(
+  rows: ReturnType<typeof buildPortfolioHeatmap>,
+  mode: WorkspaceMode,
+) {
+  return [...rows].sort((a, b) => {
+    const score = (row: (typeof rows)[number]) => {
+      const symbol = row.symbol.toUpperCase();
+      if (mode === "FCN_RISK" && symbol.includes("FCN")) return 50 + row.score;
+      if (mode === "AI_MOMENTUM" && /NVDA|MSFT|TSM|2330|AAPL|AMD|AVGO|MRVL|PLTR/.test(symbol)) return 50 + row.score;
+      if (mode === "CRYPTO_VOL" && /BTC|ETH|CRYPTO/.test(symbol)) return 50 + row.score;
+      return row.score;
+    };
+    return score(b) - score(a);
+  });
+}
+
+function sortEventsByWorkspace(
+  events: ReturnType<typeof buildUpcomingEvents>,
+  mode: WorkspaceMode,
+) {
+  const rank = (event: string) => {
+    const normalized = event.toLowerCase();
+    if (mode === "FCN_RISK" && (normalized.includes("coupon") || normalized.includes("fcn"))) return 0;
+    if (mode === "CRYPTO_VOL" && (normalized.includes("btc") || normalized.includes("crypto") || normalized.includes("cpi"))) return 0;
+    if (mode === "AI_MOMENTUM" && (normalized.includes("nvda") || normalized.includes("earnings"))) return 0;
+    if (mode === "DEFENSIVE" && (normalized.includes("cpi") || normalized.includes("fomc") || normalized.includes("macro"))) return 0;
+    return 1;
+  };
+  return {
+    next48h: [...events.next48h].sort((a, b) => rank(a) - rank(b)),
+    next7d: [...events.next7d].sort((a, b) => rank(a) - rank(b)),
+  };
+}
+
+function workspacePanelTitle(mode: WorkspaceMode) {
+  if (mode === "FCN_RISK") return "Workspace Priority · FCN Risk";
+  if (mode === "CRYPTO_VOL") return "Workspace Priority · Crypto Volatility";
+  if (mode === "AI_MOMENTUM") return "Workspace Priority · AI Momentum";
+  if (mode === "DEFENSIVE") return "Workspace Priority · Defensive Monitor";
+  return "Workspace Priority · Balanced Monitor";
+}
+
 function allocationLabel(item: AllocationItem) {
   const labels: Record<string, string> = {
     stock: "Stocks",
@@ -1185,8 +1325,7 @@ export default function DashboardPage() {
     listValue(data.summary.cash_summary),
     listValue(data.cash),
   );
-  const allNewsArticles = listValue(data.news?.articles);
-  const newsArticles = allNewsArticles.slice(0, visibleNewsCount);
+  const rawNewsArticles = listValue(data.news?.articles);
   const priorityAlerts = listValue(data.priority?.top_alerts);
   const topPriorityAlerts = priorityAlerts.slice(0, 3);
   const criticalCount = numberValue(data.priority?.critical_count, 0);
@@ -1198,13 +1337,6 @@ export default function DashboardPage() {
     fcns.length > 0 ||
     crypto.length > 0 ||
     cash.length > 0;
-  const todayBriefLines = buildTodayBrief(
-    priorityAlerts,
-    allNewsArticles,
-    fcns,
-    crypto,
-    riskLevel,
-  );
   const marketPulse = [
     { label: "SPX", value: "+0.4%" },
     { label: "NASDAQ", value: "+1.1%" },
@@ -1217,6 +1349,21 @@ export default function DashboardPage() {
     { label: "CRYPTO VOL", value: "HIGH" },
   ];
   const concentrationRadar = buildConcentrationRadar(stocks, fcns, crypto, totalValue);
+  const riskDrift = buildRiskDrift(concentrationRadar, criticalCount, highCount);
+  const marketRegime = buildMarketRegime(priorityAlerts, concentrationRadar, riskLevel);
+  const workspaceMode = buildWorkspaceMode(
+    fcns,
+    crypto,
+    concentrationRadar,
+    marketRegime,
+    riskDrift,
+    priorityAlerts,
+  );
+  const workspace = workspaceContext(workspaceMode);
+  const allNewsArticles = sortArticlesByWorkspace(rawNewsArticles, workspaceMode);
+  const newsArticles = allNewsArticles.slice(0, visibleNewsCount);
+  const baseUpcomingEvents = buildUpcomingEvents(fcns);
+  const upcomingEvents = sortEventsByWorkspace(baseUpcomingEvents, workspaceMode);
   const watchNowItems = buildWatchNow(
     priorityAlerts,
     allNewsArticles,
@@ -1224,10 +1371,15 @@ export default function DashboardPage() {
     crypto,
     concentrationRadar,
   );
-  const riskDrift = buildRiskDrift(concentrationRadar, criticalCount, highCount);
-  const marketRegime = buildMarketRegime(priorityAlerts, concentrationRadar, riskLevel);
-  const heatmapRows = buildPortfolioHeatmap(allNewsArticles, fcns);
-  const upcomingEvents = buildUpcomingEvents(fcns);
+  const todayBriefLines = buildTodayBrief(
+    priorityAlerts,
+    allNewsArticles,
+    fcns,
+    crypto,
+    riskLevel,
+  );
+  const baseHeatmapRows = buildPortfolioHeatmap(allNewsArticles, fcns);
+  const heatmapRows = sortHeatmapByWorkspace(baseHeatmapRows, workspaceMode);
   const todayFocus = buildTodayFocus(
     priorityAlerts,
     allNewsArticles,
@@ -1343,6 +1495,23 @@ export default function DashboardPage() {
                 <span className={marketPulseValueClass(item.value)}>{item.value}</span>
               </span>
             ))}
+          </div>
+        </section>
+
+        <section className="border-y border-emerald-400/20 bg-emerald-400/5 px-3 py-2 font-mono text-xs">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-zinc-500">WORKSPACE MODE:</span>
+              <span className="font-semibold text-emerald-300">{workspaceMode}</span>
+              <span className="text-zinc-400">{workspace.context}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {workspace.chips.map((chip) => (
+                <span className="text-zinc-300" key={chip}>
+                  [{chip}]
+                </span>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -1569,6 +1738,75 @@ export default function DashboardPage() {
                 </article>
                 );
               })}
+            </div>
+          )}
+        </section>
+
+        <section className="border-y border-zinc-800 bg-black/20 px-3 py-2 font-mono text-xs">
+          <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">
+            {workspacePanelTitle(workspaceMode)}
+          </div>
+          {workspaceMode === "FCN_RISK" && (
+            <div className="grid gap-2 md:grid-cols-3">
+              {fcns.slice(0, 3).map((fcn, index) => (
+                <div className="min-w-0" key={`${textValue(fcn.fcn_code || fcn.name, "fcn")}-${index}`}>
+                  <span className="text-zinc-500">
+                    {textValue(fcn.fcn_code || fcn.name || fcn.code, "FCN")}
+                  </span>{" "}
+                  <span className={kiDistanceClass(fcn.distance_to_KI || fcn.distance_to_ki || fcn.distance_to_ki_pct)}>
+                    KI {percentValue(fcn.distance_to_KI || fcn.distance_to_ki || fcn.distance_to_ki_pct)}
+                  </span>{" "}
+                  <span className="text-zinc-400">
+                    {textValue(fcn.worst_underlying || fcn.worst_symbol || fcn.worst_of, "worst-of")}
+                  </span>
+                </div>
+              ))}
+              {fcns.length === 0 && <div className="text-zinc-500">No FCN monitor items.</div>}
+            </div>
+          )}
+          {workspaceMode === "CRYPTO_VOL" && (
+            <div className="grid gap-2 md:grid-cols-3">
+              {crypto.slice(0, 3).map((item, index) => (
+                <div className="min-w-0" key={`${textValue(item.symbol, "crypto")}-${index}`}>
+                  <span className="text-zinc-500">{textValue(item.symbol, "CRYPTO")}</span>{" "}
+                  <span className="text-zinc-300">{priceMoney(item.current_price)}</span>{" "}
+                  <span className="text-yellow-300">LEV {textValue(item.leverage, "-")}</span>
+                </div>
+              ))}
+              {crypto.length === 0 && <div className="text-zinc-500">No crypto positions.</div>}
+            </div>
+          )}
+          {workspaceMode === "AI_MOMENTUM" && (
+            <div className="grid gap-2 md:grid-cols-3">
+              {allNewsArticles.slice(0, 3).map((article, index) => (
+                <div className="min-w-0 truncate" key={`${textValue(article.symbol, "ai")}-${index}`}>
+                  <span className="text-emerald-300">{textValue(article.symbol, "AI")}</span>{" "}
+                  <span className="text-zinc-400">{textValue(article.title, "AI momentum flow")}</span>
+                </div>
+              ))}
+              {allNewsArticles.length === 0 && <div className="text-zinc-500">No AI momentum intelligence.</div>}
+            </div>
+          )}
+          {workspaceMode === "DEFENSIVE" && (
+            <div className="grid gap-2 md:grid-cols-3">
+              <div>
+                <span className="text-zinc-500">Risk Drift</span>{" "}
+                <span className={riskDrift.className}>{riskDrift.direction} {riskDrift.label}</span>
+              </div>
+              <div>
+                <span className="text-zinc-500">Cash</span>{" "}
+                <span className="text-zinc-300">{commandCenter.find((item) => item.label === "CASH POSITION")?.value}</span>
+              </div>
+              <div>
+                <span className="text-zinc-500">Top Risk</span>{" "}
+                <span className="text-red-300">{textValue(data.risk.top_risk || data.summary.top_risk, "No major risk")}</span>
+              </div>
+            </div>
+          )}
+          {workspaceMode === "BALANCED" && (
+            <div className="grid gap-2 md:grid-cols-3">
+              <div className="text-zinc-400">Signals balanced across intelligence, risk and positioning.</div>
+              <div className="text-zinc-500">Mode is monitoring rather than prioritizing one risk stack.</div>
             </div>
           )}
         </section>
