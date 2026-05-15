@@ -11,10 +11,13 @@ import {
   CashPositionResponse,
   CryptoPositionResponse,
   DecisionCard,
+  explainCopilot,
   FCNPositionResponse,
   getCash,
   getCrypto,
   getFcns,
+  getIntelligenceGraph,
+  getIntelligenceScenarios,
   getMyAssetAllocation,
   getMyRiskOverview,
   getMySummary,
@@ -29,6 +32,9 @@ import {
   PortfolioIntelligenceResponse,
   PortfolioPriorityResponse,
   RiskOverviewResponse,
+  CopilotExplainResponse,
+  IntelligenceGraphResponse,
+  ScenarioResponse,
   StockPositionResponse,
   SummaryResponse,
 } from "../lib/api";
@@ -44,6 +50,9 @@ type DashboardState = {
   news: PortfolioNewsResponse | null;
   priority: PortfolioPriorityResponse | null;
   intelligence: PortfolioIntelligenceResponse | null;
+  scenarios: ScenarioResponse | null;
+  graph: IntelligenceGraphResponse | null;
+  copilot: CopilotExplainResponse | null;
 };
 
 type FCNUnderlyingResult = {
@@ -1208,6 +1217,15 @@ export default function DashboardPage() {
           intelligence: null,
           error: "Failed to load portfolio intelligence",
         }));
+      const scenariosPromise = getIntelligenceScenarios()
+        .then((scenarios) => scenarios)
+        .catch(() => null);
+      const graphPromise = getIntelligenceGraph()
+        .then((graph) => graph)
+        .catch(() => null);
+      const copilotPromise = explainCopilot("Explain current portfolio operating mode")
+        .then((copilot) => copilot)
+        .catch(() => null);
       const [
         summary,
         allocation,
@@ -1219,6 +1237,9 @@ export default function DashboardPage() {
         newsResult,
         priorityResult,
         intelligenceResult,
+        scenarios,
+        graph,
+        copilot,
       ] =
         await Promise.all([
         getMySummary(),
@@ -1231,6 +1252,9 @@ export default function DashboardPage() {
         newsPromise,
         priorityPromise,
         intelligencePromise,
+        scenariosPromise,
+        graphPromise,
+        copilotPromise,
       ]);
       const nextData = {
         summary,
@@ -1243,6 +1267,9 @@ export default function DashboardPage() {
         news: newsResult.news,
         priority: priorityResult.priority,
         intelligence: intelligenceResult.intelligence,
+        scenarios,
+        graph,
+        copilot,
       };
       setNewsError(newsResult.error);
       setPriorityError(priorityResult.error);
@@ -1432,6 +1459,11 @@ export default function DashboardPage() {
     listValue(backendWorkspace?.decision_signals),
     fallbackDecisionSignals,
   );
+  const scenarioItems = listValue(data.scenarios?.scenarios).slice(0, 3);
+  const strongestThemes = listValue(data.graph?.strongest_themes).slice(0, 4);
+  const strongestConnections = listValue(data.graph?.strongest_connections).slice(0, 4);
+  const correlatedRisks = listValue(data.graph?.top_correlated_risks).slice(0, 4);
+  const copilotInsight = textValue(data.copilot?.answer, "");
 
   return (
     <main className="min-h-screen bg-black px-5 py-8 text-white">
@@ -1980,6 +2012,72 @@ export default function DashboardPage() {
               )}
             </div>
           )}
+        </section>
+
+        <section className="grid gap-3 lg:grid-cols-3">
+          <div className="border border-zinc-800 bg-zinc-950 p-3">
+            <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">
+              Scenario Watch
+            </div>
+            <div className="mt-2 divide-y divide-zinc-800">
+              {scenarioItems.length === 0 && (
+                <div className="py-2 text-xs text-zinc-500">No scenario watch data.</div>
+              )}
+              {scenarioItems.map((scenario) => (
+                <div className="py-2" key={textValue(scenario.scenario_name, "scenario")}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="truncate font-mono text-xs font-semibold text-zinc-200">
+                      {textValue(scenario.scenario_name, "SCENARIO")}
+                    </span>
+                    <span className={`text-[11px] font-semibold ${priorityBadgeClass(scenario.impact_level)}`}>
+                      {textValue(scenario.impact_level, "LOW")}
+                    </span>
+                  </div>
+                  <p className="mt-1 truncate text-xs text-zinc-500">
+                    {textValue(scenario.narrative || scenario.portfolio_sensitivity, "Risk scenario monitoring.")}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="border border-zinc-800 bg-zinc-950 p-3">
+            <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">
+              Intelligence Graph Summary
+            </div>
+            <div className="mt-2 grid gap-2 text-xs">
+              <div>
+                <span className="text-zinc-600">THEMES:</span>{" "}
+                <span className="text-zinc-300">
+                  {strongestThemes.length > 0 ? strongestThemes.join(" · ") : "No dominant theme"}
+                </span>
+              </div>
+              <div>
+                <span className="text-zinc-600">CONNECTIONS:</span>{" "}
+                <span className="text-zinc-300">
+                  {strongestConnections.length > 0 ? strongestConnections.join(" · ") : "No strong connection"}
+                </span>
+              </div>
+              <div>
+                <span className="text-zinc-600">RISKS:</span>{" "}
+                <span className="text-zinc-300">
+                  {correlatedRisks.length > 0 ? correlatedRisks.join(" · ") : "No correlated risk"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="border border-zinc-800 bg-zinc-950 p-3">
+            <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">
+              Copilot Insight
+            </div>
+            <p className="mt-2 text-xs leading-5 text-zinc-400">
+              {copilotInsight || "Copilot context is waiting for portfolio intelligence."}
+            </p>
+            <div className="mt-2 font-mono text-[10px] uppercase tracking-wide text-zinc-600">
+              no trading advice
+            </div>
+          </div>
         </section>
 
         <section className="border-y border-zinc-800 bg-black/20 py-3 font-mono text-xs">

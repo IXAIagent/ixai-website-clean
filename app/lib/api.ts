@@ -362,6 +362,52 @@ export type PortfolioIntelligenceResponse = {
   is_stale?: boolean | null;
 };
 
+export type ScenarioResult = {
+  scenario_name?: string | null;
+  impact_level?: string | null;
+  affected_assets?: string[] | null;
+  portfolio_sensitivity?: string | null;
+  fcn_risk_change?: string | null;
+  narrative?: string | null;
+};
+
+export type ScenarioResponse = {
+  scenarios?: ScenarioResult[] | null;
+  generated_at?: string | null;
+  is_stale?: boolean | null;
+};
+
+export type IntelligenceGraphNode = {
+  id?: string | null;
+  label?: string | null;
+  node_type?: string | null;
+  weight?: number | string | null;
+};
+
+export type IntelligenceGraphEdge = {
+  source?: string | null;
+  target?: string | null;
+  edge_type?: string | null;
+  explanation?: string | null;
+};
+
+export type IntelligenceGraphResponse = {
+  nodes?: IntelligenceGraphNode[] | null;
+  edges?: IntelligenceGraphEdge[] | null;
+  strongest_themes?: string[] | null;
+  strongest_connections?: string[] | null;
+  top_correlated_risks?: string[] | null;
+  generated_at?: string | null;
+  is_stale?: boolean | null;
+};
+
+export type CopilotExplainResponse = {
+  answer?: string | null;
+  supported_topics?: string[] | null;
+  generated_at?: string | null;
+  is_stale?: boolean | null;
+};
+
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -520,6 +566,21 @@ export function getPortfolioPriority() {
 
 export function getPortfolioIntelligence() {
   return apiFetch<PortfolioIntelligenceResponse>("/api/v1/intelligence/portfolio");
+}
+
+export function getIntelligenceScenarios() {
+  return apiFetch<ScenarioResponse>("/api/v1/intelligence/scenarios");
+}
+
+export function getIntelligenceGraph() {
+  return apiFetch<IntelligenceGraphResponse>("/api/v1/intelligence/graph");
+}
+
+export function explainCopilot(question: string) {
+  return apiFetch<CopilotExplainResponse>("/api/v1/intelligence/copilot/explain", {
+    method: "POST",
+    body: JSON.stringify({ question }),
+  });
 }
 
 export function updateStock(id: string | number, payload: StockUpdatePayload) {
