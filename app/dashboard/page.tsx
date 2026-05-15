@@ -457,59 +457,22 @@ function buildWatchNow(
   return items.length > 0 ? items : ["目前未偵測到需要立即處理的決策事件。"];
 }
 
-function buildTodayFocus(
-  priorityAlerts: NewsArticle[],
-  articles: NewsArticle[],
+function buildPrimaryFocus(
+  mode: WorkspaceMode,
   fcns: FCNDetail[],
-  crypto: CryptoPositionResponse[],
-  upcomingEvents: string[],
+  concentration: ReturnType<typeof buildConcentrationRadar>,
+  riskDrift: ReturnType<typeof buildRiskDrift>,
 ) {
-  const critical = priorityAlerts.find(
-    (alert) => textValue(alert.priority_level, "").toUpperCase() === "CRITICAL",
-  );
-  const fcnRisk = fcns.find((fcn) => textValue(fcn.risk_level, "").toLowerCase() === "high");
-  const negativeHigh = articles.find(
-    (article) =>
-      textValue(article.impact, "").toLowerCase() === "negative" &&
-      textValue(article.relevance_level, "").toUpperCase() === "HIGH",
-  );
-  const positiveAi = articles.find((article) => {
-    const symbol = textValue(article.symbol, "").toUpperCase();
-    return (
-      textValue(article.impact, "").toLowerCase() === "positive" &&
-      textValue(article.relevance_level, "").toUpperCase() === "HIGH" &&
-      ["NVDA", "AMD", "TSM", "2330.TW", "AAPL", "MSFT", "MRVL", "AVGO", "PLTR"].includes(symbol)
-    );
-  });
-  const highAttention = articles.find((article) =>
-    ["HIGH", "CRITICAL"].includes(textValue(article.attention_level, "").toUpperCase()),
-  );
-  const cryptoVol = crypto.some((item) => numberValue(item.leverage, 0) > 1);
-
-  const risk =
-    critical
-      ? `${textValue(critical.symbol, "Portfolio")} critical alert active`
-      : fcnRisk
-        ? `${textValue(fcnRisk.worst_underlying || fcnRisk.worst_symbol || fcnRisk.fcn_code, "FCN")} FCN worst-of risk`
-        : negativeHigh
-          ? `${textValue(negativeHigh.symbol, "Asset")} negative high relevance flow`
-          : cryptoVol
-            ? "BTC volatility / leverage risk"
-            : "No major portfolio focus detected";
-
-  const opportunity =
-    positiveAi
-      ? `${textValue(positiveAi.symbol, "AI")} positive AI/chip momentum`
-      : articles.some((article) => /upgrade|earnings|guidance/i.test(textValue(article.title, "")))
-        ? "Earnings / guidance momentum appearing"
-        : "No clear opportunity signal";
-
-  const watch =
-    highAttention
-      ? `${textValue(highAttention.symbol, "Asset")} high attention intelligence`
-      : upcomingEvents[0] || "No near-term event window";
-
-  return { risk, opportunity, watch };
+  if (mode === "FCN_RISK") {
+    const fcn = fcns.find((item) => textValue(item.risk_level, "").toLowerCase() === "high") || fcns[0];
+    const worst = textValue(fcn?.worst_underlying || fcn?.worst_symbol || fcn?.worst_of, "worst-of");
+    const ki = percentValue(fcn?.distance_to_KI || fcn?.distance_to_ki || fcn?.distance_to_ki_pct);
+    return `FCN KI sensitivity active · ${worst} · KI ${ki}`;
+  }
+  if (mode === "AI_MOMENTUM") return `AI/chip momentum driving portfolio flow · ${concentration.aiChip} exposure`;
+  if (mode === "CRYPTO_VOL") return `Crypto volatility elevated · ${concentration.crypto} exposure`;
+  if (mode === "DEFENSIVE") return `Risk control posture · ${riskDrift.direction} ${riskDrift.label}`;
+  return "Portfolio stable · monitor alerts, FCN distance and concentration drift";
 }
 
 function buildCommandCenter(
@@ -697,6 +660,27 @@ function heatMarkerClass(marker: string) {
   if (marker === "↓") return "text-red-300";
   if (marker === "↑" || marker === "↑↑") return "text-emerald-300";
   return "text-zinc-400";
+}
+
+function heatPosture(row: { marker: string; driver: string }) {
+  if (row.marker === "!!") return "HEDGE WATCH";
+  if (row.driver.includes("AI") || row.marker === "↑↑") return "MOMENTUM";
+  if (row.marker === "↓") return "DEFENSIVE";
+  if (row.driver.includes("FCN")) return "MONITOR";
+  return "WATCH";
+}
+
+function relativeTime(value: unknown) {
+  const text = textValue(value, "");
+  if (!text) return "-";
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return formatDateTime(value);
+  const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+  if (minutes < 60) return `${minutes || 1}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 function daysUntil(value: unknown) {
@@ -920,7 +904,7 @@ function underlyingsText(value: unknown) {
 }
 
 function positionCardClass() {
-  return "rounded-xl border border-zinc-800 bg-zinc-900 p-4";
+  return "border border-zinc-800 bg-black/20 p-3";
 }
 
 function priceSource(value: unknown) {
@@ -1066,7 +1050,7 @@ function SkeletonBlock({ className = "" }: { className?: string }) {
 function DashboardSkeleton() {
   return (
     <main className="min-h-screen bg-black px-5 py-8 text-white">
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="mx-auto max-w-7xl space-y-4">
         <header className="flex flex-col gap-4 border-b border-zinc-800 pb-6 md:flex-row md:items-end md:justify-between">
           <div className="space-y-3">
             <SkeletonBlock className="h-4 w-40" />
@@ -1380,13 +1364,7 @@ export default function DashboardPage() {
   );
   const baseHeatmapRows = buildPortfolioHeatmap(allNewsArticles, fcns);
   const heatmapRows = sortHeatmapByWorkspace(baseHeatmapRows, workspaceMode);
-  const todayFocus = buildTodayFocus(
-    priorityAlerts,
-    allNewsArticles,
-    fcns,
-    crypto,
-    [...upcomingEvents.next48h, ...upcomingEvents.next7d],
-  );
+  const primaryFocus = buildPrimaryFocus(workspaceMode, fcns, concentrationRadar, riskDrift);
   const commandCenter = buildCommandCenter(fcns, crypto, allNewsArticles, cash, totalValue);
   const decisionSignals = buildDecisionSignals(
     concentrationRadar,
@@ -1515,45 +1493,21 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="border-y border-zinc-800 bg-black/25 px-3 py-2 font-mono text-xs">
-          <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">
-            Today Focus
-          </div>
-          <div className="grid gap-2 md:grid-cols-3">
-            <div className="min-w-0">
-              <span className="text-red-300">RISK:</span>{" "}
-              <span className="text-zinc-300">{todayFocus.risk}</span>
-            </div>
-            <div className="min-w-0">
-              <span className="text-emerald-300">OPPORTUNITY:</span>{" "}
-              <span className="text-zinc-300">{todayFocus.opportunity}</span>
-            </div>
-            <div className="min-w-0">
-              <span className="text-yellow-300">WATCH:</span>{" "}
-              <span className="text-zinc-300">{todayFocus.watch}</span>
-            </div>
+        <section className="border-y border-zinc-800 bg-black/30 px-3 py-2 font-mono text-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-zinc-500">PRIMARY FOCUS:</span>
+            <span className="font-semibold text-zinc-100">{primaryFocus}</span>
           </div>
         </section>
 
-        <section className="border-y border-zinc-800 bg-black/20 py-2 font-mono text-xs">
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {commandCenter.map((item) => (
-              <div className="flex items-center justify-between gap-3" key={item.label}>
-                <span className="text-zinc-500">{item.label}</span>
-                <span className="font-semibold text-zinc-200">{item.value}</span>
-              </div>
-            ))}
+        <section className="grid gap-3 md:grid-cols-3">
+          <div className="border border-zinc-800 bg-zinc-950 px-4 py-3">
+            <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">Total Value</div>
+            <div className="mt-1 text-2xl font-bold">{money(totalValue)}</div>
           </div>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
-            <div className="text-sm text-zinc-400">Total Value</div>
-            <div className="mt-2 text-3xl font-bold">{money(totalValue)}</div>
-          </div>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
-            <div className="text-sm text-zinc-400">Risk Level</div>
-            <div className="mt-3">
+          <div className="border border-zinc-800 bg-zinc-950 px-4 py-3">
+            <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">Risk Level</div>
+            <div className="mt-2">
               <span
                 className={`rounded-full px-3 py-1 text-sm font-semibold uppercase ${riskBadgeClass(riskLevel)}`}
               >
@@ -1561,39 +1515,39 @@ export default function DashboardPage() {
               </span>
             </div>
           </div>
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
-            <div className="text-sm text-zinc-400">Risk Score</div>
-            <div className="mt-2 text-3xl font-bold text-emerald-300">
+          <div className="border border-zinc-800 bg-zinc-950 px-4 py-3">
+            <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">Risk Score</div>
+            <div className="mt-1 text-2xl font-bold text-emerald-300">
               {textValue(data.risk.risk_score, "0")}
             </div>
           </div>
         </section>
 
-        <section className="grid gap-4 lg:grid-cols-4">
+        <section className="grid gap-3 lg:grid-cols-4">
           {allocationItems.map((item) => (
             <div
-              className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl"
+              className="border border-zinc-800 bg-zinc-950 px-4 py-3"
               key={item.asset_class}
             >
               <div className="flex items-center justify-between">
-                <div className="text-sm text-zinc-400">{allocationLabel(item)}</div>
+                <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">{allocationLabel(item)}</div>
                 <div className={`h-2.5 w-2.5 rounded-full ${allocationAccent(item.asset_class)}`} />
               </div>
-              <div className="mt-3 text-2xl font-bold">{money(item.value)}</div>
-              <div className="mt-3 h-2 rounded-full bg-zinc-800">
+              <div className="mt-2 text-xl font-bold">{money(item.value)}</div>
+              <div className="mt-2 h-1.5 rounded-full bg-zinc-800">
                 <div
-                  className={`h-2 rounded-full ${allocationAccent(item.asset_class)}`}
+                  className={`h-1.5 rounded-full ${allocationAccent(item.asset_class)}`}
                   style={{ width: `${Math.max(0, Math.min(100, item.percentage))}%` }}
                 />
               </div>
-              <div className="mt-2 text-sm text-zinc-400">
+              <div className="mt-1.5 text-xs text-zinc-500">
                 {item.percentage.toFixed(2)}%
               </div>
             </div>
           ))}
         </section>
 
-        <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+        <section className="border border-zinc-800 bg-zinc-950 p-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Today&apos;s IXAI Brief</h2>
@@ -1646,10 +1600,10 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+        <section className="border border-zinc-800 bg-zinc-950 p-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Top Portfolio Alerts</h2>
+              <h2 className="text-base font-semibold">Top Portfolio Alerts</h2>
               <p className="mt-1 text-sm text-zinc-400">
                 Highest priority events across holdings and FCN underlyings.
               </p>
@@ -1722,7 +1676,7 @@ export default function DashboardPage() {
                       {textValue(alert.alert_summary, "此事件可能影響相關持倉，建議持續觀察。")}
                     </p>
                     <span className="text-xs text-zinc-500">
-                      {formatDateTime(alert.published_at)}
+                      {relativeTime(alert.published_at)}
                     </span>
                     {alert.link && (
                       <a
@@ -1824,10 +1778,10 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+        <section className="border border-zinc-800 bg-zinc-950 p-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Portfolio Intelligence Stream</h2>
+              <h2 className="text-base font-semibold">Portfolio Intelligence Stream</h2>
               <p className="mt-1 text-sm text-zinc-400">
                 Compact market flow related to your holdings and FCN underlyings.
               </p>
@@ -1869,7 +1823,7 @@ export default function DashboardPage() {
           </div>
 
           {!newsError && !newsLoading && allNewsArticles.length === 0 && (
-            <div className="mt-4 rounded-xl border border-dashed border-zinc-700 p-5 text-sm text-zinc-400">
+            <div className="mt-3 border border-dashed border-zinc-700 px-3 py-2 text-sm text-zinc-400">
               No portfolio news found yet
             </div>
           )}
@@ -1877,13 +1831,12 @@ export default function DashboardPage() {
           {newsArticles.length > 0 && (
             <div className="mt-3 divide-y divide-zinc-800 overflow-hidden border border-zinc-800">
               {newsArticles.map((article: NewsArticle, index) => {
-                const insight = conciseIntelligenceInsight(article);
-                const why = whyItMatters(article);
+                const insight = whyItMatters(article) || conciseIntelligenceInsight(article);
                 const metadataClass = articleMetadataClass(article);
 
                 return (
                 <article
-                  className={`relative bg-black/20 px-3 py-2.5 pl-5 transition hover:bg-zinc-900/50 ${articleDecayClass(article)}`}
+                  className={`relative bg-black/20 px-3 py-2 pl-5 transition hover:bg-zinc-900/50 ${articleDecayClass(article)}`}
                   key={`${textValue(article.link || article.title, "news")}-${index}`}
                 >
                   <span
@@ -1908,26 +1861,21 @@ export default function DashboardPage() {
                         FCN
                       </span>
                     )}
-                    <h3 className="min-w-0 flex-1 text-sm font-semibold leading-5 text-zinc-100 md:truncate">
+                    <h3 className="min-w-0 max-h-10 flex-1 overflow-hidden text-sm font-semibold leading-5 text-zinc-100 md:truncate">
                       {textValue(article.title, "Untitled news")}
                     </h3>
                   </div>
                   {insight && (
-                    <p className="mt-1 max-h-10 overflow-hidden text-xs leading-5 text-zinc-400">
+                    <p className="mt-1 truncate font-mono text-[11px] leading-5 text-zinc-500">
+                      <span className="text-zinc-600">WHY:</span>{" "}
                       {insight}
-                    </p>
-                  )}
-                  {why && (
-                    <p className="mt-1 max-h-10 overflow-hidden font-mono text-[11px] leading-5 text-zinc-500">
-                      <span className="text-zinc-600">WHY IT MATTERS:</span>{" "}
-                      {why}
                     </p>
                   )}
 
                   <div className={`mt-1.5 flex flex-wrap items-center gap-2 text-[11px] ${metadataClass}`}>
                     <span>{textValue(article.publisher, "Unknown publisher")}</span>
                     <span>·</span>
-                    <span>{formatDateTime(article.published_at)}</span>
+                    <span>{relativeTime(article.published_at)}</span>
                     <span>·</span>
                     <span>{textValue(article.source, "yfinance")}</span>
                     {article.link && (
@@ -1937,7 +1885,7 @@ export default function DashboardPage() {
                         rel="noopener noreferrer"
                         target="_blank"
                       >
-                        View link ↗
+                        View
                       </a>
                     )}
                   </div>
@@ -2006,15 +1954,16 @@ export default function DashboardPage() {
             <div className="text-zinc-500">No heated positions detected.</div>
           ) : (
             <div className="overflow-x-auto">
-              <div className="min-w-[520px] divide-y divide-zinc-800 border border-zinc-800">
-                <div className="grid grid-cols-[1fr_0.6fr_1.4fr] gap-3 px-3 py-1.5 text-[10px] uppercase tracking-wide text-zinc-600">
+              <div className="min-w-[680px] divide-y divide-zinc-800 border border-zinc-800">
+                <div className="grid grid-cols-[1fr_0.5fr_1.2fr_1fr] gap-3 px-3 py-1.5 text-[10px] uppercase tracking-wide text-zinc-600">
                   <div>Symbol</div>
                   <div>State</div>
                   <div>Driver</div>
+                  <div>Posture</div>
                 </div>
                 {heatmapRows.map((row) => (
                   <div
-                    className="grid grid-cols-[1fr_0.6fr_1.4fr] gap-3 px-3 py-1.5"
+                    className="grid grid-cols-[1fr_0.5fr_1.2fr_1fr] gap-3 px-3 py-1.5"
                     key={row.symbol}
                   >
                     <span className="truncate text-zinc-300">{row.symbol}</span>
@@ -2022,6 +1971,7 @@ export default function DashboardPage() {
                       {row.marker}
                     </span>
                     <span className="truncate text-zinc-500">{row.driver}</span>
+                    <span className="truncate text-zinc-400">{heatPosture(row)}</span>
                   </div>
                 ))}
               </div>
@@ -2029,20 +1979,20 @@ export default function DashboardPage() {
           )}
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
-            <h2 className="text-xl font-semibold">Risk Overview</h2>
-            <div className="mt-4 rounded-xl border border-zinc-800 bg-black/40 p-4">
-              <div className="text-sm text-zinc-400">Top Risk</div>
-              <div className="mt-2 text-lg font-semibold text-red-300">
+        <section className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="border border-zinc-800 bg-zinc-950 p-3">
+            <h2 className="text-base font-semibold">Risk Overview</h2>
+            <div className="mt-3 border border-zinc-800 bg-black/40 px-3 py-2">
+              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">Top Risk</div>
+              <div className="mt-1 text-sm font-semibold text-red-300">
                 {textValue(data.risk.top_risk || data.summary.top_risk, "No major risk")}
               </div>
             </div>
 
-            <div className="mt-4 grid gap-3">
+            <div className="mt-3 grid gap-2">
               {decisionCards.map((card: DecisionCard, index) => (
                 <div
-                  className="rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+                  className="border border-zinc-800 bg-black/20 px-3 py-2"
                   key={`${textValue(card.title, "decision")}-${index}`}
                 >
                   <div className="flex flex-wrap items-center gap-2">
@@ -2055,7 +2005,7 @@ export default function DashboardPage() {
                       {textValue(card.level, "info")}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-zinc-300">
+                  <p className="mt-1 text-xs leading-5 text-zinc-400">
                     {textValue(card.message)}
                   </p>
                 </div>
@@ -2063,9 +2013,9 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
-            <h2 className="text-xl font-semibold">AI Advice</h2>
-            <p className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-7 text-zinc-200">
+          <div className="border border-zinc-800 bg-zinc-950 p-3">
+            <h2 className="text-base font-semibold">AI Advice</h2>
+            <p className="mt-3 border-l border-emerald-400/40 bg-black/30 px-3 py-2 text-sm leading-6 text-zinc-300">
               {textValue(data.risk.ai_advice || data.summary.ai_advice, "No advice available.")}
             </p>
           </div>
@@ -2105,11 +2055,11 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
+        <section className="mt-6 border border-zinc-800 bg-zinc-950 p-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold">FCN Risk Monitor</h2>
-              <p className="mt-1 text-sm text-zinc-400">
+              <h2 className="text-base font-semibold">FCN Risk Monitor</h2>
+              <p className="mt-1 text-xs text-zinc-500">
                 Worst-of、KI/KO distance 與到期監控。
               </p>
             </div>
@@ -2118,9 +2068,9 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-800">
+          <div className="mt-3 overflow-x-auto border border-zinc-800">
             <div className="min-w-[980px]">
-              <div className="grid grid-cols-[1.4fr_1fr_0.8fr_1fr_0.9fr_0.9fr_0.8fr_1fr_0.7fr] gap-3 bg-zinc-900 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              <div className="grid grid-cols-[1.4fr_1fr_0.8fr_1fr_0.9fr_0.9fr_0.8fr_1fr_0.7fr] gap-3 bg-zinc-900 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                 <div>FCN</div>
                 <div>Notional</div>
                 <div>Risk</div>
@@ -2152,7 +2102,7 @@ export default function DashboardPage() {
                 return (
                   <div className="border-t border-zinc-800" key={key}>
                     <button
-                      className={`grid w-full grid-cols-[1.4fr_1fr_0.8fr_1fr_0.9fr_0.9fr_0.8fr_1fr_0.7fr] gap-3 px-4 py-3 text-left text-sm transition ${
+                      className={`grid w-full grid-cols-[1.4fr_1fr_0.8fr_1fr_0.9fr_0.9fr_0.8fr_1fr_0.7fr] gap-3 px-3 py-2 text-left text-xs transition ${
                         expanded ? "bg-emerald-400/5" : "bg-black/20 hover:bg-zinc-900/70"
                       }`}
                       onClick={() => setExpandedFcnKey(expanded ? null : key)}
@@ -2183,7 +2133,7 @@ export default function DashboardPage() {
 
                     {expanded && (
                       <div className="bg-black/30 px-4 pb-4 pt-1">
-                        <div className="grid gap-3 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300 md:grid-cols-2">
+                        <div className="grid gap-2 border border-zinc-800 bg-zinc-950 p-3 text-xs text-zinc-300 md:grid-cols-2">
                           <div>Issuer: {textValue(fcn.issuer)}</div>
                           <div>
                             Tenor: {tenorText(fcn.tenor_months)} · Currency:{" "}
@@ -2193,8 +2143,8 @@ export default function DashboardPage() {
                           <div>Next observation: {textValue(fcn.next_observation_date)}</div>
                         </div>
 
-                        <div className="mt-3 overflow-hidden rounded-xl border border-zinc-800">
-                          <div className="grid grid-cols-4 gap-3 bg-zinc-900 px-3 py-2 text-xs font-semibold uppercase text-zinc-500">
+                        <div className="mt-3 overflow-hidden border border-zinc-800">
+                          <div className="grid grid-cols-4 gap-3 bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold uppercase text-zinc-500">
                             <div>Symbol</div>
                             <div>Current</div>
                             <div>Performance</div>
@@ -2207,7 +2157,7 @@ export default function DashboardPage() {
                           )}
                           {fcnUnderlyingList(fcn).map((underlying, underlyingIndex) => (
                             <div
-                              className="grid grid-cols-4 gap-3 border-t border-zinc-800 px-3 py-2 text-sm text-zinc-300"
+                              className="grid grid-cols-4 gap-3 border-t border-zinc-800 px-3 py-1.5 text-xs text-zinc-300"
                               key={`${textValue(underlying.symbol, "underlying")}-${underlyingIndex}`}
                             >
                               <div className="font-semibold text-white">
@@ -2242,30 +2192,29 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
-          <h2 className="text-xl font-semibold">持倉明細 / Positions</h2>
-          <div className="mt-4 grid gap-4 xl:grid-cols-4">
+        <section className="border border-zinc-800 bg-zinc-950 p-3">
+          <h2 className="text-base font-semibold">持倉明細 / Positions</h2>
+          <div className="mt-3 grid gap-3 xl:grid-cols-4">
             <div className={positionCardClass()}>
-              <h3 className="font-semibold text-white">Stocks</h3>
-              <div className="mt-4 grid gap-3">
+              <h3 className="font-mono text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Stocks</h3>
+              <div className="mt-2 divide-y divide-zinc-800">
                 {stocks.length === 0 && (
-                  <div className="text-sm text-zinc-400">尚無股票部位</div>
+                  <div className="py-2 text-xs text-zinc-500">尚無股票部位</div>
                 )}
                 {stocks.map((stock, index) => (
                   <div
-                    className="rounded-lg border border-zinc-800 bg-black/30 p-3"
+                    className="py-2"
                     key={`${textValue(stock.id || stock.symbol, "stock")}-${index}`}
                   >
-                    <div className="font-semibold text-white">
+                    <div className="truncate text-sm font-semibold text-white">
                       {assetDisplayName(stock.display_name, stock.symbol, "STOCK")}
                     </div>
-                    <div className="mt-2 grid gap-1 text-sm text-zinc-300">
-                      <div>Quantity: {textValue(stock.quantity, "0")}</div>
-                      <div>Avg Price: {priceMoney(stock.avg_price)}</div>
-                      <div>Current Price: {priceMoney(stock.current_price)}</div>
-                      <div>Current Value: {money(stock.current_value)}</div>
+                    <div className="mt-1 grid gap-1 text-xs text-zinc-400">
+                      <div className="flex justify-between gap-3"><span>Qty</span><span>{textValue(stock.quantity, "0")}</span></div>
+                      <div className="flex justify-between gap-3"><span>Current</span><span>{priceMoney(stock.current_price)}</span></div>
+                      <div className="flex justify-between gap-3"><span>Value</span><span className="text-zinc-200">{money(stock.current_value)}</span></div>
                       {priceSource(stock.price_source) && (
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
                           <span>{priceSource(stock.price_source)}</span>
                           <PriceSourceBadge
                             isStale={stock.is_stale}
@@ -2281,17 +2230,17 @@ export default function DashboardPage() {
 
             <div className={positionCardClass()}>
               <div className="flex items-center justify-between gap-3">
-                <h3 className="font-semibold text-white">FCN</h3>
-                <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-xs text-zinc-400">
+                <h3 className="font-mono text-[11px] font-semibold uppercase tracking-wide text-zinc-400">FCN</h3>
+                <span className="border border-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-400">
                   {fcns.length}
                 </span>
               </div>
-              <div className="mt-4 rounded-lg border border-zinc-800 bg-black/30 p-3">
+              <div className="mt-2 border-t border-zinc-800 py-2">
                 {fcns.length === 0 ? (
-                  <div className="text-sm text-zinc-400">尚無 FCN 部位</div>
+                  <div className="text-xs text-zinc-500">尚無 FCN 部位</div>
                 ) : (
                   <div className="space-y-2">
-                    <div className="text-sm text-zinc-300">
+                    <div className="text-xs text-zinc-300">
                       {fcns.length} FCN positions · Exposure{" "}
                       {money(
                         fcns.reduce(
@@ -2302,8 +2251,7 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <div className="text-xs leading-5 text-zinc-500">
-                      See FCN Risk Monitor for worst-of, KI/KO distance and underlying
-                      details.
+                      Linked risk: see FCN Risk Monitor for worst-of, KI/KO and underlying detail.
                     </div>
                   </div>
                 )}
@@ -2311,28 +2259,26 @@ export default function DashboardPage() {
             </div>
 
             <div className={positionCardClass()}>
-              <h3 className="font-semibold text-white">Crypto</h3>
-              <div className="mt-4 grid gap-3">
+              <h3 className="font-mono text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Crypto</h3>
+              <div className="mt-2 divide-y divide-zinc-800">
                 {crypto.length === 0 && (
-                  <div className="text-sm text-zinc-400">尚無 Crypto 部位</div>
+                  <div className="py-2 text-xs text-zinc-500">尚無 Crypto 部位</div>
                 )}
                 {crypto.map((item, index) => (
                   <div
-                    className="rounded-lg border border-zinc-800 bg-black/30 p-3"
+                    className="py-2"
                     key={`${textValue(item.id || item.symbol, "crypto")}-${index}`}
                   >
-                    <div className="font-semibold text-white">
+                    <div className="truncate text-sm font-semibold text-white">
                       {assetDisplayName(item.display_name, item.symbol, "CRYPTO")}
                     </div>
-                    <div className="mt-2 grid gap-1 text-sm text-zinc-300">
-                      <div>Type: {textValue(item.asset_type, "crypto")}</div>
-                      <div>Quantity: {textValue(item.quantity, "0")}</div>
-                      <div>Avg Price: {priceMoney(item.avg_price)}</div>
-                      <div>Current Price: {priceMoney(item.current_price)}</div>
-                      <div>Leverage: {textValue(item.leverage, "-")}</div>
-                      <div>Current Value: {cryptoCurrentValue(item)}</div>
+                    <div className="mt-1 grid gap-1 text-xs text-zinc-400">
+                      <div className="flex justify-between gap-3"><span>Qty</span><span>{textValue(item.quantity, "0")}</span></div>
+                      <div className="flex justify-between gap-3"><span>Current</span><span>{priceMoney(item.current_price)}</span></div>
+                      <div className="flex justify-between gap-3"><span>Leverage</span><span>{textValue(item.leverage, "-")}</span></div>
+                      <div className="flex justify-between gap-3"><span>Value</span><span className="text-zinc-200">{cryptoCurrentValue(item)}</span></div>
                       {cryptoPriceSource(item) && (
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
                           <span>{cryptoPriceSource(item)}</span>
                           <PriceSourceBadge
                             inputEstimate={cryptoPriceSource(item).includes("input estimate")}
@@ -2348,21 +2294,21 @@ export default function DashboardPage() {
             </div>
 
             <div className={positionCardClass()}>
-              <h3 className="font-semibold text-white">Cash</h3>
-              <div className="mt-4 grid gap-3">
+              <h3 className="font-mono text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Cash</h3>
+              <div className="mt-2 divide-y divide-zinc-800">
                 {cash.length === 0 && (
-                  <div className="text-sm text-zinc-400">尚無現金部位</div>
+                  <div className="py-2 text-xs text-zinc-500">尚無現金部位</div>
                 )}
                 {cash.map((item, index) => (
                   <div
-                    className="rounded-lg border border-zinc-800 bg-black/30 p-3"
+                    className="flex items-center justify-between gap-3 py-2"
                     key={`${textValue(item.id || item.currency, "cash")}-${index}`}
                   >
-                    <div className="font-semibold text-white">
+                    <div className="text-sm font-semibold text-white">
                       {textValue(item.currency, "USD")}
                     </div>
-                    <div className="mt-2 text-sm text-zinc-300">
-                      Amount: {money(item.amount)}
+                    <div className="text-xs text-zinc-300">
+                      {money(item.amount)}
                     </div>
                   </div>
                 ))}
@@ -2371,17 +2317,17 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
-          <h2 className="text-xl font-semibold">Portfolio Health</h2>
-          <div className="mt-4 grid gap-3">
+        <section className="border border-zinc-800 bg-zinc-950 p-3">
+          <h2 className="text-base font-semibold">Portfolio Health</h2>
+          <div className="mt-3 grid gap-2">
             {alerts.length === 0 && (
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-zinc-400">
-                No active alerts.
+              <div className="border-y border-zinc-800 bg-black/20 px-3 py-2 font-mono text-xs text-zinc-500">
+                SYSTEM HEALTH: CLEAR
               </div>
             )}
             {alerts.map((alert, index) => (
               <div
-                className={`rounded-xl border bg-zinc-900 p-4 ${severityClass(alert)}`}
+                className={`border bg-black/20 px-3 py-2 ${severityClass(alert)}`}
                 key={`${textValue(alert.id || alert.title || alert.message, "alert")}-${index}`}
               >
                 <div className="flex flex-wrap items-center gap-2">
