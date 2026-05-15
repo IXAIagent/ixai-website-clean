@@ -404,6 +404,207 @@ function buildConcentrationRadar(
   };
 }
 
+function percentToNumber(value: string) {
+  const parsed = Number(value.replace("%", ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function buildWatchNow(
+  priorityAlerts: NewsArticle[],
+  articles: NewsArticle[],
+  fcns: FCNDetail[],
+  crypto: CryptoPositionResponse[],
+  concentration: ReturnType<typeof buildConcentrationRadar>,
+) {
+  const items: string[] = [];
+  const add = (item: string) => {
+    if (item && !items.includes(item) && items.length < 4) items.push(item);
+  };
+
+  for (const alert of priorityAlerts) {
+    const level = textValue(alert.priority_level, "").toUpperCase();
+    if (level === "CRITICAL" || level === "HIGH") {
+      add(`${textValue(alert.symbol, "Portfolio")} priority event active`);
+    }
+  }
+
+  for (const article of articles) {
+    if (textValue(article.relevance_level, "").toUpperCase() === "HIGH") {
+      add(`${textValue(article.symbol, "Asset")} high relevance intelligence`);
+    }
+    if (article.is_fcn_related) {
+      add(`${textValue(article.symbol, "FCN")} FCN underlying needs monitoring`);
+    }
+    if (textValue(article.impact, "").toLowerCase() === "negative") {
+      add(`${textValue(article.symbol, "Asset")} negative impact flow detected`);
+    }
+  }
+
+  const riskyFcn = fcns.find((fcn) => textValue(fcn.risk_level, "").toLowerCase() === "high");
+  if (riskyFcn) {
+    add(`${textValue(riskyFcn.worst_underlying || riskyFcn.worst_symbol || riskyFcn.fcn_code, "FCN")} nearing FCN risk zone`);
+  }
+
+  const hasCryptoVol = crypto.some((item) => numberValue(item.leverage, 0) > 1);
+  if (hasCryptoVol || percentToNumber(concentration.crypto) > 10) {
+    add("BTC volatility expanding");
+  }
+
+  if (percentToNumber(concentration.aiChip) >= 35) {
+    add("AI/chip concentration elevated");
+  }
+
+  return items.length > 0 ? items : ["目前未偵測到需要立即處理的決策事件。"];
+}
+
+function buildRiskDrift(
+  concentration: ReturnType<typeof buildConcentrationRadar>,
+  criticalCount: number,
+  highCount: number,
+) {
+  const aiChip = percentToNumber(concentration.aiChip);
+  const fcnLinked = percentToNumber(concentration.fcnLinked);
+  const cryptoPct = percentToNumber(concentration.crypto);
+
+  if (criticalCount > 0 || aiChip >= 45 || fcnLinked >= 35 || cryptoPct >= 20) {
+    return {
+      direction: "↑",
+      label: "Increasing",
+      className: "text-red-300",
+      summary: "AI、FCN 或高優先級事件正在推升組合風險。",
+    };
+  }
+
+  if (highCount > 0 || aiChip >= 30 || fcnLinked >= 20 || cryptoPct >= 10) {
+    return {
+      direction: "→",
+      label: "Stable",
+      className: "text-yellow-300",
+      summary: "目前風險可控，但集中度與事件流仍需追蹤。",
+    };
+  }
+
+  return {
+    direction: "↓",
+    label: "Improving",
+    className: "text-emerald-300",
+    summary: "目前未觀察到明顯風險擴散。",
+  };
+}
+
+function buildMarketRegime(
+  priorityAlerts: NewsArticle[],
+  concentration: ReturnType<typeof buildConcentrationRadar>,
+  riskLevel: unknown,
+) {
+  const hasFxnAlert = priorityAlerts.some((article) => article.is_fcn_related);
+  const hasRiskAlert = priorityAlerts.some((article) => actionType(article) === "RISK");
+  const cryptoPct = percentToNumber(concentration.crypto);
+  const aiChip = percentToNumber(concentration.aiChip);
+  const risk = textValue(riskLevel, "").toLowerCase();
+
+  if (hasFxnAlert) {
+    return {
+      label: "FCN RISK WATCH",
+      summary: "FCN linked events are active; monitor worst-of and KI/KO sensitivity.",
+    };
+  }
+  if (risk === "high" || hasRiskAlert) {
+    return {
+      label: "DEFENSIVE / HIGH VOL",
+      summary: "Negative event flow is elevated; keep focus on downside risk propagation.",
+    };
+  }
+  if (cryptoPct >= 15) {
+    return {
+      label: "CRYPTO VOL REGIME",
+      summary: "Crypto exposure is meaningful; volatility can dominate short-term risk.",
+    };
+  }
+  if (aiChip >= 35) {
+    return {
+      label: "RISK-ON AI MOMENTUM",
+      summary: "AI/chip exposure is driving portfolio regime and news sensitivity.",
+    };
+  }
+  return {
+    label: "MIXED ROTATION",
+    summary: "Signal mix is balanced; portfolio regime is not dominated by one theme.",
+  };
+}
+
+function buildPortfolioHeatmap(articles: NewsArticle[], fcns: FCNDetail[]) {
+  const bySymbol = new Map<string, { symbol: string; marker: string; score: number }>();
+  const put = (symbol: string, marker: string, score: number) => {
+    const key = symbol.toUpperCase();
+    const current = bySymbol.get(key);
+    if (!current || score > current.score) bySymbol.set(key, { symbol: key, marker, score });
+  };
+
+  for (const article of articles) {
+    const symbol = textValue(article.symbol, "");
+    if (!symbol) continue;
+    const impact = textValue(article.impact, "").toLowerCase();
+    const relevance = textValue(article.relevance_level, "").toUpperCase();
+    const attention = textValue(article.attention_level, "").toUpperCase();
+    if (article.is_fcn_related && (attention === "HIGH" || attention === "CRITICAL")) {
+      put(`FCN(${symbol})`, "!!", 5);
+    } else if (impact === "positive" && relevance === "HIGH") {
+      put(symbol, "↑↑", 4);
+    } else if (impact === "positive") {
+      put(symbol, "↑", 3);
+    } else if (impact === "negative") {
+      put(symbol, "↓", 3);
+    } else {
+      put(symbol, "→", 1);
+    }
+  }
+
+  for (const fcn of fcns) {
+    if (textValue(fcn.risk_level, "").toLowerCase() === "high") {
+      put(`FCN(${textValue(fcn.worst_underlying || fcn.worst_symbol || fcn.fcn_code, "FCN")})`, "!!", 5);
+    }
+  }
+
+  return Array.from(bySymbol.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8);
+}
+
+function heatMarkerClass(marker: string) {
+  if (marker === "!!") return "text-red-300";
+  if (marker === "↓") return "text-red-300";
+  if (marker === "↑" || marker === "↑↑") return "text-emerald-300";
+  return "text-zinc-400";
+}
+
+function daysUntil(value: unknown) {
+  const text = textValue(value, "");
+  if (!text) return null;
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.ceil((date.getTime() - Date.now()) / 86400000);
+}
+
+function buildUpcomingEvents(fcns: FCNDetail[]) {
+  const events = ["CPI release tomorrow", "FOMC minutes this week", "BTC options expiry Friday"];
+  const nextCoupon = fcns
+    .map((fcn) => ({
+      code: textValue(fcn.fcn_code || fcn.name || fcn.code, "FCN"),
+      days: daysUntil(fcn.next_coupon_date),
+    }))
+    .filter((item): item is { code: string; days: number } => item.days !== null && item.days >= 0)
+    .sort((a, b) => a.days - b.days)[0];
+
+  if (nextCoupon) {
+    events.unshift(`${nextCoupon.code} coupon in ${nextCoupon.days}d`);
+  } else {
+    events.unshift("NVDA earnings in 2d");
+  }
+
+  return events.slice(0, 4);
+}
+
 function allocationLabel(item: AllocationItem) {
   const labels: Record<string, string> = {
     stock: "Stocks",
@@ -889,6 +1090,17 @@ export default function DashboardPage() {
     { label: "CRYPTO VOL", value: "HIGH" },
   ];
   const concentrationRadar = buildConcentrationRadar(stocks, fcns, crypto, totalValue);
+  const watchNowItems = buildWatchNow(
+    priorityAlerts,
+    allNewsArticles,
+    fcns,
+    crypto,
+    concentrationRadar,
+  );
+  const riskDrift = buildRiskDrift(concentrationRadar, criticalCount, highCount);
+  const marketRegime = buildMarketRegime(priorityAlerts, concentrationRadar, riskLevel);
+  const heatmapRows = buildPortfolioHeatmap(allNewsArticles, fcns);
+  const upcomingEvents = buildUpcomingEvents(fcns);
 
   return (
     <main className="min-h-screen bg-black px-5 py-8 text-white">
@@ -1059,6 +1271,37 @@ export default function DashboardPage() {
                 <span>{line}</span>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="border-l border-yellow-500/50 bg-black/20 px-3 py-2 font-mono text-xs">
+          <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">
+            WATCH NOW
+          </div>
+          <div className="grid gap-1.5 md:grid-cols-2">
+            {watchNowItems.map((item) => (
+              <div className="flex min-w-0 gap-2 text-zinc-300" key={item}>
+                <span className="shrink-0 text-yellow-300">•</span>
+                <span className="truncate">{item}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="grid gap-3 md:grid-cols-2">
+          <div className="border-y border-zinc-800 bg-black/20 px-3 py-2 font-mono text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-zinc-500">RISK DRIFT</span>
+              <span className={`font-semibold ${riskDrift.className}`}>
+                {riskDrift.direction} {riskDrift.label}
+              </span>
+            </div>
+            <div className="mt-1 text-zinc-400">{riskDrift.summary}</div>
+          </div>
+          <div className="border-y border-zinc-800 bg-black/20 px-3 py-2 font-mono text-xs">
+            <div className="text-zinc-500">MARKET REGIME:</div>
+            <div className="mt-1 font-semibold text-zinc-200">{marketRegime.label}</div>
+            <div className="mt-1 text-zinc-400">{marketRegime.summary}</div>
           </div>
         </section>
 
@@ -1332,6 +1575,26 @@ export default function DashboardPage() {
           </div>
         </section>
 
+        <section className="border-y border-zinc-800 bg-black/20 py-3 font-mono text-xs">
+          <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">
+            Portfolio Heatmap
+          </div>
+          {heatmapRows.length === 0 ? (
+            <div className="text-zinc-500">No heated positions detected.</div>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {heatmapRows.map((row) => (
+                <div className="flex items-center justify-between gap-3" key={row.symbol}>
+                  <span className="truncate text-zinc-300">{row.symbol}</span>
+                  <span className={`font-semibold ${heatMarkerClass(row.marker)}`}>
+                    {row.marker}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-5 shadow-xl">
             <h2 className="text-xl font-semibold">Risk Overview</h2>
@@ -1371,6 +1634,20 @@ export default function DashboardPage() {
             <p className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-7 text-zinc-200">
               {textValue(data.risk.ai_advice || data.summary.ai_advice, "No advice available.")}
             </p>
+          </div>
+        </section>
+
+        <section className="border-y border-zinc-800 bg-black/20 py-3 font-mono text-xs">
+          <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">
+            Upcoming Events
+          </div>
+          <div className="grid gap-1.5 md:grid-cols-2">
+            {upcomingEvents.map((event) => (
+              <div className="flex gap-2 text-zinc-300" key={event}>
+                <span className="text-zinc-500">•</span>
+                <span>{event}</span>
+              </div>
+            ))}
           </div>
         </section>
 
