@@ -457,6 +457,100 @@ function buildWatchNow(
   return items.length > 0 ? items : ["目前未偵測到需要立即處理的決策事件。"];
 }
 
+function buildTodayFocus(
+  priorityAlerts: NewsArticle[],
+  articles: NewsArticle[],
+  fcns: FCNDetail[],
+  crypto: CryptoPositionResponse[],
+  upcomingEvents: string[],
+) {
+  const critical = priorityAlerts.find(
+    (alert) => textValue(alert.priority_level, "").toUpperCase() === "CRITICAL",
+  );
+  const fcnRisk = fcns.find((fcn) => textValue(fcn.risk_level, "").toLowerCase() === "high");
+  const negativeHigh = articles.find(
+    (article) =>
+      textValue(article.impact, "").toLowerCase() === "negative" &&
+      textValue(article.relevance_level, "").toUpperCase() === "HIGH",
+  );
+  const positiveAi = articles.find((article) => {
+    const symbol = textValue(article.symbol, "").toUpperCase();
+    return (
+      textValue(article.impact, "").toLowerCase() === "positive" &&
+      textValue(article.relevance_level, "").toUpperCase() === "HIGH" &&
+      ["NVDA", "AMD", "TSM", "2330.TW", "AAPL", "MSFT", "MRVL", "AVGO", "PLTR"].includes(symbol)
+    );
+  });
+  const highAttention = articles.find((article) =>
+    ["HIGH", "CRITICAL"].includes(textValue(article.attention_level, "").toUpperCase()),
+  );
+  const cryptoVol = crypto.some((item) => numberValue(item.leverage, 0) > 1);
+
+  const risk =
+    critical
+      ? `${textValue(critical.symbol, "Portfolio")} critical alert active`
+      : fcnRisk
+        ? `${textValue(fcnRisk.worst_underlying || fcnRisk.worst_symbol || fcnRisk.fcn_code, "FCN")} FCN worst-of risk`
+        : negativeHigh
+          ? `${textValue(negativeHigh.symbol, "Asset")} negative high relevance flow`
+          : cryptoVol
+            ? "BTC volatility / leverage risk"
+            : "No major portfolio focus detected";
+
+  const opportunity =
+    positiveAi
+      ? `${textValue(positiveAi.symbol, "AI")} positive AI/chip momentum`
+      : articles.some((article) => /upgrade|earnings|guidance/i.test(textValue(article.title, "")))
+        ? "Earnings / guidance momentum appearing"
+        : "No clear opportunity signal";
+
+  const watch =
+    highAttention
+      ? `${textValue(highAttention.symbol, "Asset")} high attention intelligence`
+      : upcomingEvents[0] || "No near-term event window";
+
+  return { risk, opportunity, watch };
+}
+
+function buildCommandCenter(
+  fcns: FCNDetail[],
+  crypto: CryptoPositionResponse[],
+  articles: NewsArticle[],
+  cash: CashPositionResponse[],
+  totalValue: unknown,
+) {
+  const hasKiRisk = fcns.some((fcn) => {
+    const risk = textValue(fcn.risk_level, "").toLowerCase();
+    const ki = percentNumber(fcn.distance_to_KI || fcn.distance_to_ki || fcn.distance_to_ki_pct);
+    return risk === "high" || (Number.isFinite(ki) && ki < 5);
+  });
+  const hasFcnWatch = fcns.some((fcn) => ["medium", "high"].includes(textValue(fcn.risk_level, "").toLowerCase()));
+  const leveraged = crypto.some((item) => numberValue(item.leverage, 0) > 1);
+  const cryptoVol = articles.some((article) => {
+    const symbol = textValue(article.symbol, "").toUpperCase();
+    return ["BTC", "BTC-USD", "ETH", "ETH-USD"].includes(symbol) && textValue(article.impact, "").toLowerCase() === "negative";
+  });
+  const aiPositive = articles.filter((article) => {
+    const symbol = textValue(article.symbol, "").toUpperCase();
+    return ["NVDA", "AMD", "TSM", "2330.TW", "AAPL", "MSFT", "MRVL", "AVGO", "PLTR"].includes(symbol) &&
+      textValue(article.impact, "").toLowerCase() === "positive";
+  }).length;
+  const aiNegative = articles.filter((article) => {
+    const symbol = textValue(article.symbol, "").toUpperCase();
+    return ["NVDA", "AMD", "TSM", "2330.TW", "AAPL", "MSFT", "MRVL", "AVGO", "PLTR"].includes(symbol) &&
+      textValue(article.impact, "").toLowerCase() === "negative";
+  }).length;
+  const cashValue = cash.reduce((sum, item) => sum + numberValue(item.amount, 0), 0);
+  const cashRatio = numberValue(totalValue, 0) > 0 ? cashValue / numberValue(totalValue, 0) : 0;
+
+  return [
+    { label: "FCN STATUS", value: hasKiRisk ? "KI RISK" : hasFcnWatch ? "WATCH" : "SAFE" },
+    { label: "CRYPTO RISK", value: leveraged ? "LEVERAGED" : cryptoVol ? "HIGH VOL" : "LOW VOL" },
+    { label: "AI MOMENTUM", value: aiPositive > aiNegative ? "STRONG" : aiNegative > aiPositive ? "WEAK" : "MIXED" },
+    { label: "CASH POSITION", value: cashRatio >= 0.25 ? "DEFENSIVE" : cashRatio >= 0.08 ? "BALANCED" : "DEPLOYABLE" },
+  ];
+}
+
 function buildRiskDrift(
   concentration: ReturnType<typeof buildConcentrationRadar>,
   criticalCount: number,
@@ -533,12 +627,34 @@ function buildMarketRegime(
   };
 }
 
+function buildDecisionSignals(
+  concentration: ReturnType<typeof buildConcentrationRadar>,
+  riskDrift: ReturnType<typeof buildRiskDrift>,
+  marketRegime: ReturnType<typeof buildMarketRegime>,
+  priorityAlerts: NewsArticle[],
+) {
+  const signals: string[] = [];
+  const add = (signal: string) => {
+    if (!signals.includes(signal) && signals.length < 4) signals.push(signal);
+  };
+
+  if (riskDrift.direction === "↑") add("DEFENSIVE");
+  if (percentToNumber(concentration.aiChip) >= 35) add("RISK-ON");
+  if (percentToNumber(concentration.fcnLinked) >= 20 || marketRegime.label.includes("FCN")) add("FCN WATCH");
+  if (percentToNumber(concentration.crypto) >= 10 || marketRegime.label.includes("CRYPTO")) add("VOL EXPANSION");
+  if (priorityAlerts.length > 0 && signals.length < 4) add("ROTATION");
+
+  return signals.length > 0 ? signals : ["WATCH"];
+}
+
 function buildPortfolioHeatmap(articles: NewsArticle[], fcns: FCNDetail[]) {
-  const bySymbol = new Map<string, { symbol: string; marker: string; score: number }>();
-  const put = (symbol: string, marker: string, score: number) => {
+  const bySymbol = new Map<string, { symbol: string; marker: string; driver: string; score: number }>();
+  const put = (symbol: string, marker: string, driver: string, score: number) => {
     const key = symbol.toUpperCase();
     const current = bySymbol.get(key);
-    if (!current || score > current.score) bySymbol.set(key, { symbol: key, marker, score });
+    if (!current || score > current.score) {
+      bySymbol.set(key, { symbol: key, marker, driver, score });
+    }
   };
 
   for (const article of articles) {
@@ -548,21 +664,26 @@ function buildPortfolioHeatmap(articles: NewsArticle[], fcns: FCNDetail[]) {
     const relevance = textValue(article.relevance_level, "").toUpperCase();
     const attention = textValue(article.attention_level, "").toUpperCase();
     if (article.is_fcn_related && (attention === "HIGH" || attention === "CRITICAL")) {
-      put(`FCN(${symbol})`, "!!", 5);
+      put(`FCN(${symbol})`, "!!", "FCN WATCH", 5);
     } else if (impact === "positive" && relevance === "HIGH") {
-      put(symbol, "↑↑", 4);
+      put(symbol, "↑↑", "AI MOMENTUM", 4);
     } else if (impact === "positive") {
-      put(symbol, "↑", 3);
+      put(symbol, "↑", "POSITIVE FLOW", 3);
     } else if (impact === "negative") {
-      put(symbol, "↓", 3);
+      put(symbol, "↓", "RISK FLOW", 3);
     } else {
-      put(symbol, "→", 1);
+      put(symbol, "→", "WATCH", 1);
     }
   }
 
   for (const fcn of fcns) {
     if (textValue(fcn.risk_level, "").toLowerCase() === "high") {
-      put(`FCN(${textValue(fcn.worst_underlying || fcn.worst_symbol || fcn.fcn_code, "FCN")})`, "!!", 5);
+      put(
+        `FCN(${textValue(fcn.worst_underlying || fcn.worst_symbol || fcn.fcn_code, "FCN")})`,
+        "!!",
+        "FCN WORST-OF",
+        5,
+      );
     }
   }
 
@@ -587,7 +708,8 @@ function daysUntil(value: unknown) {
 }
 
 function buildUpcomingEvents(fcns: FCNDetail[]) {
-  const events = ["CPI release tomorrow", "FOMC minutes this week", "BTC options expiry Friday"];
+  const next48h = ["CPI release tomorrow", "BTC options expiry Friday"];
+  const next7d = ["FOMC minutes this week", "NVDA earnings in 2d"];
   const nextCoupon = fcns
     .map((fcn) => ({
       code: textValue(fcn.fcn_code || fcn.name || fcn.code, "FCN"),
@@ -597,12 +719,17 @@ function buildUpcomingEvents(fcns: FCNDetail[]) {
     .sort((a, b) => a.days - b.days)[0];
 
   if (nextCoupon) {
-    events.unshift(`${nextCoupon.code} coupon in ${nextCoupon.days}d`);
+    const event = `${nextCoupon.code} coupon in ${nextCoupon.days}d`;
+    if (nextCoupon.days <= 2) {
+      next48h.unshift(event);
+    } else {
+      next7d.unshift(event);
+    }
   } else {
-    events.unshift("NVDA earnings in 2d");
+    next7d.unshift("FCN coupon window pending");
   }
 
-  return events.slice(0, 4);
+  return { next48h: next48h.slice(0, 4), next7d: next7d.slice(0, 4) };
 }
 
 function allocationLabel(item: AllocationItem) {
@@ -1101,6 +1228,20 @@ export default function DashboardPage() {
   const marketRegime = buildMarketRegime(priorityAlerts, concentrationRadar, riskLevel);
   const heatmapRows = buildPortfolioHeatmap(allNewsArticles, fcns);
   const upcomingEvents = buildUpcomingEvents(fcns);
+  const todayFocus = buildTodayFocus(
+    priorityAlerts,
+    allNewsArticles,
+    fcns,
+    crypto,
+    [...upcomingEvents.next48h, ...upcomingEvents.next7d],
+  );
+  const commandCenter = buildCommandCenter(fcns, crypto, allNewsArticles, cash, totalValue);
+  const decisionSignals = buildDecisionSignals(
+    concentrationRadar,
+    riskDrift,
+    marketRegime,
+    priorityAlerts,
+  );
 
   return (
     <main className="min-h-screen bg-black px-5 py-8 text-white">
@@ -1201,6 +1342,37 @@ export default function DashboardPage() {
                 <span className="text-zinc-500">{item.label}</span>{" "}
                 <span className={marketPulseValueClass(item.value)}>{item.value}</span>
               </span>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-y border-zinc-800 bg-black/25 px-3 py-2 font-mono text-xs">
+          <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">
+            Today Focus
+          </div>
+          <div className="grid gap-2 md:grid-cols-3">
+            <div className="min-w-0">
+              <span className="text-red-300">RISK:</span>{" "}
+              <span className="text-zinc-300">{todayFocus.risk}</span>
+            </div>
+            <div className="min-w-0">
+              <span className="text-emerald-300">OPPORTUNITY:</span>{" "}
+              <span className="text-zinc-300">{todayFocus.opportunity}</span>
+            </div>
+            <div className="min-w-0">
+              <span className="text-yellow-300">WATCH:</span>{" "}
+              <span className="text-zinc-300">{todayFocus.watch}</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-y border-zinc-800 bg-black/20 py-2 font-mono text-xs">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {commandCenter.map((item) => (
+              <div className="flex items-center justify-between gap-3" key={item.label}>
+                <span className="text-zinc-500">{item.label}</span>
+                <span className="font-semibold text-zinc-200">{item.value}</span>
+              </div>
             ))}
           </div>
         </section>
@@ -1401,6 +1573,19 @@ export default function DashboardPage() {
           )}
         </section>
 
+        <section className="border-y border-zinc-800 bg-black/20 px-3 py-2 font-mono text-xs">
+          <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">
+            Decision Signals
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {decisionSignals.map((signal) => (
+              <span className="text-zinc-300" key={signal}>
+                [{signal}]
+              </span>
+            ))}
+          </div>
+        </section>
+
         <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -1582,15 +1767,26 @@ export default function DashboardPage() {
           {heatmapRows.length === 0 ? (
             <div className="text-zinc-500">No heated positions detected.</div>
           ) : (
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              {heatmapRows.map((row) => (
-                <div className="flex items-center justify-between gap-3" key={row.symbol}>
-                  <span className="truncate text-zinc-300">{row.symbol}</span>
-                  <span className={`font-semibold ${heatMarkerClass(row.marker)}`}>
-                    {row.marker}
-                  </span>
+            <div className="overflow-x-auto">
+              <div className="min-w-[520px] divide-y divide-zinc-800 border border-zinc-800">
+                <div className="grid grid-cols-[1fr_0.6fr_1.4fr] gap-3 px-3 py-1.5 text-[10px] uppercase tracking-wide text-zinc-600">
+                  <div>Symbol</div>
+                  <div>State</div>
+                  <div>Driver</div>
                 </div>
-              ))}
+                {heatmapRows.map((row) => (
+                  <div
+                    className="grid grid-cols-[1fr_0.6fr_1.4fr] gap-3 px-3 py-1.5"
+                    key={row.symbol}
+                  >
+                    <span className="truncate text-zinc-300">{row.symbol}</span>
+                    <span className={`font-semibold ${heatMarkerClass(row.marker)}`}>
+                      {row.marker}
+                    </span>
+                    <span className="truncate text-zinc-500">{row.driver}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </section>
@@ -1641,13 +1837,33 @@ export default function DashboardPage() {
           <div className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">
             Upcoming Events
           </div>
-          <div className="grid gap-1.5 md:grid-cols-2">
-            {upcomingEvents.map((event) => (
-              <div className="flex gap-2 text-zinc-300" key={event}>
-                <span className="text-zinc-500">•</span>
-                <span>{event}</span>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <div className="mb-1 text-[10px] uppercase tracking-wide text-zinc-600">
+                NEXT 48H
               </div>
-            ))}
+              <div className="grid gap-1.5">
+                {upcomingEvents.next48h.map((event) => (
+                  <div className="flex gap-2 text-zinc-300" key={event}>
+                    <span className="text-zinc-500">•</span>
+                    <span>{event}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 text-[10px] uppercase tracking-wide text-zinc-600">
+                NEXT 7D
+              </div>
+              <div className="grid gap-1.5">
+                {upcomingEvents.next7d.map((event) => (
+                  <div className="flex gap-2 text-zinc-300" key={event}>
+                    <span className="text-zinc-500">•</span>
+                    <span>{event}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
