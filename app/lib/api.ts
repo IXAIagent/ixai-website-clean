@@ -408,6 +408,73 @@ export type CopilotExplainResponse = {
   is_stale?: boolean | null;
 };
 
+export type LongMemorySummary = {
+  dominant_workspace_mode?: string | null;
+  recurring_risk_themes?: string[] | null;
+  historical_risk_trend?: string | null;
+  fcn_risk_trend?: string | null;
+  crypto_vol_trend?: string | null;
+  ai_momentum_trend?: string | null;
+  concentration_trend?: string | null;
+};
+
+export type ThemeEvolution = {
+  dominant_themes?: string[] | null;
+  emerging_themes?: string[] | null;
+  weakening_themes?: string[] | null;
+  theme_confidence?: number | string | null;
+  narrative_summary?: string | null;
+};
+
+export type ReasoningResult = {
+  top_risks?: string[] | null;
+  top_strengths?: string[] | null;
+  key_dependencies?: string[] | null;
+  concentration_analysis?: string | null;
+  volatility_analysis?: string | null;
+  reasoning_summary?: string | null;
+  why_workspace_mode?: string | null;
+  what_changed_this_week?: string | null;
+};
+
+export type PredictiveDrift = {
+  likely_workspace_shift?: string | null;
+  confidence?: number | string | null;
+  prediction_reason?: string | null;
+  predictive_alerts?: string[] | null;
+};
+
+export type TimelineSummary = {
+  what_changed_today?: string | null;
+  what_changed_this_week?: string | null;
+  new_risks?: string[] | null;
+  improving_signals?: string[] | null;
+  persistent_themes?: string[] | null;
+  timeline_events?: string[] | null;
+};
+
+export type PortfolioDNA = {
+  dominant_style?: string | null;
+  risk_profile?: string | null;
+  volatility_profile?: string | null;
+  concentration_profile?: string | null;
+  AI_exposure_level?: string | null;
+  FCN_dependency_level?: string | null;
+  crypto_dependency_level?: string | null;
+  macro_sensitivity?: string | null;
+};
+
+export type ReasoningSystemResponse = {
+  long_memory?: LongMemorySummary | null;
+  themes?: ThemeEvolution | null;
+  reasoning?: ReasoningResult | null;
+  predictive?: PredictiveDrift | null;
+  timeline?: TimelineSummary | null;
+  dna?: PortfolioDNA | null;
+  generated_at?: string | null;
+  is_stale?: boolean | null;
+};
+
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -574,6 +641,10 @@ export function getIntelligenceScenarios() {
 
 export function getIntelligenceGraph() {
   return apiFetch<IntelligenceGraphResponse>("/api/v1/intelligence/graph");
+}
+
+export function getIntelligenceReasoning() {
+  return apiFetch<ReasoningSystemResponse>("/api/v1/intelligence/reasoning");
 }
 
 export function explainCopilot(question: string) {

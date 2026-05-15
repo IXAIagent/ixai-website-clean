@@ -17,6 +17,7 @@ import {
   getCrypto,
   getFcns,
   getIntelligenceGraph,
+  getIntelligenceReasoning,
   getIntelligenceScenarios,
   getMyAssetAllocation,
   getMyRiskOverview,
@@ -34,6 +35,7 @@ import {
   RiskOverviewResponse,
   CopilotExplainResponse,
   IntelligenceGraphResponse,
+  ReasoningSystemResponse,
   ScenarioResponse,
   StockPositionResponse,
   SummaryResponse,
@@ -53,6 +55,7 @@ type DashboardState = {
   scenarios: ScenarioResponse | null;
   graph: IntelligenceGraphResponse | null;
   copilot: CopilotExplainResponse | null;
+  reasoning: ReasoningSystemResponse | null;
 };
 
 type FCNUnderlyingResult = {
@@ -1223,6 +1226,9 @@ export default function DashboardPage() {
       const graphPromise = getIntelligenceGraph()
         .then((graph) => graph)
         .catch(() => null);
+      const reasoningPromise = getIntelligenceReasoning()
+        .then((reasoning) => reasoning)
+        .catch(() => null);
       const copilotPromise = explainCopilot("Explain current portfolio operating mode")
         .then((copilot) => copilot)
         .catch(() => null);
@@ -1239,6 +1245,7 @@ export default function DashboardPage() {
         intelligenceResult,
         scenarios,
         graph,
+        reasoning,
         copilot,
       ] =
         await Promise.all([
@@ -1254,6 +1261,7 @@ export default function DashboardPage() {
         intelligencePromise,
         scenariosPromise,
         graphPromise,
+        reasoningPromise,
         copilotPromise,
       ]);
       const nextData = {
@@ -1269,6 +1277,7 @@ export default function DashboardPage() {
         intelligence: intelligenceResult.intelligence,
         scenarios,
         graph,
+        reasoning,
         copilot,
       };
       setNewsError(newsResult.error);
@@ -1464,6 +1473,14 @@ export default function DashboardPage() {
   const strongestConnections = listValue(data.graph?.strongest_connections).slice(0, 4);
   const correlatedRisks = listValue(data.graph?.top_correlated_risks).slice(0, 4);
   const copilotInsight = textValue(data.copilot?.answer, "");
+  const reasoningData = data.reasoning;
+  const reasoningTopRisks = listValue(reasoningData?.reasoning?.top_risks).slice(0, 3);
+  const reasoningTopStrengths = listValue(reasoningData?.reasoning?.top_strengths).slice(0, 2);
+  const themeDominant = listValue(reasoningData?.themes?.dominant_themes).slice(0, 3);
+  const themeEmerging = listValue(reasoningData?.themes?.emerging_themes).slice(0, 3);
+  const themeWeakening = listValue(reasoningData?.themes?.weakening_themes).slice(0, 3);
+  const predictiveAlerts = listValue(reasoningData?.predictive?.predictive_alerts).slice(0, 3);
+  const persistentThemes = listValue(reasoningData?.timeline?.persistent_themes).slice(0, 3);
 
   return (
     <main className="min-h-screen bg-black px-5 py-8 text-white">
@@ -2076,6 +2093,108 @@ export default function DashboardPage() {
             </p>
             <div className="mt-2 font-mono text-[10px] uppercase tracking-wide text-zinc-600">
               no trading advice
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-3 lg:grid-cols-2">
+          <div className="border border-zinc-800 bg-zinc-950 p-3">
+            <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">
+              Reasoning
+            </div>
+            <div className="mt-2 grid gap-2 text-xs">
+              <div>
+                <span className="text-zinc-600">WHY MODE:</span>{" "}
+                <span className="text-zinc-300">
+                  {textValue(reasoningData?.reasoning?.why_workspace_mode, primaryFocus)}
+                </span>
+              </div>
+              <div>
+                <span className="text-zinc-600">RISKS:</span>{" "}
+                <span className="text-zinc-300">
+                  {reasoningTopRisks.length > 0 ? reasoningTopRisks.join(" · ") : "No dominant risk cluster"}
+                </span>
+              </div>
+              <div>
+                <span className="text-zinc-600">STRENGTHS:</span>{" "}
+                <span className="text-zinc-300">
+                  {reasoningTopStrengths.length > 0 ? reasoningTopStrengths.join(" · ") : "Balanced signal mix"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="border border-zinc-800 bg-zinc-950 p-3">
+            <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">
+              Theme Evolution
+            </div>
+            <div className="mt-2 grid gap-2 text-xs">
+              <div>
+                <span className="text-zinc-600">DOMINANT:</span>{" "}
+                <span className="text-zinc-300">
+                  {themeDominant.length > 0 ? themeDominant.join(" · ") : "No dominant theme"}
+                </span>
+              </div>
+              <div>
+                <span className="text-zinc-600">EMERGING:</span>{" "}
+                <span className="text-zinc-300">
+                  {themeEmerging.length > 0 ? themeEmerging.join(" · ") : "None"}
+                </span>
+              </div>
+              <div>
+                <span className="text-zinc-600">WEAKENING:</span>{" "}
+                <span className="text-zinc-300">
+                  {themeWeakening.length > 0 ? themeWeakening.join(" · ") : "None"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-3 lg:grid-cols-3">
+          <div className="border border-zinc-800 bg-zinc-950 p-3">
+            <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">
+              Predictive Drift
+            </div>
+            <div className="mt-2 text-xs text-zinc-300">
+              <div>
+                <span className="text-zinc-600">LIKELY SHIFT:</span>{" "}
+                {textValue(reasoningData?.predictive?.likely_workspace_shift, workspaceMode)}
+              </div>
+              <div className="mt-1">
+                <span className="text-zinc-600">CONF:</span>{" "}
+                {percentValue(reasoningData?.predictive?.confidence)}
+              </div>
+              <div className="mt-1 truncate text-zinc-500">
+                {predictiveAlerts.length > 0 ? predictiveAlerts.join(" · ") : textValue(reasoningData?.predictive?.prediction_reason, "No predictive alert")}
+              </div>
+            </div>
+          </div>
+
+          <div className="border border-zinc-800 bg-zinc-950 p-3">
+            <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">
+              Portfolio DNA
+            </div>
+            <div className="mt-2 grid gap-1 text-xs text-zinc-300">
+              <div>{textValue(reasoningData?.dna?.dominant_style, "Balanced Multi-Asset")}</div>
+              <div className="text-zinc-500">
+                Risk {textValue(reasoningData?.dna?.risk_profile, "Balanced")} · Vol {textValue(reasoningData?.dna?.volatility_profile, "Moderate")}
+              </div>
+              <div className="text-zinc-500">
+                AI {textValue(reasoningData?.dna?.AI_exposure_level, "LOW")} · FCN {textValue(reasoningData?.dna?.FCN_dependency_level, "LOW")} · Crypto {textValue(reasoningData?.dna?.crypto_dependency_level, "LOW")}
+              </div>
+            </div>
+          </div>
+
+          <div className="border border-zinc-800 bg-zinc-950 p-3">
+            <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">
+              This Week Changed
+            </div>
+            <p className="mt-2 truncate text-xs text-zinc-300">
+              {textValue(reasoningData?.timeline?.what_changed_this_week, "No major weekly change detected.")}
+            </p>
+            <div className="mt-1 truncate text-xs text-zinc-500">
+              {persistentThemes.length > 0 ? `Persistent: ${persistentThemes.join(" · ")}` : "Persistent themes pending"}
             </div>
           </div>
         </section>
