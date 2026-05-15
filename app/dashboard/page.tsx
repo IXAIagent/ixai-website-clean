@@ -18,6 +18,7 @@ import {
   getMyAssetAllocation,
   getMyRiskOverview,
   getMySummary,
+  getPortfolioIntelligence,
   getPortfolioNews,
   getPortfolioPriority,
   getStocks,
@@ -25,6 +26,7 @@ import {
   logout,
   NewsArticle,
   PortfolioNewsResponse,
+  PortfolioIntelligenceResponse,
   PortfolioPriorityResponse,
   RiskOverviewResponse,
   StockPositionResponse,
@@ -41,6 +43,7 @@ type DashboardState = {
   cash: CashPositionResponse[];
   news: PortfolioNewsResponse | null;
   priority: PortfolioPriorityResponse | null;
+  intelligence: PortfolioIntelligenceResponse | null;
 };
 
 type FCNUnderlyingResult = {
@@ -718,6 +721,20 @@ function buildUpcomingEvents(fcns: FCNDetail[]) {
 
 type WorkspaceMode = "FCN_RISK" | "CRYPTO_VOL" | "AI_MOMENTUM" | "DEFENSIVE" | "BALANCED";
 
+function normalizeWorkspaceMode(value: unknown): WorkspaceMode | null {
+  const normalized = String(value || "").toUpperCase();
+  if (
+    normalized === "FCN_RISK" ||
+    normalized === "CRYPTO_VOL" ||
+    normalized === "AI_MOMENTUM" ||
+    normalized === "DEFENSIVE" ||
+    normalized === "BALANCED"
+  ) {
+    return normalized;
+  }
+  return null;
+}
+
 function buildWorkspaceMode(
   fcns: FCNDetail[],
   crypto: CryptoPositionResponse[],
@@ -1185,6 +1202,12 @@ export default function DashboardPage() {
           priority: null,
           error: err instanceof Error ? err.message : "Failed to load priority alerts",
         }));
+      const intelligencePromise = getPortfolioIntelligence()
+        .then((intelligence) => ({ intelligence, error: "" }))
+        .catch(() => ({
+          intelligence: null,
+          error: "Failed to load portfolio intelligence",
+        }));
       const [
         summary,
         allocation,
@@ -1195,6 +1218,7 @@ export default function DashboardPage() {
         cash,
         newsResult,
         priorityResult,
+        intelligenceResult,
       ] =
         await Promise.all([
         getMySummary(),
@@ -1206,6 +1230,7 @@ export default function DashboardPage() {
         getCash(),
         newsPromise,
         priorityPromise,
+        intelligencePromise,
       ]);
       const nextData = {
         summary,
@@ -1217,6 +1242,7 @@ export default function DashboardPage() {
         cash: Array.isArray(cash) ? cash : [],
         news: newsResult.news,
         priority: priorityResult.priority,
+        intelligence: intelligenceResult.intelligence,
       };
       setNewsError(newsResult.error);
       setPriorityError(priorityResult.error);
@@ -1333,44 +1359,78 @@ export default function DashboardPage() {
     { label: "CRYPTO VOL", value: "HIGH" },
   ];
   const concentrationRadar = buildConcentrationRadar(stocks, fcns, crypto, totalValue);
-  const riskDrift = buildRiskDrift(concentrationRadar, criticalCount, highCount);
-  const marketRegime = buildMarketRegime(priorityAlerts, concentrationRadar, riskLevel);
-  const workspaceMode = buildWorkspaceMode(
+  const fallbackRiskDrift = buildRiskDrift(concentrationRadar, criticalCount, highCount);
+  const fallbackMarketRegime = buildMarketRegime(priorityAlerts, concentrationRadar, riskLevel);
+  const fallbackWorkspaceMode = buildWorkspaceMode(
     fcns,
     crypto,
     concentrationRadar,
-    marketRegime,
-    riskDrift,
+    fallbackMarketRegime,
+    fallbackRiskDrift,
     priorityAlerts,
   );
+  const backendWorkspace = data.intelligence?.workspace;
+  const workspaceMode = normalizeWorkspaceMode(backendWorkspace?.workspace_mode) || fallbackWorkspaceMode;
+  const riskDriftLabel = textValue(backendWorkspace?.risk_drift, fallbackRiskDrift.label);
+  const riskDrift = {
+    ...fallbackRiskDrift,
+    label: riskDriftLabel,
+    direction:
+      riskDriftLabel.toLowerCase().includes("increasing")
+        ? "↑"
+        : riskDriftLabel.toLowerCase().includes("improving")
+          ? "↓"
+          : "→",
+    summary: textValue(data.intelligence?.narrative?.risk_narrative, fallbackRiskDrift.summary),
+  };
+  const marketRegime = {
+    ...fallbackMarketRegime,
+    label: textValue(backendWorkspace?.market_regime, fallbackMarketRegime.label),
+    summary: textValue(data.intelligence?.narrative?.market_narrative, fallbackMarketRegime.summary),
+  };
   const workspace = workspaceContext(workspaceMode);
   const allNewsArticles = sortArticlesByWorkspace(rawNewsArticles, workspaceMode);
   const newsArticles = allNewsArticles.slice(0, visibleNewsCount);
   const baseUpcomingEvents = buildUpcomingEvents(fcns);
   const upcomingEvents = sortEventsByWorkspace(baseUpcomingEvents, workspaceMode);
-  const watchNowItems = buildWatchNow(
+  const fallbackWatchNowItems = buildWatchNow(
     priorityAlerts,
     allNewsArticles,
     fcns,
     crypto,
     concentrationRadar,
   );
-  const todayBriefLines = buildTodayBrief(
+  const watchNowItems = firstNonEmpty(
+    listValue(data.intelligence?.brief?.watch_now),
+    fallbackWatchNowItems,
+  );
+  const fallbackTodayBriefLines = buildTodayBrief(
     priorityAlerts,
     allNewsArticles,
     fcns,
     crypto,
     riskLevel,
   );
+  const todayBriefLines = firstNonEmpty(
+    listValue(data.intelligence?.brief?.summary_lines),
+    fallbackTodayBriefLines,
+  );
   const baseHeatmapRows = buildPortfolioHeatmap(allNewsArticles, fcns);
   const heatmapRows = sortHeatmapByWorkspace(baseHeatmapRows, workspaceMode);
-  const primaryFocus = buildPrimaryFocus(workspaceMode, fcns, concentrationRadar, riskDrift);
+  const primaryFocus = textValue(
+    backendWorkspace?.primary_focus,
+    buildPrimaryFocus(workspaceMode, fcns, concentrationRadar, riskDrift),
+  );
   const commandCenter = buildCommandCenter(fcns, crypto, allNewsArticles, cash, totalValue);
-  const decisionSignals = buildDecisionSignals(
+  const fallbackDecisionSignals = buildDecisionSignals(
     concentrationRadar,
     riskDrift,
     marketRegime,
     priorityAlerts,
+  );
+  const decisionSignals = firstNonEmpty(
+    listValue(backendWorkspace?.decision_signals),
+    fallbackDecisionSignals,
   );
 
   return (

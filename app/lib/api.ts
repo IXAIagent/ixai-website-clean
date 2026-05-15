@@ -312,6 +312,56 @@ export type PortfolioPriorityResponse = {
   is_stale?: boolean | null;
 };
 
+export type IntelligenceScore = {
+  impact_score?: number | string | null;
+  portfolio_relevance_score?: number | string | null;
+  fcn_risk_score?: number | string | null;
+  ai_momentum_score?: number | string | null;
+  crypto_vol_score?: number | string | null;
+  macro_risk_score?: number | string | null;
+  total_score?: number | string | null;
+};
+
+export type IntelligenceNarrative = {
+  market_narrative?: string | null;
+  portfolio_narrative?: string | null;
+  risk_narrative?: string | null;
+  fcn_narrative?: string | null;
+  what_changed_today?: string | null;
+};
+
+export type IntelligenceCorrelation = {
+  source_symbol?: string | null;
+  related_symbols?: string[] | null;
+  correlation_type?: string | null;
+  explanation?: string | null;
+  risk_direction?: string | null;
+};
+
+export type WorkspaceDecision = {
+  workspace_mode?: string | null;
+  primary_focus?: string | null;
+  risk_drift?: string | null;
+  market_regime?: string | null;
+  decision_signals?: string[] | null;
+};
+
+export type IntelligenceBrief = {
+  summary_lines?: string[] | null;
+  watch_now?: string[] | null;
+  upcoming_focus?: string[] | null;
+};
+
+export type PortfolioIntelligenceResponse = {
+  scores?: IntelligenceScore | null;
+  narrative?: IntelligenceNarrative | null;
+  correlations?: IntelligenceCorrelation[] | null;
+  workspace?: WorkspaceDecision | null;
+  brief?: IntelligenceBrief | null;
+  generated_at?: string | null;
+  is_stale?: boolean | null;
+};
+
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -466,6 +516,10 @@ export function getPortfolioNews() {
 
 export function getPortfolioPriority() {
   return apiFetch<PortfolioPriorityResponse>("/api/v1/intelligence/priority");
+}
+
+export function getPortfolioIntelligence() {
+  return apiFetch<PortfolioIntelligenceResponse>("/api/v1/intelligence/portfolio");
 }
 
 export function updateStock(id: string | number, payload: StockUpdatePayload) {
