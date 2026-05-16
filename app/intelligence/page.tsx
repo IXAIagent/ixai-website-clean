@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "../components/layout/AppShell";
+import { CopilotQuestionPanel } from "../components/intelligence/CopilotQuestionPanel";
+import { MemoryNarrativePanel } from "../components/intelligence/MemoryNarrativePanel";
+import { ScenarioSensitivityPanel } from "../components/intelligence/ScenarioSensitivityPanel";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
+import { useWorkspaceContext } from "../lib/workspace-context";
 import {
   CopilotExplainResponse,
   explainCopilot,
@@ -145,6 +149,7 @@ function WindowCard({ item }: { item: TimelineWindowResponse }) {
 
 export default function IntelligencePage() {
   const { t } = useI18n();
+  const workspaceCtx = useWorkspaceContext();
   const [summary, setSummary] = useState<PortfolioSummaryV2AResponse | null>(null);
   const [portfolioSummary, setPortfolioSummary] = useState<SummaryResponse | null>(null);
   const [riskOverview, setRiskOverview] = useState<RiskOverviewResponse | null>(null);
@@ -397,9 +402,19 @@ export default function IntelligencePage() {
           </TerminalPanel>
         </section>
 
-        <TerminalPanel title={labels.copilot} meta={copilot ? "read-only" : "placeholder"}>
+        <CopilotQuestionPanel portfolioId={workspaceCtx.context.selectedPortfolioId} />
+
+        <ScenarioSensitivityPanel
+          summary={portfolioSummary}
+          intelligenceSummary={summary}
+          fcnItems={fcns}
+        />
+
+        <MemoryNarrativePanel timeline={timeline} reasoning={reasoning} />
+
+        <TerminalPanel title={labels.copilot} meta={copilot ? "read-only fallback" : "legacy"}>
           <p className="text-sm leading-6 text-zinc-300">
-            {textValue(copilot?.answer, "Copilot explain will be interactive next. Current workspace uses non-trading risk intelligence only.")}
+            {textValue(copilot?.answer, "Copilot explain is interactive above. This panel shows the legacy non-interactive narrative as a fallback.")}
           </p>
         </TerminalPanel>
 

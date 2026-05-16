@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "../components/layout/AppShell";
+import { DashboardTodayFocus } from "../components/dashboard/DashboardTodayFocus";
+import { EmptyState } from "../components/layout/EmptyState";
+import { OnboardingChecklist } from "../components/dashboard/OnboardingChecklist";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
 import {
   AllocationItem,
@@ -22,6 +25,7 @@ import {
   TimelineIntelligenceResponse,
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
+import { buildTodayFocus, focusStatus } from "../lib/intelligence-priority";
 import { usePreferences } from "../lib/preferences";
 
 type DashboardOverviewState = {
@@ -169,6 +173,40 @@ export default function DashboardPage() {
     ? data.priority.top_alerts.slice(0, 5)
     : [];
   const summary = data?.summary;
+  // v3E: derive onboarding completion from what dashboard already loads.
+  // No extra API calls.
+  const totalValue = numberValue(summary?.total_value, 0);
+  const stockCount = Array.isArray(summary?.stock_positions)
+    ? summary.stock_positions.length
+    : Array.isArray(summary?.stocks)
+      ? summary.stocks.length
+      : 0;
+  const cryptoCount = Array.isArray(summary?.crypto_positions)
+    ? summary.crypto_positions.length
+    : 0;
+  const fcnCount = fcns.length;
+  const cashCount = Array.isArray(summary?.cash_summary) ? summary.cash_summary.length : 0;
+  const hasHoldings = stockCount + cryptoCount + fcnCount + cashCount > 0 || totalValue > 0;
+  const hasPortfolio = Boolean(summary && summary.portfolio_id);
+  const hasAccount = hasPortfolio; // dashboard only reaches here if user is logged in + AppShell loaded
+  const needsOnboarding = !hasAccount || !hasPortfolio || !hasHoldings;
+  // v3E: top-3 Today Focus mirror.
+  const todayFocusItems = useMemo(
+    () =>
+      buildTodayFocus({
+        summary: data?.summary || null,
+        risk: data?.risk || null,
+        fcnItems: fcns,
+        priorityArticles: Array.isArray(data?.priority?.top_alerts)
+          ? data.priority.top_alerts
+          : [],
+        intelligenceSummary: data?.intelligenceSummary || null,
+        timeline: data?.timeline || null,
+        allocation: data?.allocation || [],
+      }),
+    [data, fcns],
+  );
+  const todayFocusStatus = focusStatus(todayFocusItems);
   const riskLevel = data?.risk?.risk_level || summary?.risk_level || "unknown";
   const riskScore = data?.risk?.risk_score || "0";
   const confidence = numberValue(data?.timeline?.confidence ?? data?.intelligenceSummary?.intelligence_confidence, NaN);
@@ -205,6 +243,36 @@ export default function DashboardPage() {
         </TerminalPanel>
       ) : (
         <div className={preferences.compactMode ? "space-y-3" : "space-y-4"}>
+          {needsOnboarding && (
+            <OnboardingChecklist
+              status={{ hasAccount, hasPortfolio, hasHoldings }}
+            />
+          )}
+          {!hasPortfolio && (
+            <EmptyState
+              title={t("empty.noPortfolio")}
+              hint={t("empty.noPortfolio.hint")}
+              meta="setup"
+              actions={[
+                { label: t("common.openAccounts"), href: "/accounts" },
+                { label: t("common.openImport"), href: "/import" },
+              ]}
+            />
+          )}
+          {hasPortfolio && !hasHoldings && (
+            <EmptyState
+              title={t("empty.noHoldings")}
+              hint={t("empty.noHoldings.hint")}
+              meta="needs data"
+              actions={[
+                { label: t("common.openInput"), href: "/input" },
+                { label: t("common.openImport"), href: "/import" },
+              ]}
+            />
+          )}
+          {hasHoldings && (
+            <DashboardTodayFocus items={todayFocusItems} status={todayFocusStatus} />
+          )}
           <TerminalPanel title={t("dashboard.aiOverview")} meta={preferences.compactMode ? "P0 · compact" : "P0"}>
             <div className="border-l border-emerald-400/40 bg-black/30 px-3 py-2 font-mono text-sm leading-6 text-zinc-300">
               {overviewLine}
@@ -285,14 +353,18 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
-              {data?.allocation.length === 0 && <EmptyLine>No allocation data yet.</EmptyLine>}
+              {data?.allocation.length === 0 && (
+                <EmptyLine>{t("empty.noHoldings")}</EmptyLine>
+              )}
             </div>
           </TerminalPanel>
 
           <section className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
             <TerminalPanel title={t("dashboard.criticalFCN")} meta="top 5">
               <div className="divide-y divide-zinc-800 border border-zinc-800">
-                {criticalFcns.length === 0 && <EmptyLine>No FCN risk items yet.</EmptyLine>}
+                {criticalFcns.length === 0 && (
+                  <EmptyLine>{t("empty.noFcn")}</EmptyLine>
+                )}
                 {criticalFcns.map((fcn, index) => {
                   const ki = fcn.distance_to_KI || fcn.distance_to_ki || fcn.distance_to_ki_pct;
                   return (
@@ -319,7 +391,9 @@ export default function DashboardPage() {
 
             <TerminalPanel title={t("dashboard.topAlerts")} meta="compact">
               <div className="divide-y divide-zinc-800 border border-zinc-800">
-                {topAlerts.length === 0 && <EmptyLine>No critical portfolio alerts.</EmptyLine>}
+                {topAlerts.length === 0 && (
+                  <EmptyLine>{t("empty.noAlerts")}</EmptyLine>
+                )}
                 {topAlerts.map((alert, index) => (
                   <div className="px-3 py-2 font-mono text-xs" key={`${textValue(alert.link || alert.title, "alert")}-${index}`}>
                     <div className={riskClass(alert.priority_level)}>

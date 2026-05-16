@@ -29,3 +29,25 @@ body {
 * {
   min-width: 0;
 }
+
+/* v3E: compact-mode density polish. Per-page wrappers can opt in to tighter
+   spacing by being descendants of AppShell's main[data-compact="1"]. */
+main[data-compact="1"] section,
+main[data-compact="1"] .panel-stack {
+  --ixai-density: 1;
+}
+main[data-compact="1"] h1 {
+  letter-spacing: -0.01em;
+}
+main[data-compact="1"] table {
+  font-size: 0.875rem;
+}
+
+/* Mobile: defensive no-overflow for any element a child page emits. */
+@media (max-width: 768px) {
+  main img,
+  main pre,
+  main code {
+    max-width: 100%;
+  }
+}

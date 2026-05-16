@@ -137,7 +137,11 @@ export function AppShell({
   }
 
   return (
-    <main className={`min-h-screen bg-black text-white ${terminal ? "font-sans" : ""}`}>
+    <main
+      className={`min-h-screen bg-black text-white ${terminal ? "font-sans" : ""}`}
+      data-compact={compact ? "1" : "0"}
+      data-terminal={terminal ? "1" : "0"}
+    >
       <div className={`min-h-screen md:grid ${compact ? "md:grid-cols-[224px_1fr]" : "md:grid-cols-[260px_1fr]"}`}>
         <aside className={`hidden border-r border-zinc-800 bg-zinc-950/70 px-4 md:block ${compact ? "py-4" : "py-5"}`}>
           <div className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-300">

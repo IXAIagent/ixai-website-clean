@@ -611,6 +611,21 @@ export type BackendHealthResponse = {
   [key: string]: unknown;
 };
 
+// v3D: shape of GET/PUT /api/v1/preferences. Backend uses snake_case.
+export type UserPreferencesPayload = {
+  locale?: string | null;
+  default_landing_page?: string | null;
+  compact_mode?: boolean | null;
+  terminal_mode?: boolean | null;
+  show_advanced_intelligence?: boolean | null;
+  alert_mode?: string | null;
+  notification_telegram?: boolean | null;
+  notification_email?: boolean | null;
+  risk_interpretation_mode?: string | null;
+  active_account_id?: string | null;
+  active_portfolio_id?: string | null;
+};
+
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -729,6 +744,13 @@ export function register(email: string, password: string) {
   });
 }
 
+// v3C: helper to append optional ?portfolio_id= query string for scoped endpoints.
+function withPortfolioId(path: string, portfolioId?: string | null) {
+  if (!portfolioId) return path;
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}portfolio_id=${encodeURIComponent(portfolioId)}`;
+}
+
 export function getMySummary() {
   return apiFetch<SummaryResponse>("/api/v1/dashboard/my-summary");
 }
@@ -741,6 +763,33 @@ export function getMyAssetAllocation() {
 
 export function getMyRiskOverview() {
   return apiFetch<RiskOverviewResponse>("/api/v1/dashboard/my-risk-overview");
+}
+
+// v3C: scoped variants honour AppShell's selectedPortfolioId.
+// Backend falls back to the user's first portfolio when portfolioId is empty.
+export function getDashboardSummary(portfolioId?: string | null) {
+  return apiFetch<SummaryResponse>(withPortfolioId("/api/v1/dashboard/summary", portfolioId));
+}
+
+export function getDashboardAlerts(portfolioId?: string | null) {
+  return apiFetch<AlertItem[]>(withPortfolioId("/api/v1/dashboard/alerts", portfolioId));
+}
+
+// v3D: per-user preferences sync. skipAuthRedirect so a logged-out hook caller
+// (e.g. usePreferences mounted on /login) silently falls back to localStorage
+// instead of triggering a redirect loop.
+export function getUserPreferences() {
+  return apiFetch<UserPreferencesPayload>("/api/v1/preferences", {
+    skipAuthRedirect: true,
+  });
+}
+
+export function putUserPreferences(payload: UserPreferencesPayload) {
+  return apiFetch<UserPreferencesPayload>("/api/v1/preferences", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+    skipAuthRedirect: true,
+  });
 }
 
 export function getBackendHealth() {
@@ -828,43 +877,69 @@ export function addFcn(payload: AddFcnPayload) {
   });
 }
 
-export function getPortfolioNews() {
-  return apiFetch<PortfolioNewsResponse>("/api/v1/intelligence/news/portfolio");
+export function getPortfolioNews(portfolioId?: string | null) {
+  return apiFetch<PortfolioNewsResponse>(
+    withPortfolioId("/api/v1/intelligence/news/portfolio", portfolioId),
+  );
 }
 
-export function getPortfolioPriority() {
-  return apiFetch<PortfolioPriorityResponse>("/api/v1/intelligence/priority");
+export function getPortfolioPriority(portfolioId?: string | null) {
+  return apiFetch<PortfolioPriorityResponse>(
+    withPortfolioId("/api/v1/intelligence/priority", portfolioId),
+  );
 }
 
-export function getPortfolioIntelligence() {
-  return apiFetch<PortfolioIntelligenceResponse>("/api/v1/intelligence/portfolio");
+export function getPortfolioIntelligence(portfolioId?: string | null) {
+  return apiFetch<PortfolioIntelligenceResponse>(
+    withPortfolioId("/api/v1/intelligence/portfolio", portfolioId),
+  );
 }
 
-export function getPortfolioSummaryV2A() {
-  return apiFetch<PortfolioSummaryV2AResponse>("/api/v1/intelligence/portfolio-summary");
+export function getPortfolioSummaryV2A(portfolioId?: string | null) {
+  return apiFetch<PortfolioSummaryV2AResponse>(
+    withPortfolioId("/api/v1/intelligence/portfolio-summary", portfolioId),
+  );
 }
 
-export function getIntelligenceTimeline() {
-  return apiFetch<TimelineIntelligenceResponse>("/api/v1/intelligence/timeline");
+export function getIntelligenceTimeline(portfolioId?: string | null) {
+  return apiFetch<TimelineIntelligenceResponse>(
+    withPortfolioId("/api/v1/intelligence/timeline", portfolioId),
+  );
 }
 
-export function getIntelligenceScenarios() {
-  return apiFetch<ScenarioResponse>("/api/v1/intelligence/scenarios");
+export function getIntelligenceScenarios(portfolioId?: string | null) {
+  return apiFetch<ScenarioResponse>(
+    withPortfolioId("/api/v1/intelligence/scenarios", portfolioId),
+  );
 }
 
-export function getIntelligenceGraph() {
-  return apiFetch<IntelligenceGraphResponse>("/api/v1/intelligence/graph");
+export function getIntelligenceGraph(portfolioId?: string | null) {
+  return apiFetch<IntelligenceGraphResponse>(
+    withPortfolioId("/api/v1/intelligence/graph", portfolioId),
+  );
 }
 
-export function getIntelligenceReasoning() {
-  return apiFetch<ReasoningSystemResponse>("/api/v1/intelligence/reasoning");
+export function getIntelligenceReasoning(portfolioId?: string | null) {
+  return apiFetch<ReasoningSystemResponse>(
+    withPortfolioId("/api/v1/intelligence/reasoning", portfolioId),
+  );
 }
 
-export function explainCopilot(question: string) {
-  return apiFetch<CopilotExplainResponse>("/api/v1/intelligence/copilot/explain", {
-    method: "POST",
-    body: JSON.stringify({ question }),
-  });
+export function explainCopilot(
+  question: string,
+  portfolioId?: string | null,
+  queryType?: string | null,
+) {
+  return apiFetch<CopilotExplainResponse>(
+    withPortfolioId("/api/v1/intelligence/copilot/explain", portfolioId),
+    {
+      method: "POST",
+      body: JSON.stringify({
+        question: question || "",
+        query_type: queryType || null,
+      }),
+    },
+  );
 }
 
 export function updateStock(id: string | number, payload: StockUpdatePayload) {
