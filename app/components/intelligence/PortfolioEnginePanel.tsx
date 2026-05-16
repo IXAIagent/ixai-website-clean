@@ -6,26 +6,11 @@ import {
   getPortfolioEngineSummary,
   type PortfolioEngineSummaryResponse,
 } from "../../lib/api";
+import { formatPercent } from "../../lib/formatters";
+import { useI18n } from "../../lib/i18n";
 import { sanitizeAdviceText } from "../../lib/intelligence-priority";
+import { StatusBadge } from "../layout/StatusBadge";
 import { TerminalPanel } from "../layout/TerminalPanel";
-
-function severityClass(value?: string | null) {
-  const normalized = String(value || "").toLowerCase();
-  if (normalized.includes("critical")) return "border-red-400 text-red-200";
-  if (normalized.includes("elevated")) return "border-orange-400 text-orange-200";
-  if (normalized.includes("watch")) return "border-yellow-400 text-yellow-200";
-  return "border-emerald-400 text-emerald-200";
-}
-
-function pct(value: unknown) {
-  const parsed =
-    typeof value === "number"
-      ? value
-      : typeof value === "string" && value.trim()
-        ? Number(value)
-        : NaN;
-  return Number.isFinite(parsed) ? `${parsed.toFixed(1)}%` : "-";
-}
 
 function score(value: unknown) {
   const parsed =
@@ -44,6 +29,8 @@ export function PortfolioEnginePanel({
   portfolioId?: string;
   compact?: boolean;
 }) {
+  const { t, locale } = useI18n();
+  const pct = (value: unknown) => formatPercent(value, locale);
   const [data, setData] = useState<PortfolioEngineSummaryResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -70,15 +57,27 @@ export function PortfolioEnginePanel({
 
   if (loading && !data) {
     return (
-      <TerminalPanel title="Portfolio Engine / 投資組合引擎" meta="loading">
+      <TerminalPanel title={t("engine.portfolioTitle")} meta={t("status.loading")}>
         <div className="h-16 animate-pulse border border-zinc-800 bg-zinc-900" />
       </TerminalPanel>
     );
   }
   if (error || !data) {
     return (
-      <TerminalPanel title="Portfolio Engine / 投資組合引擎" meta="fallback">
-        <div className="font-mono text-xs text-yellow-300">{error || "no data"}</div>
+      <TerminalPanel title={t("engine.portfolioTitle")} meta="fallback">
+        <div className="flex items-center gap-2">
+          <StatusBadge value="unavailable" />
+          <span className="font-mono text-xs text-yellow-300">
+            {error || t("errors.engine")}
+          </span>
+          <button
+            className="ml-auto border border-zinc-700 px-2 py-1 font-mono text-[10px] text-zinc-300 hover:border-emerald-400/60 hover:text-emerald-200"
+            onClick={() => void load()}
+            type="button"
+          >
+            {t("common.retry")}
+          </button>
+        </div>
       </TerminalPanel>
     );
   }
@@ -90,21 +89,36 @@ export function PortfolioEnginePanel({
   const exposure = data.exposure_graph || {};
   const propagation = data.risk_propagation || {};
   const propagationChains = Array.isArray(propagation.chains) ? propagation.chains : [];
+  const overallStatus = data.is_stale ? "stale" : data.status || unified.risk_state || "clear";
 
   return (
     <TerminalPanel
-      title="Portfolio Engine / 投資組合引擎"
+      title={t("engine.portfolioTitle")}
       meta={`v4A · ${unified.risk_state || "clear"}`}
     >
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <StatusBadge value={overallStatus} />
+        {data.locale && (
+          <span className="border border-zinc-800 px-2 py-0.5 font-mono text-[10px] uppercase text-zinc-500">
+            {data.locale}
+          </span>
+        )}
+        {data.degraded_reason && (
+          <span className="font-mono text-[10px] text-yellow-300">
+            {data.degraded_reason}
+          </span>
+        )}
+      </div>
+
       <div className={`grid gap-2 font-mono text-xs ${compact ? "md:grid-cols-3" : "md:grid-cols-6"}`}>
         {(
           [
-            ["TOTAL", unified.total_intelligence_score],
-            ["EXPOSURE", unified.exposure_score],
-            ["CONC", unified.concentration_score],
-            ["FCN STRESS", unified.fcn_stress_score],
-            ["VOL", unified.volatility_score],
-            ["DRIFT", unified.drift_score],
+            [t("engine.score.total"), unified.total_intelligence_score],
+            [t("engine.score.exposure"), unified.exposure_score],
+            [t("engine.score.concentration"), unified.concentration_score],
+            [t("engine.score.fcnStress"), unified.fcn_stress_score],
+            [t("engine.score.volatility"), unified.volatility_score],
+            [t("engine.score.drift"), unified.drift_score],
           ] as const
         ).map(([label, value]) => (
           <div className="border border-zinc-800 bg-black/30 px-2 py-2" key={label}>
@@ -118,10 +132,10 @@ export function PortfolioEnginePanel({
         <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr]">
           <div className="border border-zinc-800 bg-black/20 p-3">
             <div className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
-              CONCENTRATION
+              {t("engine.concentrationHeader")}
             </div>
-            <div className={`mt-1 inline-block border px-2 py-0.5 font-mono text-[10px] uppercase ${severityClass(concentration.risk_level)}`}>
-              {concentration.risk_level || "clear"}
+            <div className="mt-1">
+              <StatusBadge value={concentration.risk_level || "clear"} />
             </div>
             <div className="mt-2 grid gap-1 font-mono text-[11px] text-zinc-400">
               <div>Single name: {pct(concentration.single_name_pct)}</div>
@@ -134,25 +148,26 @@ export function PortfolioEnginePanel({
 
           <div className="border border-zinc-800 bg-black/20 p-3">
             <div className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
-              FCN SYSTEMIC
+              {t("engine.fcnSystemicHeader")}
             </div>
-            <div className={`mt-1 inline-block border px-2 py-0.5 font-mono text-[10px] uppercase ${severityClass(fcnRisk.risk_level)}`}>
-              {fcnRisk.risk_level || "clear"}
+            <div className="mt-1">
+              <StatusBadge value={fcnRisk.risk_level || "clear"} />
             </div>
             <div className="mt-2 grid gap-1 font-mono text-[11px] text-zinc-400">
               <div>Worst-of pressure: {pct(fcnRisk.worst_of_pressure_pct)}</div>
               <div>
-                Nearest KI:{" "}
+                {t("engine.fields.nearestKi")}:{" "}
                 {fcnRisk.nearest_ki_pct == null
                   ? "n/a"
                   : pct(fcnRisk.nearest_ki_pct)}
               </div>
               <div>
-                Repeated underlyings:{" "}
-                {(fcnRisk.repeated_underlyings || []).join(", ") || "none"}
+                {t("engine.fields.repeatedUnderlyings")}:{" "}
+                {(fcnRisk.repeated_underlyings || []).join(", ") || t("engine.none")}
               </div>
               <div>
-                KI cluster: {(fcnRisk.ki_cluster_symbols || []).join(", ") || "none"}
+                {t("engine.fields.kiCluster")}:{" "}
+                {(fcnRisk.ki_cluster_symbols || []).join(", ") || t("engine.none")}
               </div>
               <div>Observation: {fcnRisk.observation_clustering || "unknown"}</div>
             </div>
@@ -163,7 +178,7 @@ export function PortfolioEnginePanel({
       {!compact && (
         <div className="mt-3 border border-zinc-800 bg-black/20 p-3">
           <div className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
-            DRIFT · window {drift.history_window ?? 0}
+            {t("engine.driftHeader")} · window {drift.history_window ?? 0}
           </div>
           <div className="mt-2 grid gap-2 font-mono text-[11px] text-zinc-400 md:grid-cols-5">
             <div>Allocation: {drift.allocation_drift || "UNCHANGED"}</div>
@@ -181,7 +196,7 @@ export function PortfolioEnginePanel({
       {!compact && (
         <div className="mt-3 border border-zinc-800 bg-black/20 p-3">
           <div className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
-            RISK PROPAGATION
+            {t("engine.riskPropagationHeader")}
           </div>
           <div className="mt-1 text-xs text-zinc-300">
             {sanitizeAdviceText(propagation.summary || "")}
@@ -209,19 +224,19 @@ export function PortfolioEnginePanel({
       {!compact && (
         <div className="mt-3 grid gap-2 font-mono text-[11px] text-zinc-400 md:grid-cols-2">
           <div>
-            <span className="text-zinc-500">Dominant themes: </span>
+            <span className="text-zinc-500">{t("engine.fields.dominantThemes")}: </span>
             {(exposure.dominant_themes || []).join(", ") || "—"}
           </div>
           <div>
-            <span className="text-zinc-500">High-beta symbols: </span>
+            <span className="text-zinc-500">{t("engine.fields.highBeta")}: </span>
             {(exposure.high_beta_symbols || []).join(", ") || "—"}
           </div>
           <div>
-            <span className="text-zinc-500">FCN-linked symbols: </span>
+            <span className="text-zinc-500">{t("engine.fields.fcnLinked")}: </span>
             {(exposure.fcn_linked_symbols || []).join(", ") || "—"}
           </div>
           <div>
-            <span className="text-zinc-500">Repeated underlyings: </span>
+            <span className="text-zinc-500">{t("engine.fields.repeatedUnderlyings")}: </span>
             {(exposure.repeated_underlyings || []).join(", ") || "—"}
           </div>
         </div>

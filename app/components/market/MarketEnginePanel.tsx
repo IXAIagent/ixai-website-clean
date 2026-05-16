@@ -6,7 +6,9 @@ import {
   getMarketEngineSummary,
   type MarketEngineSummaryResponse,
 } from "../../lib/api";
+import { useI18n } from "../../lib/i18n";
 import { sanitizeAdviceText } from "../../lib/intelligence-priority";
+import { StatusBadge } from "../layout/StatusBadge";
 import { TerminalPanel } from "../layout/TerminalPanel";
 
 function regimeClass(value?: string | null) {
@@ -43,6 +45,7 @@ export function MarketEnginePanel({
   portfolioId?: string;
   compact?: boolean;
 }) {
+  const { t } = useI18n();
   const [data, setData] = useState<MarketEngineSummaryResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -69,15 +72,27 @@ export function MarketEnginePanel({
 
   if (loading && !data) {
     return (
-      <TerminalPanel title="Market Engine / 市場引擎" meta="loading">
+      <TerminalPanel title={t("engine.marketTitle")} meta={t("status.loading")}>
         <div className="h-16 animate-pulse border border-zinc-800 bg-zinc-900" />
       </TerminalPanel>
     );
   }
   if (error || !data) {
     return (
-      <TerminalPanel title="Market Engine / 市場引擎" meta="fallback">
-        <div className="font-mono text-xs text-yellow-300">{error || "no data"}</div>
+      <TerminalPanel title={t("engine.marketTitle")} meta="fallback">
+        <div className="flex items-center gap-2">
+          <StatusBadge value="unavailable" />
+          <span className="font-mono text-xs text-yellow-300">
+            {error || t("errors.market")}
+          </span>
+          <button
+            className="ml-auto border border-zinc-700 px-2 py-1 font-mono text-[10px] text-zinc-300 hover:border-emerald-400/60 hover:text-emerald-200"
+            onClick={() => void load()}
+            type="button"
+          >
+            {t("common.retry")}
+          </button>
+        </div>
       </TerminalPanel>
     );
   }
@@ -87,25 +102,32 @@ export function MarketEnginePanel({
   const macro = data.macro_news || {};
   const impact = data.portfolio_impact || {};
   const topThemes = Array.isArray(macro.top_themes) ? macro.top_themes : [];
+  const overallStatus = data.is_stale ? "stale" : data.status || "healthy";
 
   return (
     <TerminalPanel
-      title="Market Engine / 市場引擎"
+      title={t("engine.marketTitle")}
       meta={`v4B · ${regime.regime || "data_limited"}`}
     >
       <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
         <span className={`border px-2 py-1 uppercase ${regimeClass(regime.regime)}`}>
-          REGIME: {regime.regime || "data_limited"}
+          {t("engine.labels.regime")}: {regime.regime || "data_limited"}
         </span>
         <span className={`border px-2 py-1 uppercase ${severityClass(volatility.overall_state)}`}>
-          VOL: {volatility.overall_state || "normal"}
+          {t("engine.labels.vol")}: {volatility.overall_state || "normal"}
         </span>
         <span className={`border px-2 py-1 uppercase ${severityClass(impact.overall_impact_level)}`}>
-          IMPACT: {impact.overall_impact_level || "clear"}
+          {t("engine.labels.impact")}: {impact.overall_impact_level || "clear"}
         </span>
         {typeof regime.confidence === "number" && (
           <span className="border border-zinc-700 px-2 py-1 uppercase text-zinc-400">
-            conf {regime.confidence.toFixed(0)}%
+            {t("engine.labels.confidence")} {regime.confidence.toFixed(0)}%
+          </span>
+        )}
+        <StatusBadge value={overallStatus} />
+        {data.locale && (
+          <span className="border border-zinc-800 px-2 py-0.5 font-mono text-[10px] uppercase text-zinc-500">
+            {data.locale}
           </span>
         )}
       </div>

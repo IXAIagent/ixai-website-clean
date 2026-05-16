@@ -687,6 +687,12 @@ export type PortfolioEngineSummaryResponse = {
   unified_score?: UnifiedIntelligenceScoreV4 | null;
   generated_at?: string | null;
   is_stale?: boolean | null;
+  // v4E additions
+  status?: string | null;
+  stale_reason?: string | null;
+  degraded_reason?: string | null;
+  locale?: string | null;
+  failed_engines?: string[] | null;
 };
 
 // v4B: Market engine summary types
@@ -733,6 +739,12 @@ export type MarketEngineSummaryResponse = {
   portfolio_impact?: PortfolioMarketImpactSummaryV4 | null;
   generated_at?: string | null;
   is_stale?: boolean | null;
+  // v4E additions
+  status?: string | null;
+  stale_reason?: string | null;
+  degraded_reason?: string | null;
+  locale?: string | null;
+  failed_engines?: string[] | null;
 };
 
 // v3D: shape of GET/PUT /api/v1/preferences. Backend uses snake_case.
@@ -773,12 +785,33 @@ export function setToken(token: string) {
   window.localStorage.removeItem("token");
 }
 
+// v4D: attach the user's preferred locale to outbound API requests so the
+// backend can apply locale-aware narrative. Reads from the same localStorage
+// key that `usePreferences` writes. Safe on SSR (returns empty).
+function getStoredLocale(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem("ixai_preferences_v1");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.locale === "string") return parsed.locale;
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 export function authHeaders(headers?: HeadersInit) {
   const nextHeaders = new Headers(headers);
   const token = getToken();
 
   if (token) {
     nextHeaders.set("Authorization", `Bearer ${token}`);
+  }
+
+  const locale = getStoredLocale();
+  if (locale && !nextHeaders.has("X-IXAI-Locale")) {
+    nextHeaders.set("X-IXAI-Locale", locale);
   }
 
   return nextHeaders;

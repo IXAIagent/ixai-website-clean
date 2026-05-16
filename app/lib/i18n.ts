@@ -1,192 +1,72 @@
 "use client";
 
-import { defaultPreferences, SupportedLocale, usePreferences } from "./preferences";
+// v4D: locale registry + nested-key lookup. Backward-compatible with the
+// v3E flat-key shape ("dashboard.aiOverview") thanks to dotted-path
+// traversal. Missing keys fall back through:
+//   requested locale namespace → en namespace → key string itself.
 
-type Dictionary = Record<string, string>;
+import {
+  FALLBACK_LOCALE,
+  registry,
+  type Dictionary,
+  type SupportedLocale,
+} from "../locales";
+import { defaultPreferences, usePreferences } from "./preferences";
 
-const zhTW: Dictionary = {
-  "common.active": "Active / 啟用",
-  "common.error": "Error / 錯誤",
-  "common.fresh": "Fresh / 最新",
-  "common.loading": "Loading / 載入中",
-  "common.stale": "Stale / 過期",
-  "common.unknown": "Unknown / 未知",
-  "nav.accounts": "Accounts / 帳戶",
-  "nav.alerts": "Alerts / 警示",
-  "nav.dashboard": "Dashboard / 投資總覽",
-  "nav.fcn": "FCN / FCN 監控",
-  "nav.import": "Import / 匯入",
-  "nav.input": "Input / 資產輸入",
-  "nav.intelligence": "Intelligence / AI 分析",
-  "nav.market": "Market / 市場",
-  "nav.portfolio": "Portfolio / 資產",
-  "nav.settings": "Settings / 設定",
-  "page.accounts": "Accounts / 帳戶",
-  "page.alerts": "Alerts / 警示中心",
-  "page.dashboard": "Dashboard / 投資總覽",
-  "page.fcn": "FCN Risk Workspace / FCN 風險監控",
-  "page.import": "Import / 匯入",
-  "page.input": "Input / 資產輸入",
-  "page.intelligence": "Intelligence / AI 分析",
-  "page.market": "Market / 市場情報",
-  "page.portfolio": "Portfolio / 資產管理",
-  "page.settings": "Settings / 設定",
-  "settings.compliance": "Compliance / Disclaimer",
-  "settings.dataSources": "Data Source Status",
-  "settings.intelligence": "Intelligence Preferences",
-  "settings.language": "Language / Locale Preferences",
-  "settings.notifications": "Notification Preferences",
-  "settings.profile": "Profile / Account",
-  "settings.system": "API / System Health",
-  "settings.workspace": "Workspace Preferences",
-  "dashboard.aiOverview": "今日總結 / AI Overview",
-  "dashboard.assetAllocation": "Asset Allocation / 資產配置",
-  "dashboard.criticalFCN": "FCN Critical Watch / FCN 重點監控",
-  "dashboard.scheduler": "Scheduler / Memory Freshness",
-  "dashboard.topAlerts": "Top Alerts / 重要警示",
-  "dashboard.todayFocus": "Today Focus / 今日重點",
-  "dashboard.todayFocus.subtitle": "Top 3 monitoring priorities · 觀察用，非交易指令",
-  "dashboard.todayFocus.openIntelligence": "Open intelligence detail / 完整分析",
-  "dashboard.todayFocus.action": "Action / 動作",
-  "dashboard.onboarding.title": "Get IXAI ready / 初始化你的工作區",
-  "dashboard.onboarding.meta": "setup checklist",
-  "dashboard.onboarding.hint":
-    "完成下列步驟即可解鎖 dashboard 與 intelligence。Existing users skip automatically.",
-  "dashboard.onboarding.step1": "1. Create account / 建立 account",
-  "dashboard.onboarding.step2": "2. Create portfolio / 建立 portfolio",
-  "dashboard.onboarding.step3": "3. Add asset or import CSV / 新增資產或匯入 CSV",
-  "dashboard.onboarding.step4": "4. Open dashboard & intelligence / 開啟總覽與 AI 分析",
-  "dashboard.onboarding.openGuide": "Open onboarding guide / 開啟引導",
-  "dashboard.onboarding.importCsv": "Import CSV / 匯入 CSV",
-  "empty.noPortfolio": "No portfolio yet / 尚未建立 portfolio",
-  "empty.noPortfolio.hint": "建立 account 與 portfolio 才能開始監控風險。",
-  "empty.noHoldings": "No holdings yet / 尚未新增資產",
-  "empty.noHoldings.hint": "新增 position 或匯入 CSV 後 dashboard 才會有資料。",
-  "empty.noFcn": "No FCN positions / 尚未新增 FCN",
-  "empty.noFcn.hint": "至少新增一筆 FCN，FCN intelligence 才會啟動。",
-  "empty.noAlerts": "No active alerts / 目前沒有警示",
-  "empty.noAlerts.hint": "當監控觸發 critical 訊號時，會即時顯示於此。",
-  "empty.timelineBuilding": "Timeline history accumulating / 歷史資料累積中",
-  "empty.timelineBuilding.hint":
-    "Snapshot 會隨時間累積，drift 分析的信心度也會逐步提升。",
-  "empty.missingContext": "Select a portfolio / 請選擇 portfolio",
-  "empty.missingContext.hint":
-    "從工作區左側切換 account / portfolio 後此視圖才會載入。",
-  "empty.todayFocusBuilding": "Today Focus is still building / 今日重點累積中",
-  "common.openAccounts": "Open accounts / 帳戶管理",
-  "common.openInput": "Add asset / 新增資產",
-  "common.openImport": "Import CSV / 匯入 CSV",
-};
+export type { SupportedLocale } from "../locales";
 
-const en: Dictionary = {
-  "common.active": "Active",
-  "common.error": "Error",
-  "common.fresh": "Fresh",
-  "common.loading": "Loading",
-  "common.stale": "Stale",
-  "common.unknown": "Unknown",
-  "nav.accounts": "Accounts",
-  "nav.alerts": "Alerts",
-  "nav.dashboard": "Dashboard",
-  "nav.fcn": "FCN",
-  "nav.import": "Import",
-  "nav.input": "Input",
-  "nav.intelligence": "Intelligence",
-  "nav.market": "Market",
-  "nav.portfolio": "Portfolio",
-  "nav.settings": "Settings",
-  "page.accounts": "Accounts",
-  "page.alerts": "Alerts Center",
-  "page.dashboard": "Dashboard",
-  "page.fcn": "FCN Risk Workspace",
-  "page.import": "Import",
-  "page.input": "Input",
-  "page.intelligence": "Intelligence",
-  "page.market": "Market",
-  "page.portfolio": "Portfolio Management",
-  "page.settings": "Settings",
-  "settings.compliance": "Compliance / Disclaimer",
-  "settings.dataSources": "Data Source Status",
-  "settings.intelligence": "Intelligence Preferences",
-  "settings.language": "Language / Locale Preferences",
-  "settings.notifications": "Notification Preferences",
-  "settings.profile": "Profile / Account",
-  "settings.system": "API / System Health",
-  "settings.workspace": "Workspace Preferences",
-  "dashboard.aiOverview": "AI Overview",
-  "dashboard.assetAllocation": "Asset Allocation",
-  "dashboard.criticalFCN": "FCN Critical Watch",
-  "dashboard.scheduler": "Scheduler / Memory Freshness",
-  "dashboard.topAlerts": "Top Alerts",
-  "dashboard.todayFocus": "Today Focus",
-  "dashboard.todayFocus.subtitle": "Top 3 monitoring priorities — observation only, no trading instruction",
-  "dashboard.todayFocus.openIntelligence": "Open intelligence detail",
-  "dashboard.todayFocus.action": "Action",
-  "dashboard.onboarding.title": "Get IXAI ready",
-  "dashboard.onboarding.meta": "setup checklist",
-  "dashboard.onboarding.hint":
-    "Complete the steps below to unlock dashboard and intelligence views. Existing users skip automatically.",
-  "dashboard.onboarding.step1": "1. Create account",
-  "dashboard.onboarding.step2": "2. Create portfolio",
-  "dashboard.onboarding.step3": "3. Add asset or import CSV",
-  "dashboard.onboarding.step4": "4. Open dashboard & intelligence",
-  "dashboard.onboarding.openGuide": "Open onboarding guide",
-  "dashboard.onboarding.importCsv": "Import CSV",
-  "empty.noPortfolio": "No portfolio yet",
-  "empty.noPortfolio.hint": "Create an account and portfolio to start tracking risk.",
-  "empty.noHoldings": "No holdings yet",
-  "empty.noHoldings.hint": "Add a position or import a CSV to populate dashboards.",
-  "empty.noFcn": "No FCN positions",
-  "empty.noFcn.hint": "FCN intelligence activates when at least one FCN is recorded.",
-  "empty.noAlerts": "No active alerts",
-  "empty.noAlerts.hint": "We surface critical signals here when monitoring triggers.",
-  "empty.timelineBuilding": "Timeline history accumulating",
-  "empty.timelineBuilding.hint":
-    "Snapshots are recorded over time. Drift analysis becomes more confident as memory grows.",
-  "empty.missingContext": "Select a portfolio",
-  "empty.missingContext.hint":
-    "Choose an account and portfolio from the workspace switcher to scope this view.",
-  "empty.todayFocusBuilding": "Today Focus is still building",
-  "common.openAccounts": "Open accounts",
-  "common.openInput": "Add asset",
-  "common.openImport": "Import CSV",
-};
+export const HEADER_NAME = "X-IXAI-Locale";
 
-const dictionaries: Record<SupportedLocale, Dictionary> = {
-  "zh-TW": zhTW,
-  en,
-  ja: {
-    ...en,
-    "nav.dashboard": "Dashboard / 投資概要",
-    "nav.settings": "Settings / 設定",
-    "page.settings": "Settings / 設定",
-  },
-  ko: {
-    ...en,
-    "nav.dashboard": "Dashboard / 투자 개요",
-    "nav.settings": "Settings / 설정",
-    "page.settings": "Settings / 설정",
-  },
-  "zh-CN": {
-    ...zhTW,
-    "nav.dashboard": "Dashboard / 投资总览",
-    "nav.portfolio": "Portfolio / 资产",
-    "nav.settings": "Settings / 设置",
-    "page.settings": "Settings / 设置",
-  },
-};
+function safeDictionary(locale: SupportedLocale): Dictionary {
+  return registry[locale] || registry[FALLBACK_LOCALE];
+}
 
-export function translate(key: string, locale: SupportedLocale = defaultPreferences.locale) {
-  return dictionaries[locale]?.[key] || dictionaries.en[key] || dictionaries["zh-TW"][key] || key;
+/**
+ * Resolve a dotted key against a dictionary.
+ * Supports namespace.key and namespace.group.subkey, but flattening at one
+ * level matches the legacy v3E shape (e.g. "dashboard.onboarding.step1"
+ * stored as { dashboard: { "onboarding.step1": "..." } }).
+ */
+function lookup(dict: Dictionary, key: string): string | undefined {
+  if (!key) return undefined;
+  const parts = key.split(".");
+  if (parts.length < 2) return undefined;
+  const namespace = parts[0] as keyof Dictionary;
+  const rest = parts.slice(1).join(".");
+  const ns = dict[namespace];
+  if (!ns) return undefined;
+  const direct = ns[rest];
+  if (typeof direct === "string") return direct;
+  // nested object support: { dashboard: { onboarding: { step1: "..." } } }
+  if (parts.length >= 3) {
+    let cursor: unknown = ns;
+    for (const segment of parts.slice(1)) {
+      if (!cursor || typeof cursor !== "object") return undefined;
+      cursor = (cursor as Record<string, unknown>)[segment];
+    }
+    return typeof cursor === "string" ? cursor : undefined;
+  }
+  return undefined;
+}
+
+export function translate(
+  key: string,
+  locale: SupportedLocale = defaultPreferences.locale,
+): string {
+  const primary = lookup(safeDictionary(locale), key);
+  if (primary !== undefined) return primary;
+  const fallback = lookup(safeDictionary(FALLBACK_LOCALE), key);
+  if (fallback !== undefined) return fallback;
+  return key;
 }
 
 export function useI18n() {
   const { preferences } = usePreferences();
-
+  const locale = (preferences.locale || defaultPreferences.locale) as SupportedLocale;
   return {
-    locale: preferences.locale,
+    locale,
     t(key: string) {
-      return translate(key, preferences.locale);
+      return translate(key, locale);
     },
   };
 }
