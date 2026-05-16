@@ -42,6 +42,13 @@ export default function ImportWorkspacePage() {
   const previewRows = Array.isArray(preview?.rows) ? preview.rows : [];
   const previewErrorCount = Number(preview?.summary?.errors ?? 0);
   const canConfirm = Boolean(file && preview && !loading && (previewErrorCount === 0 || allowErrorImport));
+  function actionTone(actionValue: unknown) {
+    const action = textValue(actionValue).toLowerCase();
+    if (action.includes("update")) return "border-yellow-400/40 text-yellow-200";
+    if (action.includes("skip")) return "border-zinc-700 text-zinc-400";
+    if (action.includes("import") || action.includes("write")) return "border-emerald-400/40 text-emerald-200";
+    return "border-zinc-700 text-zinc-300";
+  }
 
   async function loadHistory() {
     try {
@@ -123,6 +130,14 @@ export default function ImportWorkspacePage() {
       title={t("page.import")}
       subtitle={t("import.subtitle")}
     >
+      <div className="mb-4 border border-zinc-800 bg-zinc-950/70 px-4 py-3">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+          {t("import.normalized")}
+        </div>
+        <div className="mt-2 text-sm leading-6 text-zinc-300">
+          {t("import.workflowGuide")}
+        </div>
+      </div>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <TerminalPanel title={t("import.panel")} meta={t("import.previewConfirmMeta")}>
@@ -149,7 +164,7 @@ export default function ImportWorkspacePage() {
                 {file ? file.name : t("import.dropCsv")}
               </div>
               <div className="mt-2 text-xs text-zinc-500">
-                {file ? fileSize(file.size) : "asset_type,symbol,quantity,avg_price,current_price,currency,amount"}
+                {file ? fileSize(file.size) : t("import.templateColumns")}
               </div>
             </label>
 
@@ -188,6 +203,9 @@ export default function ImportWorkspacePage() {
           </TerminalPanel>
 
           <TerminalPanel title={t("import.statusPanel")} meta={t("import.resultMeta")}>
+            <div className="mb-3 text-sm leading-6 text-zinc-400">
+              {t("import.previewGuide")}
+            </div>
             {!preview && !result && <EmptyLine>{t("import.noPreview")}</EmptyLine>}
             {preview?.summary && (
               <div className="grid gap-2 font-mono text-xs md:grid-cols-4">
@@ -243,7 +261,11 @@ export default function ImportWorkspacePage() {
                               <PreviewCell>{textValue(row.asset_type)}</PreviewCell>
                               <PreviewCell>{textValue(row.input_symbol)}</PreviewCell>
                               <PreviewCell>{textValue(row.canonical_symbol)}</PreviewCell>
-                              <PreviewCell>{textValue(row.action)}</PreviewCell>
+                              <PreviewCell>
+                                <span className={`inline-block border px-2 py-0.5 ${actionTone(row.action)}`}>
+                                  {textValue(row.action)}
+                                </span>
+                              </PreviewCell>
                               <PreviewCell>{textValue(row.quantity)}</PreviewCell>
                               <PreviewCell>{textValue(row.avg_price)}</PreviewCell>
                               <PreviewCell>{textValue(row.current_price)}</PreviewCell>

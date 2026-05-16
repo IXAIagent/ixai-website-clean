@@ -57,6 +57,10 @@ export default function InputWorkspacePage() {
       recent: t("input.recent"),
       submitAsset: t("input.submitAsset"),
       dataPending: t("common.dataPending"),
+      stock: t("input.asset.stock"),
+      crypto: t("input.asset.crypto"),
+      cash: t("input.asset.cash"),
+      awaitingReferenceData: t("input.awaitingReferenceData"),
     }),
     [t],
   );
@@ -113,7 +117,7 @@ export default function InputWorkspacePage() {
       ]);
       const rows: RecentPosition[] = [
         ...stocks.slice(0, 3).map((item) => ({
-          type: "Stock",
+          type: labels.stock,
           label: textValue(item.symbol, "STOCK"),
           detail: `${textValue(item.quantity, "0")} sh · ${money(item.current_value)}`,
         })),
@@ -123,15 +127,15 @@ export default function InputWorkspacePage() {
           detail:
             Number(item.notional_amount || item.notional || 0) > 0
               ? `notional ${money(item.notional_amount || item.notional)}`
-              : labels.dataPending,
+              : labels.awaitingReferenceData,
         })),
         ...cryptos.slice(0, 3).map((item) => ({
-          type: "Crypto",
+          type: labels.crypto,
           label: textValue(item.symbol, "CRYPTO"),
           detail: `${textValue(item.quantity, "0")} · ${money(item.current_value)}`,
         })),
         ...cashItems.slice(0, 3).map((item) => ({
-          type: "Cash",
+          type: labels.cash,
           label: textValue(item.currency, "USD"),
           detail: money(item.amount),
         })),
@@ -312,6 +316,14 @@ export default function InputWorkspacePage() {
       title={labels.input}
       subtitle={t("input.subtitle")}
     >
+      <div className="mb-4 border border-zinc-800 bg-zinc-950/70 px-4 py-3">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+          {t("input.activeWriteHint")}
+        </div>
+        <div className="mt-2 text-sm leading-6 text-zinc-300">
+          {t("input.workspaceGuide")}
+        </div>
+      </div>
       <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
         <TerminalPanel title={t("input.context")} meta="account">
           <div className="space-y-3 font-mono text-xs">
@@ -369,9 +381,11 @@ export default function InputWorkspacePage() {
               <button
                 className={`border px-3 py-2 text-left text-xs transition ${
                   assetType === item.id
-                    ? "border-emerald-400 bg-emerald-400/10 text-emerald-200"
+                    ? item.id === "fcn"
+                      ? "border-yellow-400/70 bg-yellow-400/10 text-yellow-100"
+                      : "border-emerald-400 bg-emerald-400/10 text-emerald-200"
                     : "border-zinc-800 text-zinc-400 hover:border-zinc-600"
-                }`}
+                } ${item.id === "fcn" ? "sm:scale-[1.02]" : ""}`}
                 key={item.id}
                 onClick={() => setAssetType(item.id)}
                 type="button"
@@ -385,7 +399,7 @@ export default function InputWorkspacePage() {
           <form className="space-y-3" onSubmit={handleSubmit}>
             {assetType === "stock" && (
               <div className="grid gap-3 md:grid-cols-4">
-                <Field label="Symbol" value={stock.symbol} onChange={(value) => setStock({ ...stock, symbol: value })} placeholder="AAPL / 2330" />
+                <Field label={t("input.symbol")} value={stock.symbol} onChange={(value) => setStock({ ...stock, symbol: value })} placeholder="AAPL / 2330" />
                 <Field label={t("input.quantity")} value={stock.quantity} onChange={(value) => setStock({ ...stock, quantity: value })} />
                 <Field label={t("input.avgCost")} value={stock.avg_price} onChange={(value) => setStock({ ...stock, avg_price: value })} />
                 <Field label={t("input.currentPrice")} value={stock.current_price} onChange={(value) => setStock({ ...stock, current_price: value })} />
@@ -393,7 +407,7 @@ export default function InputWorkspacePage() {
             )}
             {assetType === "crypto" && (
               <div className="grid gap-3 md:grid-cols-4">
-                <Field label="Symbol" value={crypto.symbol} onChange={(value) => setCrypto({ ...crypto, symbol: value })} placeholder="BTC / ETH" />
+                <Field label={t("input.symbol")} value={crypto.symbol} onChange={(value) => setCrypto({ ...crypto, symbol: value })} placeholder="BTC / ETH" />
                 <Field label={t("input.quantity")} value={crypto.quantity} onChange={(value) => setCrypto({ ...crypto, quantity: value })} />
                 <Field label={t("input.avgCost")} value={crypto.avg_price} onChange={(value) => setCrypto({ ...crypto, avg_price: value })} />
                 <Field label={t("input.currentPrice")} value={crypto.current_price} onChange={(value) => setCrypto({ ...crypto, current_price: value })} />
@@ -401,17 +415,41 @@ export default function InputWorkspacePage() {
             )}
             {assetType === "cash" && (
               <div className="grid gap-3 md:grid-cols-2">
-                <Field label="Currency" value={cash.currency} onChange={(value) => setCash({ ...cash, currency: value })} />
-                <Field label={t("input.amount")} value={cash.amount} onChange={(value) => setCash({ ...cash, amount: value })} />
+                <Field label={t("input.currency")} value={cash.currency} onChange={(value) => setCash({ ...cash, currency: value })} />
+                <Field label={t("input.cashBalance")} value={cash.amount} onChange={(value) => setCash({ ...cash, amount: value })} />
               </div>
             )}
             {assetType === "fcn" && (
-              <div className="grid gap-3 md:grid-cols-5">
-                <Field label="Name / Code" value={fcn.name} onChange={(value) => setFcn({ ...fcn, name: value })} />
-                <Field label="Worst-of" value={fcn.worst_of} onChange={(value) => setFcn({ ...fcn, worst_of: value })} placeholder="MDB" />
-                <Field label="Notional" value={fcn.notional} onChange={(value) => setFcn({ ...fcn, notional: value })} />
-                <Field label="KI" value={fcn.ki} onChange={(value) => setFcn({ ...fcn, ki: value })} />
-                <Field label="KO" value={fcn.ko} onChange={(value) => setFcn({ ...fcn, ko: value })} />
+              <div className="border border-yellow-400/30 bg-yellow-400/[0.04] p-3">
+                <div className="mb-3 text-sm leading-6 text-zinc-300">
+                  {t("input.fcnFlagship")}
+                </div>
+                <div className="grid gap-3 md:grid-cols-[1.1fr_1fr_1fr]">
+                  <div>
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                      {t("input.fcnTerms")}
+                    </div>
+                    <div className="grid gap-3">
+                      <Field label={t("input.nameCode")} value={fcn.name} onChange={(value) => setFcn({ ...fcn, name: value })} />
+                      <Field label={t("input.notional")} value={fcn.notional} onChange={(value) => setFcn({ ...fcn, notional: value })} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                      {t("input.fcnUnderlyings")}
+                    </div>
+                    <Field label="Worst-of" value={fcn.worst_of} onChange={(value) => setFcn({ ...fcn, worst_of: value })} placeholder="MDB" />
+                  </div>
+                  <div>
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                      {t("input.fcnBarriers")}
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
+                      <Field label="KI" value={fcn.ki} onChange={(value) => setFcn({ ...fcn, ki: value })} />
+                      <Field label="KO" value={fcn.ko} onChange={(value) => setFcn({ ...fcn, ko: value })} />
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -428,9 +466,9 @@ export default function InputWorkspacePage() {
           </form>
         </TerminalPanel>
 
-        <TerminalPanel title={labels.recent} meta="preview">
+        <TerminalPanel title={labels.recent} meta={t("dashboard.meta.overview")}>
           <div className="divide-y divide-zinc-800 border border-zinc-800">
-            {recent.length === 0 && <EmptyLine>No recent positions yet.</EmptyLine>}
+            {recent.length === 0 && <EmptyLine>{t("input.noRecentActivity")}</EmptyLine>}
             {recent.map((item) => (
               <div className="px-3 py-2 font-mono text-xs" key={`${item.type}-${item.label}-${item.detail}`}>
                 <div className="flex items-center justify-between gap-3">
