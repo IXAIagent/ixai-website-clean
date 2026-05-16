@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  clearApiCache,
   getToken,
   getUserPreferences,
   putUserPreferences,
@@ -11,6 +12,7 @@ import {
 
 export const PREFERENCES_STORAGE_KEY = "ixai_preferences_v1";
 export const PREFERENCES_CHANGED_EVENT = "ixai:preferences-changed";
+const BACKEND_PREFERENCES_TTL_MS = 30_000;
 
 export type SupportedLocale = "zh-TW" | "en" | "ja" | "ko" | "zh-CN";
 export type DefaultLandingPage =
@@ -58,6 +60,10 @@ const landingPages: DefaultLandingPage[] = [
 const locales: SupportedLocale[] = ["zh-TW", "en", "ja", "ko", "zh-CN"];
 const alertModes: AlertMode[] = ["criticalOnly", "all", "dailyBrief"];
 const riskModes: RiskInterpretationMode[] = ["conservative", "balanced", "aggressive"];
+
+let preferencesHydrationPromise: Promise<UserPreferencesPayload | null> | null = null;
+let lastBackendPreferences: UserPreferencesPayload | null = null;
+let lastBackendPreferencesAt = 0;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -124,6 +130,7 @@ export function writePreferences(preferences: IXAIPreferences) {
   try {
     const normalized = coercePreferences(preferences);
     window.localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(normalized));
+    clearApiCache();
     window.dispatchEvent(new CustomEvent(PREFERENCES_CHANGED_EVENT, { detail: normalized }));
   } catch {
     // localStorage can fail in private mode; keep runtime safe.
@@ -190,8 +197,28 @@ function localToBackend(preferences: IXAIPreferences): UserPreferencesPayload {
 export async function loadPreferencesFromBackend(): Promise<UserPreferencesPayload | null> {
   if (typeof window === "undefined") return null;
   if (!getToken()) return null;
+  const now = Date.now();
+  if (
+    lastBackendPreferences &&
+    now - lastBackendPreferencesAt < BACKEND_PREFERENCES_TTL_MS
+  ) {
+    return lastBackendPreferences;
+  }
+  if (preferencesHydrationPromise) return preferencesHydrationPromise;
+
+  preferencesHydrationPromise = getUserPreferences()
+    .then((payload) => {
+      lastBackendPreferences = payload;
+      lastBackendPreferencesAt = Date.now();
+      return payload;
+    })
+    .catch(() => null)
+    .finally(() => {
+      preferencesHydrationPromise = null;
+    });
+
   try {
-    return await getUserPreferences();
+    return await preferencesHydrationPromise;
   } catch {
     return null;
   }
@@ -205,7 +232,9 @@ export async function savePreferencesToBackend(
   if (typeof window === "undefined") return;
   if (!getToken()) return;
   try {
-    await putUserPreferences({ ...localToBackend(preferences), ...(extras ?? {}) });
+    const payload = await putUserPreferences({ ...localToBackend(preferences), ...(extras ?? {}) });
+    lastBackendPreferences = payload;
+    lastBackendPreferencesAt = Date.now();
   } catch {
     // Swallow: localStorage is the source of truth for the UI.
   }
@@ -221,10 +250,12 @@ export async function syncActiveContextToBackend(
   if (typeof window === "undefined") return;
   if (!getToken()) return;
   try {
-    await putUserPreferences({
+    const payload = await putUserPreferences({
       active_account_id: activeAccountId || null,
       active_portfolio_id: activePortfolioId || null,
     });
+    lastBackendPreferences = payload;
+    lastBackendPreferencesAt = Date.now();
   } catch {
     // Swallow: workspace context is also in localStorage; this is a hint only.
   }

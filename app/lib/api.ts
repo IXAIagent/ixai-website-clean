@@ -27,6 +27,16 @@ type ApiFetchInit = RequestInit & {
   skipAuthRedirect?: boolean;
 };
 
+const DATA_CACHE_TTL_MS = 25_000;
+
+type CacheEntry<T = unknown> = {
+  value?: T;
+  promise?: Promise<T>;
+  timestamp: number;
+};
+
+const getCache = new Map<string, CacheEntry>();
+
 export type LoginResponse = {
   access_token: string;
   token_type: string;
@@ -805,6 +815,7 @@ export function getToken() {
 
 export function setToken(token: string) {
   if (typeof window === "undefined") return;
+  clearApiCache();
   window.localStorage.setItem("ixai_token", token);
   window.localStorage.removeItem("token");
 }
@@ -843,8 +854,13 @@ export function authHeaders(headers?: HeadersInit) {
 
 export function logout() {
   if (typeof window === "undefined") return;
+  clearApiCache();
   window.localStorage.removeItem("ixai_token");
   window.localStorage.removeItem("token");
+}
+
+export function clearApiCache() {
+  getCache.clear();
 }
 
 function readableError(payload: unknown, fallback: string) {
@@ -919,6 +935,50 @@ export async function apiFetch<T>(
   return payload as T;
 }
 
+function cacheKey(path: string) {
+  return JSON.stringify({
+    path,
+    token: getToken() || "",
+    locale: getStoredLocale() || "",
+  });
+}
+
+function cachedGet<T>(
+  path: string,
+  ttlMs = DATA_CACHE_TTL_MS,
+  init: ApiFetchInit = {},
+): Promise<T> {
+  if (typeof window === "undefined") return apiFetch<T>(path, init);
+  const key = cacheKey(path);
+  const now = Date.now();
+  const entry = getCache.get(key) as CacheEntry<T> | undefined;
+
+  if (entry?.promise) return entry.promise;
+  if (entry && entry.value !== undefined && now - entry.timestamp < ttlMs) {
+    return Promise.resolve(entry.value);
+  }
+
+  const promise = apiFetch<T>(path, init)
+    .then((value) => {
+      getCache.set(key, { value, timestamp: Date.now() });
+      return value;
+    })
+    .catch((error) => {
+      getCache.delete(key);
+      throw error;
+    });
+
+  getCache.set(key, { promise, timestamp: now });
+  return promise;
+}
+
+function invalidateAfter<T>(promise: Promise<T>): Promise<T> {
+  return promise.then((value) => {
+    clearApiCache();
+    return value;
+  });
+}
+
 export async function login(email: string, password: string) {
   const data = await apiFetch<LoginResponse>("/api/v1/auth/auth/login", {
     method: "POST",
@@ -945,38 +1005,38 @@ function withPortfolioId(path: string, portfolioId?: string | null) {
 }
 
 export function getMySummary() {
-  return apiFetch<SummaryResponse>("/api/v1/dashboard/my-summary");
+  return cachedGet<SummaryResponse>("/api/v1/dashboard/my-summary");
 }
 
 export function getMyAssetAllocation() {
-  return apiFetch<AssetAllocationResponse>(
+  return cachedGet<AssetAllocationResponse>(
     "/api/v1/dashboard/my-asset-allocation",
   );
 }
 
 export function getMyRiskOverview() {
-  return apiFetch<RiskOverviewResponse>("/api/v1/dashboard/my-risk-overview");
+  return cachedGet<RiskOverviewResponse>("/api/v1/dashboard/my-risk-overview");
 }
 
 // v3C: scoped variants honour AppShell's selectedPortfolioId.
 // Backend falls back to the user's first portfolio when portfolioId is empty.
 export function getDashboardSummary(portfolioId?: string | null) {
-  return apiFetch<SummaryResponse>(withPortfolioId("/api/v1/dashboard/summary", portfolioId));
+  return cachedGet<SummaryResponse>(withPortfolioId("/api/v1/dashboard/summary", portfolioId));
 }
 
 export function getDashboardAlerts(portfolioId?: string | null) {
-  return apiFetch<AlertItem[]>(withPortfolioId("/api/v1/dashboard/alerts", portfolioId));
+  return cachedGet<AlertItem[]>(withPortfolioId("/api/v1/dashboard/alerts", portfolioId));
 }
 
 // v4A / v4B engine helpers
 export function getPortfolioEngineSummary(portfolioId?: string | null) {
-  return apiFetch<PortfolioEngineSummaryResponse>(
+  return cachedGet<PortfolioEngineSummaryResponse>(
     withPortfolioId("/api/v1/intelligence/engine-summary", portfolioId),
   );
 }
 
 export function getMarketEngineSummary(portfolioId?: string | null) {
-  return apiFetch<MarketEngineSummaryResponse>(
+  return cachedGet<MarketEngineSummaryResponse>(
     withPortfolioId("/api/v1/intelligence/market-engine", portfolioId),
   );
 }
@@ -985,17 +1045,21 @@ export function getMarketEngineSummary(portfolioId?: string | null) {
 // (e.g. usePreferences mounted on /login) silently falls back to localStorage
 // instead of triggering a redirect loop.
 export function getUserPreferences() {
-  return apiFetch<UserPreferencesPayload>("/api/v1/preferences", {
+  return cachedGet<UserPreferencesPayload>("/api/v1/preferences", DATA_CACHE_TTL_MS, {
     skipAuthRedirect: true,
   });
 }
 
-export function putUserPreferences(payload: UserPreferencesPayload) {
+function putUserPreferencesRaw(payload: UserPreferencesPayload) {
   return apiFetch<UserPreferencesPayload>("/api/v1/preferences", {
+    skipAuthRedirect: true,
     method: "PUT",
     body: JSON.stringify(payload),
-    skipAuthRedirect: true,
   });
+}
+
+export function putUserPreferences(payload: UserPreferencesPayload) {
+  return invalidateAfter(putUserPreferencesRaw(payload));
 }
 
 export function getBackendHealth() {
@@ -1003,7 +1067,7 @@ export function getBackendHealth() {
 }
 
 export function getAccounts() {
-  return apiFetch<AccountsListResponse>("/api/v1/accounts");
+  return cachedGet<AccountsListResponse>("/api/v1/accounts");
 }
 
 export function getAccount(accountId: string) {
@@ -1011,26 +1075,26 @@ export function getAccount(accountId: string) {
 }
 
 export function createAccount(name: string, accountType = "individual") {
-  return apiFetch<AccountResponse>("/api/v1/accounts", {
+  return invalidateAfter(apiFetch<AccountResponse>("/api/v1/accounts", {
     method: "POST",
     body: JSON.stringify({ name, account_type: accountType }),
-  });
+  }));
 }
 
 export function getAccountPortfolios(accountId: string) {
-  return apiFetch<AccountPortfoliosResponse>(
+  return cachedGet<AccountPortfoliosResponse>(
     `/api/v1/accounts/${encodeURIComponent(accountId)}/portfolios`,
   );
 }
 
 export function createAccountPortfolio(accountId: string, name: string, baseCurrency = "USD") {
-  return apiFetch<AccountPortfolioResponse>(
+  return invalidateAfter(apiFetch<AccountPortfolioResponse>(
     `/api/v1/accounts/${encodeURIComponent(accountId)}/portfolios`,
     {
       method: "POST",
       body: JSON.stringify({ name, base_currency: baseCurrency }),
     },
-  );
+  ));
 }
 
 export function getAccountIntelligenceSummary(accountId: string) {
@@ -1056,59 +1120,59 @@ export function getCash() {
 }
 
 export function addStock(payload: AddStockPayload) {
-  return apiFetch<{ status?: string; id?: string | number }>("/api/v1/portfolio/stock", {
+  return invalidateAfter(apiFetch<{ status?: string; id?: string | number }>("/api/v1/portfolio/stock", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }));
 }
 
 export function addCrypto(payload: AddCryptoPayload) {
-  return apiFetch<{ status?: string; id?: string | number }>("/api/v1/portfolio/crypto", {
+  return invalidateAfter(apiFetch<{ status?: string; id?: string | number }>("/api/v1/portfolio/crypto", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }));
 }
 
 export function addCash(payload: AddCashPayload) {
-  return apiFetch<{ status?: string; id?: string | number }>("/api/v1/portfolio/cash", {
+  return invalidateAfter(apiFetch<{ status?: string; id?: string | number }>("/api/v1/portfolio/cash", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }));
 }
 
 export function addFcn(payload: AddFcnPayload) {
-  return apiFetch<{ status?: string; id?: string | number }>("/api/v1/portfolio/fcn", {
+  return invalidateAfter(apiFetch<{ status?: string; id?: string | number }>("/api/v1/portfolio/fcn", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }));
 }
 
 export function deleteStock(id: string | number) {
-  return apiFetch<{ status?: string; message?: string }>(
+  return invalidateAfter(apiFetch<{ status?: string; message?: string }>(
     `/api/v1/portfolio/stocks/${encodeURIComponent(String(id))}`,
     { method: "DELETE" },
-  );
+  ));
 }
 
 export function deleteCrypto(id: string | number) {
-  return apiFetch<{ status?: string; message?: string }>(
+  return invalidateAfter(apiFetch<{ status?: string; message?: string }>(
     `/api/v1/portfolio/crypto/${encodeURIComponent(String(id))}`,
     { method: "DELETE" },
-  );
+  ));
 }
 
 export function deleteCash(id: string | number) {
-  return apiFetch<{ status?: string; message?: string }>(
+  return invalidateAfter(apiFetch<{ status?: string; message?: string }>(
     `/api/v1/portfolio/cash/${encodeURIComponent(String(id))}`,
     { method: "DELETE" },
-  );
+  ));
 }
 
 export function deleteFcn(id: string | number) {
-  return apiFetch<{ status?: string; message?: string }>(
+  return invalidateAfter(apiFetch<{ status?: string; message?: string }>(
     `/api/v1/portfolio/fcn/${encodeURIComponent(String(id))}`,
     { method: "DELETE" },
-  );
+  ));
 }
 
 export function getFcnSchedule(id: string | number) {
@@ -1118,49 +1182,49 @@ export function getFcnSchedule(id: string | number) {
 }
 
 export function getPortfolioNews(portfolioId?: string | null) {
-  return apiFetch<PortfolioNewsResponse>(
+  return cachedGet<PortfolioNewsResponse>(
     withPortfolioId("/api/v1/intelligence/news/portfolio", portfolioId),
   );
 }
 
 export function getPortfolioPriority(portfolioId?: string | null) {
-  return apiFetch<PortfolioPriorityResponse>(
+  return cachedGet<PortfolioPriorityResponse>(
     withPortfolioId("/api/v1/intelligence/priority", portfolioId),
   );
 }
 
 export function getPortfolioIntelligence(portfolioId?: string | null) {
-  return apiFetch<PortfolioIntelligenceResponse>(
+  return cachedGet<PortfolioIntelligenceResponse>(
     withPortfolioId("/api/v1/intelligence/portfolio", portfolioId),
   );
 }
 
 export function getPortfolioSummaryV2A(portfolioId?: string | null) {
-  return apiFetch<PortfolioSummaryV2AResponse>(
+  return cachedGet<PortfolioSummaryV2AResponse>(
     withPortfolioId("/api/v1/intelligence/portfolio-summary", portfolioId),
   );
 }
 
 export function getIntelligenceTimeline(portfolioId?: string | null) {
-  return apiFetch<TimelineIntelligenceResponse>(
+  return cachedGet<TimelineIntelligenceResponse>(
     withPortfolioId("/api/v1/intelligence/timeline", portfolioId),
   );
 }
 
 export function getIntelligenceScenarios(portfolioId?: string | null) {
-  return apiFetch<ScenarioResponse>(
+  return cachedGet<ScenarioResponse>(
     withPortfolioId("/api/v1/intelligence/scenarios", portfolioId),
   );
 }
 
 export function getIntelligenceGraph(portfolioId?: string | null) {
-  return apiFetch<IntelligenceGraphResponse>(
+  return cachedGet<IntelligenceGraphResponse>(
     withPortfolioId("/api/v1/intelligence/graph", portfolioId),
   );
 }
 
 export function getIntelligenceReasoning(portfolioId?: string | null) {
-  return apiFetch<ReasoningSystemResponse>(
+  return cachedGet<ReasoningSystemResponse>(
     withPortfolioId("/api/v1/intelligence/reasoning", portfolioId),
   );
 }
@@ -1183,33 +1247,33 @@ export function explainCopilot(
 }
 
 export function updateStock(id: string | number, payload: StockUpdatePayload) {
-  return apiFetch<{ status?: string; message?: string; id?: string | number }>(
+  return invalidateAfter(apiFetch<{ status?: string; message?: string; id?: string | number }>(
     `/api/v1/portfolio/stock/${encodeURIComponent(String(id))}`,
     {
       method: "PATCH",
       body: JSON.stringify(payload),
     },
-  );
+  ));
 }
 
 export function updateCrypto(id: string | number, payload: CryptoUpdatePayload) {
-  return apiFetch<{ status?: string; message?: string; id?: string | number }>(
+  return invalidateAfter(apiFetch<{ status?: string; message?: string; id?: string | number }>(
     `/api/v1/portfolio/crypto/${encodeURIComponent(String(id))}`,
     {
       method: "PATCH",
       body: JSON.stringify(payload),
     },
-  );
+  ));
 }
 
 export function updateCash(id: string | number, payload: CashUpdatePayload) {
-  return apiFetch<{ status?: string; message?: string; id?: string | number }>(
+  return invalidateAfter(apiFetch<{ status?: string; message?: string; id?: string | number }>(
     `/api/v1/portfolio/cash/${encodeURIComponent(String(id))}`,
     {
       method: "PATCH",
       body: JSON.stringify(payload),
     },
-  );
+  ));
 }
 
 export function searchAssets(query: string, assetType = "stock") {
@@ -1234,11 +1298,11 @@ export function uploadPortfolioCsv(file: File, signal?: AbortSignal) {
   const formData = new FormData();
   formData.append("file", file);
 
-  return apiFetch<PortfolioCsvImportResponse>("/api/v1/imports/portfolio-csv", {
+  return invalidateAfter(apiFetch<PortfolioCsvImportResponse>("/api/v1/imports/portfolio-csv", {
     method: "POST",
     body: formData,
     signal,
-  });
+  }));
 }
 
 export function previewPortfolioCsv(file: File, signal?: AbortSignal) {

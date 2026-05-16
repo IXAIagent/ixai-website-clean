@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { clearApiCache } from "./api";
+
 export const WORKSPACE_CONTEXT_STORAGE_KEY = "ixai_workspace_context_v1";
 
 export type WorkspaceContextState = {
@@ -59,6 +61,7 @@ export function writeWorkspaceContext(context: WorkspaceContextState) {
       WORKSPACE_CONTEXT_STORAGE_KEY,
       JSON.stringify(normalizeContext({ ...context, updatedAt: new Date().toISOString() })),
     );
+    clearApiCache();
   } catch {
     // Keep the workspace operational if localStorage is unavailable.
   }
