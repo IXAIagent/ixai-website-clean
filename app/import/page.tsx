@@ -12,6 +12,7 @@ import {
   previewPortfolioCsv,
   uploadPortfolioCsv,
 } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 const integrations = ["Manual CSV", "Futu", "Binance", "IBKR"];
 
@@ -28,6 +29,7 @@ function fileSize(size: number) {
 }
 
 export default function ImportWorkspacePage() {
+  const { t } = useI18n();
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [preview, setPreview] = useState<PortfolioCsvPreviewResponse | null>(null);
@@ -110,7 +112,7 @@ export default function ImportWorkspacePage() {
 
   return (
     <AppShell
-      title="Import / 匯入"
+      title={t("page.import")}
       subtitle="CSV import workspace with broker connector placeholders."
     >
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">

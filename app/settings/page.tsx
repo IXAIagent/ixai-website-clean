@@ -14,19 +14,14 @@ import {
   getToken,
   SummaryResponse,
 } from "../lib/api";
-
-const labels = {
-  title: "Settings / 設定",
-  subtitle: "Workspace preferences, account context, data sources, system health, and compliance settings.",
-  profile: "Profile / Account",
-  language: "Language / Locale Preferences",
-  notifications: "Notification Preferences",
-  dataSources: "Data Source Status",
-  system: "API / System Health",
-  intelligence: "Intelligence Preferences",
-  workspace: "Workspace Preferences",
-  compliance: "Compliance / Disclaimer",
-};
+import { useI18n } from "../lib/i18n";
+import {
+  AlertMode,
+  DefaultLandingPage,
+  RiskInterpretationMode,
+  SupportedLocale,
+  usePreferences,
+} from "../lib/preferences";
 
 const localeOptions = [
   { code: "zh-TW", label: "繁體中文 zh-TW" },
@@ -37,20 +32,17 @@ const localeOptions = [
 ];
 
 const landingPages = [
-  "/dashboard",
-  "/portfolio",
-  "/fcn",
-  "/intelligence",
-  "/market",
-  "/alerts",
+  "dashboard",
+  "portfolio",
+  "fcn",
+  "intelligence",
+  "market",
+  "alerts",
 ];
 
 type ToggleKey =
   | "telegram"
   | "email"
-  | "criticalOnly"
-  | "allAlerts"
-  | "dailyBrief"
   | "compactMode"
   | "terminalMode"
   | "advancedIntelligence";
@@ -146,24 +138,13 @@ function MetricRow({ label, value }: { label: string; value: unknown }) {
 }
 
 export default function SettingsPage() {
+  const { preferences, updatePreferences, resetPreferences } = usePreferences();
+  const { t } = useI18n();
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [accounts, setAccounts] = useState<AccountResponse[]>([]);
   const [health, setHealth] = useState<BackendHealthResponse | null>(null);
   const [healthError, setHealthError] = useState("");
   const [lastChecked, setLastChecked] = useState("");
-  const [locale, setLocale] = useState("zh-TW");
-  const [landingPage, setLandingPage] = useState("/dashboard");
-  const [riskMode, setRiskMode] = useState("balanced");
-  const [toggles, setToggles] = useState<Record<ToggleKey, boolean>>({
-    telegram: false,
-    email: false,
-    criticalOnly: true,
-    allAlerts: false,
-    dailyBrief: true,
-    compactMode: true,
-    terminalMode: true,
-    advancedIntelligence: false,
-  });
 
   useEffect(() => {
     async function load() {
@@ -199,14 +180,33 @@ export default function SettingsPage() {
   ];
 
   function setToggle(key: ToggleKey) {
-    setToggles((current) => ({ ...current, [key]: !current[key] }));
+    if (key === "telegram") {
+      updatePreferences({ notificationTelegram: !preferences.notificationTelegram });
+      return;
+    }
+    if (key === "email") {
+      updatePreferences({ notificationEmail: !preferences.notificationEmail });
+      return;
+    }
+    if (key === "compactMode") {
+      updatePreferences({ compactMode: !preferences.compactMode });
+      return;
+    }
+    if (key === "terminalMode") {
+      updatePreferences({ terminalMode: !preferences.terminalMode });
+      return;
+    }
+    updatePreferences({ showAdvancedIntelligence: !preferences.showAdvancedIntelligence });
   }
 
   return (
-    <AppShell title={labels.title} subtitle={labels.subtitle}>
+    <AppShell
+      title={t("page.settings")}
+      subtitle="Workspace preferences, account context, data sources, system health, and compliance settings."
+    >
       <div className="space-y-5">
         <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-          <TerminalPanel title={labels.profile} meta="account context">
+          <TerminalPanel title={t("settings.profile")} meta="account context">
             <MetricRow label="USER" value={userEmail || "token profile unavailable"} />
             <MetricRow label="ACCOUNT" value={currentAccount?.name || "Personal workspace"} />
             <MetricRow label="ACCOUNT ID" value={currentAccount?.id || "pending"} />
@@ -220,21 +220,21 @@ export default function SettingsPage() {
             </Link>
           </TerminalPanel>
 
-          <TerminalPanel title={labels.language} meta="future i18n">
+          <TerminalPanel title={t("settings.language")} meta="future i18n">
             <div className="grid gap-2">
               {localeOptions.map((option) => (
                 <button
                   className={`flex items-center justify-between border px-3 py-2 text-left text-sm ${
-                    locale === option.code
+                    preferences.locale === option.code
                       ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-200"
                       : "border-zinc-800 text-zinc-400"
                   }`}
                   key={option.code}
-                  onClick={() => setLocale(option.code)}
+                  onClick={() => updatePreferences({ locale: option.code as SupportedLocale })}
                   type="button"
                 >
                   <span>{option.label}</span>
-                  <span className="font-mono text-[10px]">{locale === option.code ? "SELECTED" : option.code}</span>
+                  <span className="font-mono text-[10px]">{preferences.locale === option.code ? "SELECTED" : option.code}</span>
                 </button>
               ))}
             </div>
@@ -245,40 +245,34 @@ export default function SettingsPage() {
         </section>
 
         <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-          <TerminalPanel title={labels.notifications} meta="local preferences">
+          <TerminalPanel title={t("settings.notifications")} meta="persisted local preferences">
             <Toggle
-              checked={toggles.telegram}
+              checked={preferences.notificationTelegram}
               description="Send critical portfolio alerts to Telegram when configured."
               label="Telegram alerts"
               onChange={() => setToggle("telegram")}
             />
             <Toggle
-              checked={toggles.email}
+              checked={preferences.notificationEmail}
               description="Email alert delivery placeholder."
               label="Email alerts"
               onChange={() => setToggle("email")}
             />
-            <Toggle
-              checked={toggles.criticalOnly}
-              description="Only critical / high-priority alerts."
-              label="Critical only"
-              onChange={() => setToggle("criticalOnly")}
-            />
-            <Toggle
-              checked={toggles.allAlerts}
-              description="Show all portfolio alerts in workspace feeds."
-              label="All alerts"
-              onChange={() => setToggle("allAlerts")}
-            />
-            <Toggle
-              checked={toggles.dailyBrief}
-              description="Daily brief placeholder for future scheduled delivery."
-              label="Daily brief"
-              onChange={() => setToggle("dailyBrief")}
-            />
+            <label className="block border-b border-zinc-900 py-2">
+              <span className="block text-sm text-zinc-200">Alert mode</span>
+              <select
+                className="mt-2 w-full border border-zinc-700 bg-black px-2 py-2 text-sm text-zinc-200"
+                onChange={(event) => updatePreferences({ alertMode: event.target.value as AlertMode })}
+                value={preferences.alertMode}
+              >
+                <option value="criticalOnly">Critical only</option>
+                <option value="all">All alerts</option>
+                <option value="dailyBrief">Daily brief</option>
+              </select>
+            </label>
           </TerminalPanel>
 
-          <TerminalPanel title={labels.dataSources} meta="safe placeholders">
+          <TerminalPanel title={t("settings.dataSources")} meta="safe placeholders">
             {dataSources.map((source) => (
               <SourceRow detail={source.detail} key={source.name} name={source.name} status={source.status} />
             ))}
@@ -286,7 +280,7 @@ export default function SettingsPage() {
         </section>
 
         <section className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
-          <TerminalPanel title={labels.system} meta={healthStatus}>
+          <TerminalPanel title={t("settings.system")} meta={healthStatus}>
             <MetricRow label="BACKEND HEALTH" value={healthStatus} />
             <MetricRow label="DATABASE READINESS" value={health?.database || "unknown"} />
             <MetricRow label="REQUEST STATUS" value={healthError ? "failed soft" : health ? "ok" : "unknown"} />
@@ -298,7 +292,7 @@ export default function SettingsPage() {
             )}
           </TerminalPanel>
 
-          <TerminalPanel title={labels.intelligence} meta="risk interpretation only">
+          <TerminalPanel title={t("settings.intelligence")} meta="risk interpretation only">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="border border-zinc-800 bg-black/20 p-3">
                 <div className="font-mono text-[10px] uppercase text-zinc-600">Scheduler Snapshot Interval</div>
@@ -316,8 +310,8 @@ export default function SettingsPage() {
                 <span className="block font-mono text-[10px] uppercase text-zinc-600">Risk Mode Preference</span>
                 <select
                   className="mt-2 w-full border border-zinc-700 bg-black px-2 py-2 text-sm text-zinc-200"
-                  onChange={(event) => setRiskMode(event.target.value)}
-                  value={riskMode}
+                  onChange={(event) => updatePreferences({ riskInterpretationMode: event.target.value as RiskInterpretationMode })}
+                  value={preferences.riskInterpretationMode}
                 >
                   <option value="conservative">Conservative interpretation</option>
                   <option value="balanced">Balanced interpretation</option>
@@ -332,40 +326,47 @@ export default function SettingsPage() {
         </section>
 
         <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-          <TerminalPanel title={labels.workspace} meta="local UI state">
+          <TerminalPanel title={t("settings.workspace")} meta="persisted local state">
             <label className="block border-b border-zinc-900 py-2">
               <span className="block text-sm text-zinc-200">Default landing page</span>
               <select
                 className="mt-2 w-full border border-zinc-700 bg-black px-2 py-2 text-sm text-zinc-200"
-                onChange={(event) => setLandingPage(event.target.value)}
-                value={landingPage}
+                onChange={(event) => updatePreferences({ defaultLandingPage: event.target.value as DefaultLandingPage })}
+                value={preferences.defaultLandingPage}
               >
                 {landingPages.map((page) => (
-                  <option key={page} value={page}>{page}</option>
+                  <option key={page} value={page}>{`/${page}`}</option>
                 ))}
               </select>
             </label>
             <Toggle
-              checked={toggles.compactMode}
+              checked={preferences.compactMode}
               description="Favor terminal density and compact rows."
               label="Compact mode"
               onChange={() => setToggle("compactMode")}
             />
             <Toggle
-              checked={toggles.terminalMode}
+              checked={preferences.terminalMode}
               description="Use Bloomberg-like terminal visual hierarchy."
               label="Terminal mode"
               onChange={() => setToggle("terminalMode")}
             />
             <Toggle
-              checked={toggles.advancedIntelligence}
+              checked={preferences.showAdvancedIntelligence}
               description="Show advanced intelligence panels by default in future workspace."
               label="Show advanced intelligence"
               onChange={() => setToggle("advancedIntelligence")}
             />
+            <button
+              className="mt-3 border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-yellow-500/50 hover:text-yellow-200"
+              onClick={resetPreferences}
+              type="button"
+            >
+              Reset preferences
+            </button>
           </TerminalPanel>
 
-          <TerminalPanel title={labels.compliance} meta="always visible">
+          <TerminalPanel title={t("settings.compliance")} meta="always visible">
             <div className="space-y-3 text-sm leading-6 text-zinc-300">
               <p>IXAI 提供風險情報與投資組合分析。</p>
               <p>IXAI 不提供個別買賣建議，不提供保證收益，也不提供自動交易指令。</p>

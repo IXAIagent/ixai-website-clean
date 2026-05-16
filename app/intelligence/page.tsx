@@ -21,6 +21,7 @@ import {
   TimelineIntelligenceResponse,
   TimelineWindowResponse,
 } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 const labels = {
   title: "Intelligence / AI 分析",
@@ -103,6 +104,7 @@ function WindowCard({ item }: { item: TimelineWindowResponse }) {
 }
 
 export default function IntelligencePage() {
+  const { t } = useI18n();
   const [summary, setSummary] = useState<PortfolioSummaryV2AResponse | null>(null);
   const [timeline, setTimeline] = useState<TimelineIntelligenceResponse | null>(null);
   const [reasoning, setReasoning] = useState<ReasoningSystemResponse | null>(null);
@@ -160,7 +162,7 @@ export default function IntelligencePage() {
   const scenarioRows = useMemo(() => scenarios.slice(0, 6), [scenarios]);
 
   return (
-    <AppShell title={labels.title} subtitle={labels.subtitle}>
+    <AppShell title={t("page.intelligence")} subtitle={labels.subtitle}>
       <div className="space-y-5">
         {errors.length > 0 && (
           <div className="border border-yellow-500/30 bg-yellow-950/10 px-3 py-2 text-xs text-yellow-200">

@@ -21,6 +21,8 @@ import {
   SummaryResponse,
   TimelineIntelligenceResponse,
 } from "../lib/api";
+import { useI18n } from "../lib/i18n";
+import { usePreferences } from "../lib/preferences";
 
 type DashboardOverviewState = {
   summary: SummaryResponse | null;
@@ -119,6 +121,8 @@ function topAlertLine(alert: NewsArticle, index: number) {
 }
 
 export default function DashboardPage() {
+  const { t } = useI18n();
+  const { preferences } = usePreferences();
   const [data, setData] = useState<DashboardOverviewState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -179,7 +183,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell
-      title="Dashboard / 投資總覽"
+      title={t("page.dashboard")}
       subtitle="P0 portfolio overview: risk, allocation, critical FCN watch and scheduler memory."
     >
       {loading && !data ? (
@@ -200,8 +204,8 @@ export default function DashboardPage() {
           </button>
         </TerminalPanel>
       ) : (
-        <div className="space-y-4">
-          <TerminalPanel title="今日總結 / AI Overview" meta="P0">
+        <div className={preferences.compactMode ? "space-y-3" : "space-y-4"}>
+          <TerminalPanel title={t("dashboard.aiOverview")} meta={preferences.compactMode ? "P0 · compact" : "P0"}>
             <div className="border-l border-emerald-400/40 bg-black/30 px-3 py-2 font-mono text-sm leading-6 text-zinc-300">
               {overviewLine}
             </div>
@@ -241,7 +245,7 @@ export default function DashboardPage() {
             </div>
           </TerminalPanel>
 
-          <section className="grid gap-3 lg:grid-cols-4">
+          <section className={`grid gap-3 lg:grid-cols-4 ${preferences.compactMode ? "text-sm" : ""}`}>
             <div className="border border-zinc-800 bg-zinc-950 p-3">
               <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">Regime</div>
               <div className="mt-2 text-xl font-semibold text-zinc-100">
@@ -268,7 +272,7 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <TerminalPanel title="Asset Allocation" meta={money(summary?.total_value)}>
+          <TerminalPanel title={t("dashboard.assetAllocation")} meta={money(summary?.total_value)}>
             <div className="grid gap-2 md:grid-cols-4">
               {data?.allocation.map((item) => (
                 <div className="border border-zinc-800 bg-black/20 p-3" key={item.asset_class}>
@@ -286,7 +290,7 @@ export default function DashboardPage() {
           </TerminalPanel>
 
           <section className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
-            <TerminalPanel title="FCN Critical Watch" meta="top 5">
+            <TerminalPanel title={t("dashboard.criticalFCN")} meta="top 5">
               <div className="divide-y divide-zinc-800 border border-zinc-800">
                 {criticalFcns.length === 0 && <EmptyLine>No FCN risk items yet.</EmptyLine>}
                 {criticalFcns.map((fcn, index) => {
@@ -313,7 +317,7 @@ export default function DashboardPage() {
               </Link>
             </TerminalPanel>
 
-            <TerminalPanel title="Top Alerts" meta="compact">
+            <TerminalPanel title={t("dashboard.topAlerts")} meta="compact">
               <div className="divide-y divide-zinc-800 border border-zinc-800">
                 {topAlerts.length === 0 && <EmptyLine>No critical portfolio alerts.</EmptyLine>}
                 {topAlerts.map((alert, index) => (
@@ -333,7 +337,7 @@ export default function DashboardPage() {
             </TerminalPanel>
           </section>
 
-          <TerminalPanel title="Scheduler / Memory Freshness" meta="history">
+          <TerminalPanel title={t("dashboard.scheduler")} meta="history">
             <div className="grid gap-2 font-mono text-xs md:grid-cols-4">
               <div>
                 <span className="text-zinc-600">LAST GENERATED</span>

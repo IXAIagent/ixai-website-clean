@@ -12,6 +12,7 @@ import {
   getMySummary,
   SummaryResponse,
 } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 const labels = {
   title: "FCN Risk Workspace / FCN 風險監控",
@@ -260,6 +261,7 @@ function UnderlyingMiniTable({ rows }: { rows: FCNUnderlyingResult[] }) {
 }
 
 export default function FcnPage() {
+  const { t } = useI18n();
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [rawFcns, setRawFcns] = useState<FCNPositionResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -316,7 +318,7 @@ export default function FcnPage() {
   });
 
   return (
-    <AppShell title={labels.title} subtitle={labels.subtitle}>
+    <AppShell title={t("page.fcn")} subtitle={labels.subtitle}>
       <div className="space-y-5">
         {error && (
           <div className="border border-red-500/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">

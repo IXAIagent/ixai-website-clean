@@ -13,6 +13,7 @@ import {
   PortfolioNewsResponse,
   PortfolioPriorityResponse,
 } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 const labels = {
   title: "Market / 市場情報",
@@ -99,6 +100,7 @@ function matchesFilter(article: NewsArticle, filter: Filter) {
 }
 
 export default function MarketPage() {
+  const { t } = useI18n();
   const [news, setNews] = useState<PortfolioNewsResponse | null>(null);
   const [priority, setPriority] = useState<PortfolioPriorityResponse | null>(null);
   const [intelligence, setIntelligence] = useState<PortfolioIntelligenceResponse | null>(null);
@@ -148,7 +150,7 @@ export default function MarketPage() {
   const negativeNews = articles.filter((article) => toneLabel(article).toLowerCase().includes("negative")).length;
 
   return (
-    <AppShell title={labels.title} subtitle={labels.subtitle}>
+    <AppShell title={t("page.market")} subtitle={labels.subtitle}>
       <div className="space-y-5">
         {error && (
           <div className="border border-yellow-500/30 bg-yellow-950/10 px-3 py-2 text-xs text-yellow-200">

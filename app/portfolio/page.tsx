@@ -21,6 +21,7 @@ import {
   StockPositionResponse,
   SummaryResponse,
 } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 const labels = {
   title: "Portfolio / 資產管理",
@@ -258,6 +259,7 @@ function HoldingSection({ title, rows }: { title: string; rows: HoldingRow[] }) 
 }
 
 export default function PortfolioPage() {
+  const { t } = useI18n();
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [allocation, setAllocation] = useState<AllocationItem[]>([]);
   const [stocks, setStocks] = useState<StockPositionResponse[]>([]);
@@ -342,7 +344,7 @@ export default function PortfolioPage() {
   const isEmpty = !loading && rows.all.length === 0;
 
   return (
-    <AppShell title={labels.title} subtitle={labels.subtitle}>
+    <AppShell title={t("page.portfolio")} subtitle={labels.subtitle}>
       <div className="space-y-5">
         {error && (
           <div className="border border-red-500/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">

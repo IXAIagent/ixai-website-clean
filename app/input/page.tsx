@@ -18,6 +18,7 @@ import {
   getFcns,
   getStocks,
 } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 type AssetType = "stock" | "fcn" | "crypto" | "cash";
 type RecentPosition = { type: string; label: string; detail: string };
@@ -56,6 +57,7 @@ function inputClass() {
 }
 
 export default function InputWorkspacePage() {
+  const { t } = useI18n();
   const [assetType, setAssetType] = useState<AssetType>("stock");
   const [accounts, setAccounts] = useState<AccountResponse[]>([]);
   const [portfolios, setPortfolios] = useState<AccountPortfolioResponse[]>([]);
@@ -186,7 +188,7 @@ export default function InputWorkspacePage() {
 
   return (
     <AppShell
-      title={labels.input}
+      title={t("page.input")}
       subtitle="Structured asset tickets, account context and recent portfolio preview."
     >
       <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_360px]">

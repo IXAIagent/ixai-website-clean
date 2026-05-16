@@ -12,6 +12,7 @@ import {
   NewsArticle,
   RiskOverviewResponse,
 } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 const labels = {
   title: "Alerts / 警示中心",
@@ -135,6 +136,7 @@ function AlertRow({ alert }: { alert: UnifiedAlert }) {
 }
 
 export default function AlertsPage() {
+  const { t } = useI18n();
   const [risk, setRisk] = useState<RiskOverviewResponse | null>(null);
   const [priority, setPriority] = useState<NewsArticle[]>([]);
   const [filter, setFilter] = useState<Filter>("All");
@@ -180,7 +182,7 @@ export default function AlertsPage() {
   ];
 
   return (
-    <AppShell title={labels.title} subtitle={labels.subtitle}>
+    <AppShell title={t("page.alerts")} subtitle={labels.subtitle}>
       <div className="space-y-5">
         {error && (
           <div className="border border-yellow-500/30 bg-yellow-950/10 px-3 py-2 text-xs text-yellow-200">

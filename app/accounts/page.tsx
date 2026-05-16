@@ -12,6 +12,7 @@ import {
   getAccountPortfolios,
   getAccounts,
 } from "../lib/api";
+import { useI18n } from "../lib/i18n";
 
 function textValue(value: unknown, fallback = "-") {
   if (typeof value === "string" && value.trim()) return value.trim();
@@ -20,6 +21,7 @@ function textValue(value: unknown, fallback = "-") {
 }
 
 export default function AccountsPage() {
+  const { t } = useI18n();
   const [accounts, setAccounts] = useState<AccountResponse[]>([]);
   const [portfolios, setPortfolios] = useState<AccountPortfolioResponse[]>([]);
   const [selectedAccount, setSelectedAccount] = useState("");
@@ -107,7 +109,7 @@ export default function AccountsPage() {
 
   return (
     <AppShell
-      title="Accounts / 帳戶"
+      title={t("page.accounts")}
       subtitle="Multi-account and multi-portfolio foundation for future client/family/business workspaces."
     >
       <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">

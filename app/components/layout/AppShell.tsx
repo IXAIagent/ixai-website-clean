@@ -5,31 +5,20 @@ import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect } from "react";
 
 import { getToken, logout } from "../../lib/api";
-
-const labels = {
-  dashboard: "Dashboard / 投資總覽",
-  portfolio: "Portfolio / 資產",
-  fcn: "FCN / FCN 監控",
-  intelligence: "Intelligence / AI 分析",
-  market: "Market / 市場",
-  alerts: "Alerts / 警示",
-  input: "Input / 資產輸入",
-  import: "Import / 匯入",
-  accounts: "Accounts / 帳戶",
-  settings: "Settings / 設定",
-};
+import { useI18n } from "../../lib/i18n";
+import { landingPath, usePreferences } from "../../lib/preferences";
 
 const navItems = [
-  { href: "/dashboard", label: labels.dashboard, short: "Home" },
-  { href: "/portfolio", label: labels.portfolio, short: "Portfolio" },
-  { href: "/fcn", label: labels.fcn, short: "FCN" },
-  { href: "/intelligence", label: labels.intelligence, short: "AI" },
-  { href: "/market", label: labels.market, short: "Market" },
-  { href: "/alerts", label: labels.alerts, short: "Alerts" },
-  { href: "/input", label: labels.input, short: "Input" },
-  { href: "/import", label: labels.import, short: "Import" },
-  { href: "/accounts", label: labels.accounts, short: "Accounts" },
-  { href: "/settings", label: labels.settings, short: "Settings" },
+  { href: "/dashboard", labelKey: "nav.dashboard", short: "Home" },
+  { href: "/portfolio", labelKey: "nav.portfolio", short: "Portfolio" },
+  { href: "/fcn", labelKey: "nav.fcn", short: "FCN" },
+  { href: "/intelligence", labelKey: "nav.intelligence", short: "AI" },
+  { href: "/market", labelKey: "nav.market", short: "Market" },
+  { href: "/alerts", labelKey: "nav.alerts", short: "Alerts" },
+  { href: "/input", labelKey: "nav.input", short: "Input" },
+  { href: "/import", labelKey: "nav.import", short: "Import" },
+  { href: "/accounts", labelKey: "nav.accounts", short: "Accounts" },
+  { href: "/settings", labelKey: "nav.settings", short: "Settings" },
 ];
 
 export function AppShell({
@@ -43,6 +32,11 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { preferences } = usePreferences();
+  const { t } = useI18n();
+  const compact = preferences.compactMode;
+  const terminal = preferences.terminalMode;
+  const defaultPath = landingPath(preferences.defaultLandingPage);
 
   useEffect(() => {
     if (!getToken()) router.replace("/login");
@@ -54,20 +48,22 @@ export function AppShell({
   }
 
   return (
-    <main className="min-h-screen bg-black text-white">
-      <div className="min-h-screen md:grid md:grid-cols-[240px_1fr]">
-        <aside className="hidden border-r border-zinc-800 bg-zinc-950/70 px-4 py-5 md:block">
+    <main className={`min-h-screen bg-black text-white ${terminal ? "font-sans" : ""}`}>
+      <div className={`min-h-screen md:grid ${compact ? "md:grid-cols-[224px_1fr]" : "md:grid-cols-[260px_1fr]"}`}>
+        <aside className={`hidden border-r border-zinc-800 bg-zinc-950/70 px-4 md:block ${compact ? "py-4" : "py-5"}`}>
           <div className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-300">
             IXAI
           </div>
-          <div className="mt-1 text-sm text-zinc-500">Portfolio OS</div>
+          <Link className="mt-1 block text-sm text-zinc-500 hover:text-zinc-300" href={defaultPath}>
+            Portfolio OS
+          </Link>
 
-          <nav className="mt-8 space-y-1">
+          <nav className={`${compact ? "mt-6" : "mt-8"} space-y-1`}>
             {navItems.map((item) => {
               const active = pathname === item.href;
               return (
                 <Link
-                  className={`block border-l-2 px-3 py-2 text-sm transition ${
+                  className={`block truncate border-l-2 px-3 text-sm transition ${compact ? "py-1.5" : "py-2"} ${
                     active
                       ? "border-emerald-400 bg-emerald-400/10 text-emerald-200"
                       : "border-transparent text-zinc-400 hover:border-zinc-700 hover:bg-zinc-900 hover:text-zinc-100"
@@ -75,7 +71,7 @@ export function AppShell({
                   href={item.href}
                   key={item.href}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </Link>
               );
             })}
@@ -90,14 +86,14 @@ export function AppShell({
           </button>
         </aside>
 
-        <section className="min-w-0">
+        <section className="min-w-0 overflow-x-hidden">
           <div className="sticky top-0 z-20 border-b border-zinc-800 bg-black/90 px-4 py-3 backdrop-blur md:hidden">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-300">
                   IXAI
                 </div>
-                <div className="text-xs text-zinc-500">Portfolio OS</div>
+                <Link className="text-xs text-zinc-500" href={defaultPath}>Portfolio OS</Link>
               </div>
               <button
                 className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300"
@@ -127,12 +123,12 @@ export function AppShell({
             </nav>
           </div>
 
-          <div className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-8">
-            <header className="mb-6 border-b border-zinc-800 pb-5">
+          <div className={`mx-auto max-w-7xl px-4 md:px-6 ${compact ? "py-4 md:py-6" : "py-6 md:py-8"}`}>
+            <header className={`border-b border-zinc-800 ${compact ? "mb-4 pb-4" : "mb-6 pb-5"}`}>
               <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-emerald-300">
-                IXAI Agent / 一玄AI
+                IXAI Agent / 一玄AI · {preferences.locale}
               </div>
-              <h1 className="mt-2 text-2xl font-semibold md:text-3xl">{title}</h1>
+              <h1 className={`${compact ? "mt-1 text-xl md:text-2xl" : "mt-2 text-2xl md:text-3xl"} font-semibold`}>{title}</h1>
               {subtitle && <p className="mt-2 text-sm text-zinc-500">{subtitle}</p>}
             </header>
             {children}
@@ -142,5 +138,3 @@ export function AppShell({
     </main>
   );
 }
-
-export { labels };
