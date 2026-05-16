@@ -37,7 +37,7 @@ export function DashboardTodayFocus({
     >
       <div className="mb-2 flex flex-wrap items-center gap-2 font-mono text-xs">
         <span className={`border px-2 py-1 uppercase ${severityClass(status)}`}>
-          STATUS: {status}
+          {t("intelligence.statusLabel")}: {status}
         </span>
         <span className="text-zinc-500">{t("dashboard.todayFocus.subtitle")}</span>
         <Link className="ml-auto text-emerald-300 hover:text-emerald-200" href="/intelligence">
@@ -67,7 +67,8 @@ export function DashboardTodayFocus({
               </div>
               <div className="text-zinc-400">{sanitizeAdviceText(item.reason)}</div>
               <div className="font-mono text-zinc-300">
-                {t("dashboard.todayFocus.action")}: {item.recommended_monitoring_action}
+                {t("dashboard.todayFocus.action")}:{" "}
+                {t(`intelligence.actions.${item.recommended_monitoring_action}`)}
               </div>
             </div>
           ))}

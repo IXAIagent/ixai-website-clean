@@ -46,19 +46,9 @@ import {
   TodayFocusItem,
 } from "../lib/intelligence-priority";
 
-const labels = {
-  title: "Intelligence / AI 分析",
-  subtitle: "AI intelligence workspace for regime, drift, explainability, scenarios, and portfolio reasoning.",
-  header: "Intelligence Header / 智能總覽",
-  explainability: "Explainability / 解釋層",
-  timeline: "Timeline / 時間軸",
-  drift: "Drift & Regime / 漂移與市場狀態",
-  scenarios: "Scenario Watch / 情境監控",
-  graph: "Intelligence Graph / 關聯圖",
-  copilot: "Copilot Insight / 助理解讀",
-  todayFocus: "Today Focus / 今日重點",
-  crossAsset: "Cross-Asset Reasoning / 跨資產推理",
-};
+// v4.9D: labels were hardcoded bilingual strings; they now resolve through
+// the i18n hook below. Keeping the names as fields of a memoised object so
+// downstream JSX needs zero refactor.
 
 function textValue(value: unknown, fallback = "-") {
   if (typeof value === "string" && value.trim()) return value.trim();
@@ -153,6 +143,27 @@ function WindowCard({ item }: { item: TimelineWindowResponse }) {
 export default function IntelligencePage() {
   const { t } = useI18n();
   const workspaceCtx = useWorkspaceContext();
+  // v4.9D: resolve all panel labels through i18n so they reflect the
+  // current locale instead of the previous hardcoded bilingual strings.
+  const labels = useMemo(
+    () => ({
+      title: t("page.intelligence"),
+      subtitle: t("intelligence.subtitle"),
+      header: t("intelligence.header"),
+      explainability: t("intelligence.explainability"),
+      timeline: t("intelligence.timeline"),
+      drift: t("intelligence.drift"),
+      scenarios: t("intelligence.scenarios"),
+      graph: t("intelligence.graphPanel"),
+      copilot: t("intelligence.copilot"),
+      todayFocus: t("intelligence.todayFocus"),
+      crossAsset: t("intelligence.crossAsset"),
+      todayFocusSubtitle: t("intelligence.todayFocusSubtitle"),
+      connections: t("intelligence.connectionsPanel"),
+      correlatedRisks: t("intelligence.correlatedRisksPanel"),
+    }),
+    [t],
+  );
   const [summary, setSummary] = useState<PortfolioSummaryV2AResponse | null>(null);
   const [portfolioSummary, setPortfolioSummary] = useState<SummaryResponse | null>(null);
   const [riskOverview, setRiskOverview] = useState<RiskOverviewResponse | null>(null);
@@ -290,9 +301,9 @@ export default function IntelligencePage() {
         <TerminalPanel title={labels.todayFocus} meta={todayStatus}>
           <div className="mb-3 flex flex-wrap items-center gap-2 font-mono text-xs">
             <span className={`border px-2 py-1 uppercase ${severityClass(todayStatus)}`}>
-              STATUS: {todayStatus}
+              {t("intelligence.statusLabel")}: {todayStatus}
             </span>
-            <span className="text-zinc-500">Top 3 monitoring priorities · no trading instruction</span>
+            <span className="text-zinc-500">{labels.todayFocusSubtitle}</span>
           </div>
           <div className="divide-y divide-zinc-900 border border-zinc-800">
             {todayFocus.map((item: TodayFocusItem) => (
@@ -308,7 +319,10 @@ export default function IntelligencePage() {
                   <div className="font-mono text-[10px] text-zinc-500">{item.symbol}</div>
                 </div>
                 <div className="text-zinc-400">{sanitizeAdviceText(item.reason)}</div>
-                <div className="font-mono text-zinc-300">Action: {item.recommended_monitoring_action}</div>
+                <div className="font-mono text-zinc-300">
+                  {t("intelligence.actionLabel")}:{" "}
+                  {t(`intelligence.actions.${item.recommended_monitoring_action}`)}
+                </div>
               </div>
             ))}
           </div>
@@ -392,7 +406,7 @@ export default function IntelligencePage() {
           </div>
         </ExpandablePanel>
 
-        <ExpandablePanel title="Graph / 圖譜" meta="themes · connections · risks">
+        <ExpandablePanel title={labels.graph} meta="themes · connections · risks">
           <section className="grid gap-5 lg:grid-cols-3">
             <div>
               <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-zinc-500">
@@ -406,7 +420,7 @@ export default function IntelligencePage() {
             </div>
             <div>
               <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-zinc-500">
-                Connections / 連結
+                {labels.connections}
               </div>
               <div className="space-y-2">
                 {graphConnections.map((connection) => (
@@ -416,7 +430,7 @@ export default function IntelligencePage() {
             </div>
             <div>
               <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-zinc-500">
-                Correlated Risks / 相關風險
+                {labels.correlatedRisks}
               </div>
               <div className="space-y-2">
                 {graphRisks.map((risk) => (

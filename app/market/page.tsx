@@ -17,15 +17,7 @@ import {
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 
-const labels = {
-  title: "Market / 市場情報",
-  subtitle: "Portfolio-relevant market intelligence, news flow, and provider status.",
-  header: "Market Header / 市場總覽",
-  pulse: "Market Pulse / 市場脈搏",
-  news: "Portfolio-Relevant News Stream / 相關新聞流",
-  interpretation: "Risk Interpretation / 市場風險解讀",
-  provider: "Provider Status / 資料來源狀態",
-};
+// v4.9D: labels were hardcoded bilingual; now resolve through useI18n.
 
 const pulse = [
   { label: "SPX", value: "+0.4%", tone: "up" },
@@ -103,6 +95,18 @@ function matchesFilter(article: NewsArticle, filter: Filter) {
 
 export default function MarketPage() {
   const { t } = useI18n();
+  const labels = useMemo(
+    () => ({
+      title: t("page.market"),
+      subtitle: t("market.subtitle"),
+      header: t("market.header"),
+      pulse: t("market.pulse"),
+      news: t("market.news"),
+      interpretation: t("market.interpretation"),
+      provider: t("market.provider"),
+    }),
+    [t],
+  );
   const [news, setNews] = useState<PortfolioNewsResponse | null>(null);
   const [priority, setPriority] = useState<PortfolioPriorityResponse | null>(null);
   const [intelligence, setIntelligence] = useState<PortfolioIntelligenceResponse | null>(null);

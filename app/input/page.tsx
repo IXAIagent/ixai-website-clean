@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "../components/layout/AppShell";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
@@ -23,20 +23,8 @@ import { useI18n } from "../lib/i18n";
 type AssetType = "stock" | "fcn" | "crypto" | "cash";
 type RecentPosition = { type: string; label: string; detail: string };
 
-const labels = {
-  input: "Input / 資產輸入",
-  account: "Account",
-  portfolio: "Portfolio",
-  assetType: "Asset Type",
-  recent: "Recent Positions",
-};
-
-const assetTypes: Array<{ id: AssetType; label: string; hint: string }> = [
-  { id: "stock", label: "Stock", hint: "symbol / quantity / avg cost" },
-  { id: "fcn", label: "FCN", hint: "name / worst-of / notional / KI / KO" },
-  { id: "crypto", label: "Crypto", hint: "symbol / quantity / avg cost" },
-  { id: "cash", label: "Cash", hint: "currency / amount" },
-];
+// v4.9D: labels resolved through useI18n inside the component (was hardcoded
+// bilingual "Input / 資產輸入" etc., which never reflected the active locale).
 
 function numberValue(value: string) {
   const parsed = Number(value);
@@ -58,6 +46,25 @@ function inputClass() {
 
 export default function InputWorkspacePage() {
   const { t } = useI18n();
+  const labels = useMemo(
+    () => ({
+      input: t("page.input"),
+      account: t("input.account"),
+      portfolio: t("input.portfolio"),
+      assetType: t("input.assetType"),
+      recent: t("input.recent"),
+    }),
+    [t],
+  );
+  const assetTypes = useMemo<Array<{ id: AssetType; label: string; hint: string }>>(
+    () => [
+      { id: "stock", label: "Stock", hint: t("input.hints.stock") },
+      { id: "fcn", label: "FCN", hint: t("input.fcnHint") },
+      { id: "crypto", label: "Crypto", hint: t("input.hints.crypto") },
+      { id: "cash", label: "Cash", hint: t("input.hints.cash") },
+    ],
+    [t],
+  );
   const [assetType, setAssetType] = useState<AssetType>("stock");
   const [accounts, setAccounts] = useState<AccountResponse[]>([]);
   const [portfolios, setPortfolios] = useState<AccountPortfolioResponse[]>([]);
@@ -164,23 +171,55 @@ export default function InputWorkspacePage() {
         });
         setCash({ currency: "USD", amount: "" });
       } else {
+        // v4.9E: FCN validation — `numberValue("")` silently returned 0 so
+        // empty notional was submitted as $0. Validate explicitly and surface
+        // a localized error before sending the payload.
+        const notionalRaw = fcn.notional.trim();
+        const notionalNum = Number(notionalRaw);
+        if (!notionalRaw || !Number.isFinite(notionalNum) || notionalNum <= 0) {
+          setError(t("input.errors.fcnNotionalRequired"));
+          setSaving(false);
+          return;
+        }
+        const kiRaw = fcn.ki.trim();
+        let kiNum: number | null = null;
+        if (kiRaw) {
+          const parsedKi = Number(kiRaw);
+          if (!Number.isFinite(parsedKi) || parsedKi <= 0) {
+            setError(t("input.errors.fcnInvalidKi"));
+            setSaving(false);
+            return;
+          }
+          kiNum = parsedKi;
+        }
+        const koRaw = fcn.ko.trim();
+        let koNum: number | null = null;
+        if (koRaw) {
+          const parsedKo = Number(koRaw);
+          if (!Number.isFinite(parsedKo) || parsedKo <= 0) {
+            setError(t("input.errors.fcnInvalidKo"));
+            setSaving(false);
+            return;
+          }
+          koNum = parsedKo;
+        }
         await addFcn({
           name: fcn.name.trim(),
           fcn_code: fcn.name.trim().toUpperCase(),
-          notional_amount: numberValue(fcn.notional),
+          notional_amount: notionalNum,
           worst_of_symbol: fcn.worst_of.trim().toUpperCase(),
-          ki_level: numberValue(fcn.ki),
-          ko_level: numberValue(fcn.ko),
+          ki_level: kiNum,
+          ko_level: koNum,
           underlying_details: fcn.worst_of.trim()
             ? [{ symbol: fcn.worst_of.trim().toUpperCase(), initial_price: null }]
             : [],
         });
         setFcn({ name: "", worst_of: "", notional: "", ki: "", ko: "" });
       }
-      setStatus("Position submitted. Dashboard will refresh from backend portfolio data.");
+      setStatus(t("input.statusOk"));
       await loadRecent();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Add asset failed.");
+      setError(err instanceof Error ? err.message : t("input.statusError"));
     } finally {
       setSaving(false);
     }
@@ -188,11 +227,11 @@ export default function InputWorkspacePage() {
 
   return (
     <AppShell
-      title={t("page.input")}
-      subtitle="Structured asset tickets, account context and recent portfolio preview."
+      title={labels.input}
+      subtitle={t("input.subtitle")}
     >
       <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
-        <TerminalPanel title="Context" meta="account">
+        <TerminalPanel title={t("input.context")} meta="account">
           <div className="space-y-3 font-mono text-xs">
             <label className="block text-zinc-500">
               {labels.account}
@@ -242,7 +281,7 @@ export default function InputWorkspacePage() {
           </div>
         </TerminalPanel>
 
-        <TerminalPanel title="Add Asset" meta="ticket">
+        <TerminalPanel title={t("input.addAsset")} meta="ticket">
           <div className="mb-4 grid gap-2 sm:grid-cols-4">
             {assetTypes.map((item) => (
               <button
@@ -300,7 +339,7 @@ export default function InputWorkspacePage() {
               disabled={saving}
               type="submit"
             >
-              {saving ? "Submitting..." : "Submit Asset Ticket"}
+              {saving ? t("input.submitting") : t("input.submitTicket")}
             </button>
           </form>
         </TerminalPanel>
