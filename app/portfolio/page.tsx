@@ -209,14 +209,15 @@ function plText(row: HoldingRow) {
 }
 
 function HoldingSection({ title, rows }: { title: string; rows: HoldingRow[] }) {
+  const { t } = useI18n();
   return (
     <div className="border border-zinc-800 bg-zinc-950/70">
       <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2">
         <h3 className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-300">{title}</h3>
-        <span className="font-mono text-[10px] text-zinc-500">{rows.length} positions</span>
+        <span className="font-mono text-[10px] text-zinc-500">{rows.length} {t("portfolio.positions")}</span>
       </div>
       <div className="divide-y divide-zinc-900">
-        {rows.length === 0 && <EmptyLine>No positions yet. Add assets from /input.</EmptyLine>}
+        {rows.length === 0 && <EmptyLine>{t("common.dataPending")}</EmptyLine>}
         {rows.map((row, index) => (
           <div className="grid gap-2 px-3 py-2 text-xs md:grid-cols-[1.5fr_0.7fr_0.9fr_0.9fr_0.8fr_0.7fr]" key={`${row.assetType}-${row.id ?? row.label}-${index}`}>
             <div>
@@ -358,9 +359,9 @@ export default function PortfolioPage() {
           <TerminalPanel title={labels.header} meta={loading ? "loading" : "live workspace"}>
             <div className="grid gap-3 md:grid-cols-4">
               <div>
-                <div className="font-mono text-[10px] uppercase text-zinc-500">Portfolio</div>
+                <div className="font-mono text-[10px] uppercase text-zinc-500">{t("common.portfolio")}</div>
                 <div className="mt-1 text-lg font-semibold text-zinc-100">
-                  {summary?.portfolio_name || "Primary Portfolio"}
+                  {summary?.portfolio_name || t("portfolio.primaryPortfolio")}
                 </div>
                 <div className="mt-1 text-xs text-zinc-500">{accountName}</div>
               </div>

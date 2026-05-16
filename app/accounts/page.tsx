@@ -81,7 +81,7 @@ export default function AccountsPage() {
     setStatus("");
     try {
       const account = await createAccount(accountName, accountType);
-      setStatus("Account created.");
+      setStatus(t("accounts.accountCreated"));
       setAccountName("");
       await loadAccounts();
       if (account.id) {
@@ -109,7 +109,7 @@ export default function AccountsPage() {
     setStatus("");
     try {
       const portfolio = await createAccountPortfolio(selectedAccount, portfolioName || "New Portfolio");
-      setStatus("Portfolio created.");
+      setStatus(t("accounts.portfolioCreated"));
       setPortfolioName("");
       if (portfolio.id) {
         setWorkspaceContext({
@@ -172,11 +172,11 @@ export default function AccountsPage() {
 
       <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-4">
-          <TerminalPanel title="Create Account" meta="v3">
+          <TerminalPanel title={t("accounts.createAccount")} meta="v3">
             <form className="space-y-3" onSubmit={handleCreateAccount}>
               <input
                 className="w-full border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-400"
-                placeholder="Account name"
+                placeholder={t("accounts.accountName")}
                 value={accountName}
                 onChange={(event) => setAccountName(event.target.value)}
               />
@@ -194,14 +194,14 @@ export default function AccountsPage() {
                 disabled={loading}
                 type="submit"
               >
-                Create Account
+                {t("accounts.createAccount")}
               </button>
             </form>
           </TerminalPanel>
 
-          <TerminalPanel title="Account List" meta={`${accounts.length} accounts`}>
+          <TerminalPanel title={t("accounts.accountList")} meta={`${accounts.length} ${t("accounts.accountsCount")}`}>
             <div className="divide-y divide-zinc-800 border border-zinc-800">
-              {accounts.length === 0 && <EmptyLine>No accounts yet.</EmptyLine>}
+              {accounts.length === 0 && <EmptyLine>{t("accounts.noAccounts")}</EmptyLine>}
               {accounts.map((account) => (
                 <button
                   className={`block w-full px-3 py-2 text-left font-mono text-xs ${
@@ -221,7 +221,7 @@ export default function AccountsPage() {
                   }}
                   type="button"
                 >
-                  <div>{textValue(account.name, "Account")}</div>
+                  <div>{textValue(account.name, t("common.account"))}</div>
                   <div className="mt-1 text-zinc-500">{textValue(account.account_type, "individual")}</div>
                 </button>
               ))}
@@ -230,16 +230,16 @@ export default function AccountsPage() {
         </div>
 
         <div className="space-y-4">
-          <TerminalPanel title="Account Summary" meta={textValue(selected?.account_type, "type")}>
+          <TerminalPanel title={t("accounts.accountSummary")} meta={textValue(selected?.account_type, t("accounts.type"))}>
             {error && <div className="mb-3 border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200">{error}</div>}
             {status && <div className="mb-3 border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-200">{status}</div>}
             {!selected ? (
-              <EmptyLine>Select or create an account.</EmptyLine>
+              <EmptyLine>{t("accounts.selectOrCreate")}</EmptyLine>
             ) : (
               <div className="grid gap-3 font-mono text-xs md:grid-cols-3">
                 <div className="border border-zinc-800 bg-black/20 p-3">
-                  <div className="text-zinc-600">ACCOUNT</div>
-                  <div className="mt-1 text-zinc-100">{textValue(selected.name, "Account")}</div>
+                  <div className="text-zinc-600">{t("common.account")}</div>
+                  <div className="mt-1 text-zinc-100">{textValue(selected.name, t("common.account"))}</div>
                 </div>
                 <div className="border border-zinc-800 bg-black/20 p-3">
                   <div className="text-zinc-600">ROLE</div>
@@ -257,11 +257,11 @@ export default function AccountsPage() {
             )}
           </TerminalPanel>
 
-          <TerminalPanel title="Portfolios" meta="account scope">
+          <TerminalPanel title={t("accounts.portfolios")} meta={t("accounts.accountScope")}>
             <form className="mb-3 flex flex-col gap-2 sm:flex-row" onSubmit={handleCreatePortfolio}>
               <input
                 className="min-w-0 flex-1 border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-400"
-                placeholder="New portfolio name"
+                placeholder={t("accounts.newPortfolioName")}
                 value={portfolioName}
                 onChange={(event) => setPortfolioName(event.target.value)}
               />
@@ -270,11 +270,11 @@ export default function AccountsPage() {
                 disabled={!selectedAccount || loading}
                 type="submit"
               >
-                Create Portfolio
+                {t("accounts.createPortfolio")}
               </button>
             </form>
             <div className="divide-y divide-zinc-800 border border-zinc-800">
-              {portfolios.length === 0 && <EmptyLine>No portfolios in this account.</EmptyLine>}
+              {portfolios.length === 0 && <EmptyLine>{t("accounts.noPortfolios")}</EmptyLine>}
               {portfolios.map((portfolio) => (
                 <div
                   className={`px-3 py-2 font-mono text-xs ${
@@ -283,7 +283,7 @@ export default function AccountsPage() {
                   key={portfolio.id || portfolio.name}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-zinc-100">{textValue(portfolio.name, "Portfolio")}</div>
+                    <div className="text-zinc-100">{textValue(portfolio.name, t("common.portfolio"))}</div>
                     <button
                       className="border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300 hover:border-emerald-400/60 hover:text-emerald-200"
                       onClick={() => setWorkspaceContext({
@@ -294,7 +294,7 @@ export default function AccountsPage() {
                       })}
                       type="button"
                     >
-                      {context.selectedPortfolioId === portfolio.id ? "ACTIVE" : "Set active"}
+                      {context.selectedPortfolioId === portfolio.id ? t("status.active") : t("accounts.setActive")}
                     </button>
                   </div>
                   <div className="mt-1 text-zinc-500">

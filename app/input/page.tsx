@@ -56,6 +56,7 @@ export default function InputWorkspacePage() {
       assetType: t("input.assetType"),
       recent: t("input.recent"),
       submitAsset: t("input.submitAsset"),
+      dataPending: t("common.dataPending"),
     }),
     [t],
   );
@@ -122,7 +123,7 @@ export default function InputWorkspacePage() {
           detail:
             Number(item.notional_amount || item.notional || 0) > 0
               ? `notional ${money(item.notional_amount || item.notional)}`
-              : "data incomplete",
+              : labels.dataPending,
         })),
         ...cryptos.slice(0, 3).map((item) => ({
           type: "Crypto",
@@ -333,10 +334,10 @@ export default function InputWorkspacePage() {
                   }
                 }}
               >
-                <option value="">Default user portfolio</option>
+                <option value="">{t("input.defaultUserPortfolio")}</option>
                 {accounts.map((account) => (
                   <option key={account.id || account.name} value={account.id || ""}>
-                    {textValue(account.name, "Account")}
+                    {textValue(account.name, t("common.account"))}
                   </option>
                 ))}
               </select>
@@ -348,21 +349,21 @@ export default function InputWorkspacePage() {
                 value={selectedPortfolio}
                 onChange={(event) => setSelectedPortfolio(event.target.value)}
               >
-                <option value="">Current write portfolio</option>
+                <option value="">{t("input.currentWritePortfolio")}</option>
                 {portfolios.map((portfolio) => (
                   <option key={portfolio.id || portfolio.name} value={portfolio.id || ""}>
-                    {textValue(portfolio.name, "Portfolio")}
+                    {textValue(portfolio.name, t("common.portfolio"))}
                   </option>
                 ))}
               </select>
             </label>
             <div className="text-zinc-600">
-              Account/portfolio selector is workspace context. Current input APIs continue using the authenticated portfolio contract.
+              {t("input.selectorHint")}
             </div>
           </div>
         </TerminalPanel>
 
-        <TerminalPanel title={t("input.addAsset")} meta="ticket">
+        <TerminalPanel title={t("input.addAsset")} meta={t("input.ticketMeta")}>
           <div className="mb-4 grid gap-2 sm:grid-cols-4">
             {assetTypes.map((item) => (
               <button

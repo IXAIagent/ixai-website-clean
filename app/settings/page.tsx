@@ -202,15 +202,15 @@ export default function SettingsPage() {
   return (
     <AppShell
       title={t("page.settings")}
-      subtitle="Workspace preferences, account context, data sources, system health, and compliance settings."
+      subtitle={t("settings.subtitle")}
     >
       <div className="space-y-5">
         <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
           <TerminalPanel title={t("settings.profile")} meta="account context">
             <MetricRow label="USER" value={userEmail || "token profile unavailable"} />
-            <MetricRow label="ACCOUNT" value={currentAccount?.name || "Personal workspace"} />
-            <MetricRow label="ACCOUNT ID" value={currentAccount?.id || "pending"} />
-            <MetricRow label="WORKSPACE" value={summary?.portfolio_name || "Primary Portfolio"} />
+            <MetricRow label={t("common.account")} value={currentAccount?.name || t("settings.personalWorkspace")} />
+            <MetricRow label={t("settings.accountId")} value={currentAccount?.id || t("common.dataPending")} />
+            <MetricRow label={t("common.workspace")} value={summary?.portfolio_name || t("portfolio.primaryPortfolio")} />
             <MetricRow label="ROLE" value="owner / admin / viewer ready" />
             <Link
               className="mt-3 inline-block border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-emerald-400 hover:text-emerald-200"

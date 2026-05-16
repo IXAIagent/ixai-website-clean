@@ -166,6 +166,9 @@ const REQUIRED_NAMESPACES = [
 const REQUIRED_KEYS_EN = [
   "common.retry",
   "common.openAccounts",
+  "common.selectAccount",
+  "common.selectPortfolio",
+  "common.dataPending",
   "nav.dashboard",
   "nav.portfolio",
   "nav.fcn",
@@ -195,6 +198,7 @@ const REQUIRED_KEYS_EN = [
   "dashboard.aiOverview",
   "dashboard.assetAllocation",
   "dashboard.todayFocus",
+  "dashboard.openInputWorkspace",
   "dashboard.sections.immediateAttention",
   "dashboard.sections.analysisOverview",
   "dashboard.sections.deepAnalysis",
@@ -209,6 +213,12 @@ const REQUIRED_KEYS_EN = [
   "onboarding.step1",
   "settings.language",
   "input.submitAsset",
+  "input.title",
+  "input.context",
+  "input.addAsset",
+  "input.recent",
+  "input.defaultUserPortfolio",
+  "input.currentWritePortfolio",
   "import.preview",
   "engine.portfolioTitle",
   "engine.marketTitle",
@@ -217,6 +227,19 @@ const REQUIRED_KEYS_EN = [
   "status.healthy",
   "status.degraded",
   "errors.engine",
+];
+
+const HIGH_VISIBILITY_KEYS = [
+  "page.input",
+  "nav.input",
+  "input.title",
+  "input.context",
+  "input.addAsset",
+  "input.recent",
+  "input.submitAsset",
+  "common.selectAccount",
+  "common.selectPortfolio",
+  "common.dataPending",
 ];
 
 function readLocaleSource(filename) {
@@ -278,6 +301,22 @@ test("zh-TW.ts contains every required dotted key", () => {
       patterns.some((re) => re.test(src)),
       `zh-TW.ts missing key ${key}`,
     );
+  }
+});
+
+test("ja ko zh-CN explicitly cover high-visibility workspace chrome", () => {
+  for (const filename of ["ja.ts", "ko.ts", "zh-CN.ts"]) {
+    const src = readLocaleSource(filename);
+    for (const key of HIGH_VISIBILITY_KEYS) {
+      const last = key.split(".").pop();
+      const compound = key.split(".").slice(1).join(".");
+      const patterns = [
+        new RegExp(`["']${escapeRe(key)}["']\\s*:`),
+        new RegExp(`["']${escapeRe(compound)}["']\\s*:`),
+        new RegExp(`\\b${escapeRe(last)}\\s*:`),
+      ];
+      assert.ok(patterns.some((re) => re.test(src)), `${filename} missing high-visibility key ${key}`);
+    }
   }
 });
 
@@ -441,12 +480,53 @@ test("visible UI does not expose hardcoded bilingual chrome or product-internal 
     /single name/i,
     /theme cluster/i,
   ];
+  const hardcodedLeftovers = [
+    /Default user portfolio/,
+    /Current write portfolio/,
+    /data incomplete/,
+    /Recent Positions/,
+    /Submit asset/,
+    /Add asset/,
+    /Select account/,
+    /Select portfolio/,
+  ];
 
   for (const file of scopedFiles) {
     const source = stripComments(readFileSync(file, "utf8"));
     assert.ok(!bilingualPattern.test(source), `${file} contains hardcoded bilingual visible text`);
     for (const pattern of forbiddenPatterns) {
       assert.ok(!pattern.test(source), `${file} contains forbidden product language ${pattern}`);
+    }
+    for (const pattern of hardcodedLeftovers) {
+      assert.ok(!pattern.test(source), `${file} contains hardcoded user-facing English ${pattern}`);
+    }
+  }
+});
+
+test("ja and ko high-visibility dictionaries do not leak Traditional Chinese", () => {
+  const forbiddenZhTwFragments = [
+    "選擇帳戶",
+    "選擇投資組合",
+    "資料待補",
+    "資產輸入",
+    "近期部位",
+    "送出資產",
+    "預設使用者投資組合",
+    "目前寫入投資組合",
+  ];
+  for (const filename of ["ja.ts", "ko.ts"]) {
+    const src = readLocaleSource(filename);
+    for (const key of HIGH_VISIBILITY_KEYS) {
+      const last = key.split(".").pop();
+      const compound = key.split(".").slice(1).join(".");
+      const match =
+        src.match(new RegExp(`["']${escapeRe(compound)}["']\\s*:\\s*["'\`]([^"'\`]+)["'\`]`)) ||
+        src.match(new RegExp(`\\b${escapeRe(last)}\\s*:\\s*["'\`]([^"'\`]+)["'\`]`));
+      assert.ok(match, `${filename} missing ${key}`);
+      assert.ok(
+        !forbiddenZhTwFragments.some((fragment) => match[1].includes(fragment)),
+        `${filename} leaks zh-TW text for ${key}: ${match[1]}`,
+      );
     }
   }
 });

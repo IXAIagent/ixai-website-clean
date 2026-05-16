@@ -299,13 +299,13 @@ export default function DashboardPage() {
                 className="border border-zinc-700 px-3 py-2 text-zinc-300 transition hover:border-emerald-400/60 hover:text-emerald-200"
                 href="/input"
               >
-                Open Input Workspace
+                {t("dashboard.openInputWorkspace")}
               </Link>
               <Link
                 className="border border-zinc-700 px-3 py-2 text-zinc-300 transition hover:border-emerald-400/60 hover:text-emerald-200"
                 href="/import"
               >
-                Open Import Workspace
+                {t("dashboard.openImportWorkspace")}
               </Link>
             </div>
             <div className="mt-3 grid gap-2 font-mono text-xs md:grid-cols-3">

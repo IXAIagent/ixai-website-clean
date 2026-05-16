@@ -67,12 +67,12 @@ export default function ImportWorkspacePage() {
     setAllowErrorImport(false);
     if (!nextFile) return;
     if (!nextFile.name.toLowerCase().endsWith(".csv")) {
-      setError("請上傳 .csv 檔案。");
+      setError(t("import.csvOnly"));
       setFile(null);
       return;
     }
     setFile(nextFile);
-    setStatus("CSV ready for backend preview.");
+    setStatus(t("import.statusReady"));
   }
 
   function handleInput(event: ChangeEvent<HTMLInputElement>) {
@@ -84,14 +84,14 @@ export default function ImportWorkspacePage() {
     if (!file) return;
     setLoading(true);
     setError("");
-    setStatus("Preview / Validate running...");
+    setStatus(t("import.statusPreviewRunning"));
     try {
       const response = await previewPortfolioCsv(file);
       setPreview(response);
       setAllowErrorImport(false);
-      setStatus("Preview completed. Confirm import when ready.");
+      setStatus(t("import.statusPreviewDone"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Preview failed.");
+      setError(err instanceof Error ? err.message : t("import.previewFailed"));
       setStatus("");
     } finally {
       setLoading(false);
@@ -104,14 +104,14 @@ export default function ImportWorkspacePage() {
     if (!selectedFile) return;
     setLoading(true);
     setError("");
-    setStatus("Confirm import running...");
+    setStatus(t("import.statusConfirmRunning"));
     try {
       const response = await uploadPortfolioCsv(selectedFile);
       setResult(response);
-      setStatus("Import completed.");
+      setStatus(t("import.statusImportDone"));
       await loadHistory();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Import failed.");
+      setError(err instanceof Error ? err.message : t("import.importFailed"));
       setStatus("");
     } finally {
       setLoading(false);
@@ -121,11 +121,11 @@ export default function ImportWorkspacePage() {
   return (
     <AppShell
       title={t("page.import")}
-      subtitle="CSV import workspace with broker connector placeholders."
+      subtitle={t("import.subtitle")}
     >
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
-          <TerminalPanel title="CSV Import Panel" meta="preview / confirm">
+          <TerminalPanel title={t("import.panel")} meta={t("import.previewConfirmMeta")}>
             <label
               className={`block border border-dashed px-4 py-10 text-center transition ${
                 dragActive ? "border-emerald-400 bg-emerald-400/10" : "border-zinc-700 bg-black/20"
@@ -146,7 +146,7 @@ export default function ImportWorkspacePage() {
             >
               <input accept=".csv,text/csv" className="hidden" type="file" onChange={handleInput} />
               <div className="font-mono text-sm text-zinc-200">
-                {file ? file.name : "Drop CSV here or click to upload"}
+                {file ? file.name : t("import.dropCsv")}
               </div>
               <div className="mt-2 text-xs text-zinc-500">
                 {file ? fileSize(file.size) : "asset_type,symbol,quantity,avg_price,current_price,currency,amount"}
@@ -160,7 +160,7 @@ export default function ImportWorkspacePage() {
                 onClick={() => void handlePreview()}
                 type="button"
               >
-                Preview
+                {t("import.previewAction")}
               </button>
               <button
                 className="border border-emerald-400/60 px-4 py-2 text-sm text-emerald-100 disabled:opacity-50"
@@ -179,7 +179,7 @@ export default function ImportWorkspacePage() {
                   onChange={(event) => setAllowErrorImport(event.target.checked)}
                   type="checkbox"
                 />
-                <span>Preview contains row errors. Confirm that skipped/error rows should be ignored before import.</span>
+                <span>{t("import.overrideErrors")}</span>
               </label>
             )}
 
@@ -187,14 +187,14 @@ export default function ImportWorkspacePage() {
             {error && <div className="mt-3 border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200">{error}</div>}
           </TerminalPanel>
 
-          <TerminalPanel title="Import Status" meta="result">
-            {!preview && !result && <EmptyLine>No import preview yet.</EmptyLine>}
+          <TerminalPanel title={t("import.statusPanel")} meta={t("import.resultMeta")}>
+            {!preview && !result && <EmptyLine>{t("import.noPreview")}</EmptyLine>}
             {preview?.summary && (
               <div className="grid gap-2 font-mono text-xs md:grid-cols-4">
-                <Metric label="will import" value={preview.summary.will_import} />
-                <Metric label="will update" value={preview.summary.will_update} />
-                <Metric label="will skip" value={preview.summary.will_skip} />
-                <Metric label="errors" value={preview.summary.errors} />
+                <Metric label={t("import.willImport")} value={preview.summary.will_import} />
+                <Metric label={t("import.willUpdate")} value={preview.summary.will_update} />
+                <Metric label={t("import.willSkip")} value={preview.summary.will_skip} />
+                <Metric label={t("import.errors")} value={preview.summary.errors} />
               </div>
             )}
             {preview && (
@@ -203,7 +203,7 @@ export default function ImportWorkspacePage() {
                   {t("import.preview")}
                 </div>
                 {previewRows.length === 0 ? (
-                  <EmptyLine>No preview rows returned.</EmptyLine>
+                  <EmptyLine>{t("import.noPreviewRows")}</EmptyLine>
                 ) : (
                   <div className="overflow-x-auto border border-zinc-800">
                     <table className="min-w-[900px] w-full border-collapse font-mono text-xs">
@@ -214,11 +214,11 @@ export default function ImportWorkspacePage() {
                           <PreviewHead>{t("import.inputSymbol")}</PreviewHead>
                           <PreviewHead>{t("import.canonicalSymbol")}</PreviewHead>
                           <PreviewHead>{t("import.action")}</PreviewHead>
-                          <PreviewHead>quantity</PreviewHead>
-                          <PreviewHead>avg_price</PreviewHead>
-                          <PreviewHead>current_price</PreviewHead>
-                          <PreviewHead>currency</PreviewHead>
-                          <PreviewHead>amount</PreviewHead>
+                          <PreviewHead>{t("import.quantity")}</PreviewHead>
+                          <PreviewHead>{t("import.avgPrice")}</PreviewHead>
+                          <PreviewHead>{t("import.currentPrice")}</PreviewHead>
+                          <PreviewHead>{t("import.currency")}</PreviewHead>
+                          <PreviewHead>{t("import.amount")}</PreviewHead>
                           <PreviewHead>{t("import.errors")}</PreviewHead>
                         </tr>
                       </thead>
@@ -261,30 +261,30 @@ export default function ImportWorkspacePage() {
             )}
             {result && (
               <div className="mt-3 grid gap-2 font-mono text-xs md:grid-cols-4">
-                <Metric label="imported" value={result.imported} />
-                <Metric label="updated" value={result.updated} />
-                <Metric label="skipped" value={result.skipped} />
-                <Metric label="batch" value={result.batch_id} />
+                <Metric label={t("import.imported")} value={result.imported} />
+                <Metric label={t("import.updated")} value={result.updated} />
+                <Metric label={t("import.skipped")} value={result.skipped} />
+                <Metric label={t("import.batch")} value={result.batch_id} />
               </div>
             )}
           </TerminalPanel>
         </div>
 
         <div className="space-y-4">
-          <TerminalPanel title="Future Integrations" meta="connectors">
+          <TerminalPanel title={t("import.futureIntegrations")} meta="connectors">
             <div className="grid gap-2">
               {integrations.map((item) => (
                 <div className="border border-zinc-800 bg-black/20 px-3 py-2 font-mono text-xs" key={item}>
                   <div className="text-zinc-200">{item}</div>
-                  <div className="mt-1 text-zinc-500">{item === "Manual CSV" ? "available" : "planned connector"}</div>
+                  <div className="mt-1 text-zinc-500">{item === "Manual CSV" ? t("status.active") : t("import.plannedConnector")}</div>
                 </div>
               ))}
             </div>
           </TerminalPanel>
 
-          <TerminalPanel title="Recent Imports" meta="audit">
+          <TerminalPanel title={t("import.recentImports")} meta="audit">
             <div className="divide-y divide-zinc-800 border border-zinc-800">
-              {history.length === 0 && <EmptyLine>No recent imports.</EmptyLine>}
+              {history.length === 0 && <EmptyLine>{t("import.noRecentImports")}</EmptyLine>}
               {history.map((item) => (
                 <div className="px-3 py-2 font-mono text-xs" key={String(item.id || item.created_at)}>
                   <div className="flex justify-between gap-3">
@@ -292,7 +292,7 @@ export default function ImportWorkspacePage() {
                     <span className="text-zinc-500">{textValue(item.status, "-")}</span>
                   </div>
                   <div className="mt-1 text-zinc-500">
-                    imported {textValue(item.imported, "0")} · updated {textValue(item.updated, "0")} · skipped {textValue(item.skipped, "0")}
+                    {t("import.imported")} {textValue(item.imported, "0")} · {t("import.updated")} {textValue(item.updated, "0")} · {t("import.skipped")} {textValue(item.skipped, "0")}
                   </div>
                 </div>
               ))}
