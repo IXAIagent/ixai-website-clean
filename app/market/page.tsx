@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "../components/layout/AppShell";
+import { MarketEnginePanel } from "../components/market/MarketEnginePanel";
+import { useWorkspaceContext } from "../lib/workspace-context";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
 import {
   getPortfolioIntelligence,
@@ -149,6 +151,7 @@ export default function MarketPage() {
   const macroNews = articles.filter((article) => newsCategory(article) === "Macro").length;
   const negativeNews = articles.filter((article) => toneLabel(article).toLowerCase().includes("negative")).length;
 
+  const marketWorkspaceCtx = useWorkspaceContext();
   return (
     <AppShell title={t("page.market")} subtitle={labels.subtitle}>
       <div className="space-y-5">
@@ -157,6 +160,8 @@ export default function MarketPage() {
             {error}
           </div>
         )}
+
+        <MarketEnginePanel portfolioId={marketWorkspaceCtx.context.selectedPortfolioId} />
 
         <TerminalPanel title={labels.header} meta={loading ? "loading" : news?.is_stale ? "stale" : "active"}>
           <div className="grid gap-3 md:grid-cols-4">

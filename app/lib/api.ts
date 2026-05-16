@@ -611,6 +611,130 @@ export type BackendHealthResponse = {
   [key: string]: unknown;
 };
 
+// v4A: Portfolio engine summary types
+export type ExposureGraphNodeV4 = {
+  label?: string | null;
+  node_type?: string | null;
+  weight?: number | null;
+};
+export type ExposureGraphEdgeV4 = {
+  source?: string | null;
+  target?: string | null;
+  edge_type?: string | null;
+  weight?: number | null;
+};
+export type ExposureGraphSummaryV4 = {
+  nodes?: ExposureGraphNodeV4[] | null;
+  edges?: ExposureGraphEdgeV4[] | null;
+  repeated_underlyings?: string[] | null;
+  dominant_themes?: string[] | null;
+  high_beta_symbols?: string[] | null;
+  fcn_linked_symbols?: string[] | null;
+};
+export type ConcentrationSummaryV4 = {
+  single_name_pct?: number | null;
+  theme_pct?: number | null;
+  fcn_underlying_pct?: number | null;
+  crypto_pct?: number | null;
+  cash_buffer_pct?: number | null;
+  concentration_score?: number | null;
+  risk_level?: string | null;
+  top_concentration_label?: string | null;
+};
+export type PortfolioDriftSummaryV4 = {
+  allocation_drift?: string | null;
+  concentration_drift?: string | null;
+  volatility_drift?: string | null;
+  fcn_pressure_drift?: string | null;
+  regime_drift?: string | null;
+  drift_summary?: string | null;
+  history_window?: number | null;
+};
+export type FCNSystemicRiskSummaryV4 = {
+  worst_of_pressure_pct?: number | null;
+  nearest_ki_pct?: number | null;
+  repeated_underlyings?: string[] | null;
+  ki_cluster_symbols?: string[] | null;
+  observation_clustering?: string | null;
+  risk_level?: string | null;
+};
+export type RiskPropagationChainV4 = {
+  chain?: string[] | null;
+  explanation?: string | null;
+};
+export type RiskPropagationSummaryV4 = {
+  chains?: RiskPropagationChainV4[] | null;
+  summary?: string | null;
+};
+export type UnifiedIntelligenceScoreV4 = {
+  exposure_score?: number | null;
+  concentration_score?: number | null;
+  fcn_stress_score?: number | null;
+  volatility_score?: number | null;
+  drift_score?: number | null;
+  systemic_score?: number | null;
+  total_intelligence_score?: number | null;
+  risk_state?: string | null;
+  confidence?: number | null;
+};
+export type PortfolioEngineSummaryResponse = {
+  portfolio_id?: string | null;
+  exposure_graph?: ExposureGraphSummaryV4 | null;
+  concentration?: ConcentrationSummaryV4 | null;
+  drift?: PortfolioDriftSummaryV4 | null;
+  fcn_systemic_risk?: FCNSystemicRiskSummaryV4 | null;
+  risk_propagation?: RiskPropagationSummaryV4 | null;
+  unified_score?: UnifiedIntelligenceScoreV4 | null;
+  generated_at?: string | null;
+  is_stale?: boolean | null;
+};
+
+// v4B: Market engine summary types
+export type MarketRegimeSummaryV4 = {
+  regime?: string | null;
+  confidence?: number | null;
+  drivers?: string[] | null;
+  narrative?: string | null;
+};
+export type VolatilityStateSummaryV4 = {
+  equity_volatility_state?: string | null;
+  crypto_volatility_state?: string | null;
+  fcn_sensitivity_state?: string | null;
+  overall_state?: string | null;
+  data_limited?: boolean | null;
+};
+export type MacroNewsRiskThemeV4 = {
+  theme?: string | null;
+  weight?: number | null;
+  sample_headlines?: string[] | null;
+};
+export type MacroNewsRiskSummaryV4 = {
+  rates_pressure?: number | null;
+  ai_pressure?: number | null;
+  crypto_pressure?: number | null;
+  geopolitics_pressure?: number | null;
+  earnings_pressure?: number | null;
+  macro_stress?: number | null;
+  top_themes?: MacroNewsRiskThemeV4[] | null;
+  narrative?: string | null;
+};
+export type PortfolioMarketImpactSummaryV4 = {
+  fcn_impact?: string | null;
+  crypto_impact?: string | null;
+  equity_impact?: string | null;
+  cash_buffer_interpretation?: string | null;
+  overall_impact_level?: string | null;
+};
+export type MarketEngineSummaryResponse = {
+  portfolio_id?: string | null;
+  regime?: MarketRegimeSummaryV4 | null;
+  volatility?: VolatilityStateSummaryV4 | null;
+  macro_news?: MacroNewsRiskSummaryV4 | null;
+  portfolio_impact?: PortfolioMarketImpactSummaryV4 | null;
+  generated_at?: string | null;
+  is_stale?: boolean | null;
+};
+
 // v3D: shape of GET/PUT /api/v1/preferences. Backend uses snake_case.
 export type UserPreferencesPayload = {
   locale?: string | null;
@@ -773,6 +897,19 @@ export function getDashboardSummary(portfolioId?: string | null) {
 
 export function getDashboardAlerts(portfolioId?: string | null) {
   return apiFetch<AlertItem[]>(withPortfolioId("/api/v1/dashboard/alerts", portfolioId));
+}
+
+// v4A / v4B engine helpers
+export function getPortfolioEngineSummary(portfolioId?: string | null) {
+  return apiFetch<PortfolioEngineSummaryResponse>(
+    withPortfolioId("/api/v1/intelligence/engine-summary", portfolioId),
+  );
+}
+
+export function getMarketEngineSummary(portfolioId?: string | null) {
+  return apiFetch<MarketEngineSummaryResponse>(
+    withPortfolioId("/api/v1/intelligence/market-engine", portfolioId),
+  );
 }
 
 // v3D: per-user preferences sync. skipAuthRedirect so a logged-out hook caller

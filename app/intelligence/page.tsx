@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../components/layout/AppShell";
 import { CopilotQuestionPanel } from "../components/intelligence/CopilotQuestionPanel";
 import { MemoryNarrativePanel } from "../components/intelligence/MemoryNarrativePanel";
+import { PortfolioEnginePanel } from "../components/intelligence/PortfolioEnginePanel";
 import { ScenarioSensitivityPanel } from "../components/intelligence/ScenarioSensitivityPanel";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
 import { useWorkspaceContext } from "../lib/workspace-context";
@@ -401,6 +402,8 @@ export default function IntelligencePage() {
             </div>
           </TerminalPanel>
         </section>
+
+        <PortfolioEnginePanel portfolioId={workspaceCtx.context.selectedPortfolioId} />
 
         <CopilotQuestionPanel portfolioId={workspaceCtx.context.selectedPortfolioId} />
 

@@ -7,7 +7,10 @@ import { AppShell } from "../components/layout/AppShell";
 import { DashboardTodayFocus } from "../components/dashboard/DashboardTodayFocus";
 import { EmptyState } from "../components/layout/EmptyState";
 import { OnboardingChecklist } from "../components/dashboard/OnboardingChecklist";
+import { PortfolioEnginePanel } from "../components/intelligence/PortfolioEnginePanel";
+import { MarketEnginePanel } from "../components/market/MarketEnginePanel";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
+import { useWorkspaceContext } from "../lib/workspace-context";
 import {
   AllocationItem,
   FCNPositionResponse,
@@ -127,6 +130,7 @@ function topAlertLine(alert: NewsArticle, index: number) {
 export default function DashboardPage() {
   const { t } = useI18n();
   const { preferences } = usePreferences();
+  const dashWorkspaceCtx = useWorkspaceContext();
   const [data, setData] = useState<DashboardOverviewState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -272,6 +276,18 @@ export default function DashboardPage() {
           )}
           {hasHoldings && (
             <DashboardTodayFocus items={todayFocusItems} status={todayFocusStatus} />
+          )}
+          {hasHoldings && (
+            <PortfolioEnginePanel
+              portfolioId={dashWorkspaceCtx.context.selectedPortfolioId}
+              compact
+            />
+          )}
+          {hasHoldings && (
+            <MarketEnginePanel
+              portfolioId={dashWorkspaceCtx.context.selectedPortfolioId}
+              compact
+            />
           )}
           <TerminalPanel title={t("dashboard.aiOverview")} meta={preferences.compactMode ? "P0 · compact" : "P0"}>
             <div className="border-l border-emerald-400/40 bg-black/30 px-3 py-2 font-mono text-sm leading-6 text-zinc-300">
