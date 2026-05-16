@@ -140,31 +140,50 @@ export default function DashboardPage() {
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError("");
+    const emptyState: DashboardOverviewState = {
+      summary: null,
+      allocation: [],
+      risk: null,
+      priority: null,
+      intelligenceSummary: null,
+      timeline: null,
+    };
     try {
-      const [summary, allocation, risk, priority, intelligenceSummary, timeline] =
-        await Promise.all([
+      const [summaryResult, allocationResult, riskResult, priorityResult, intelligenceResult, timelineResult] =
+        await Promise.allSettled([
           getMySummary(),
           getMyAssetAllocation(),
           getMyRiskOverview(),
-          getPortfolioPriority().catch(() => null),
-          getPortfolioSummaryV2A().catch(() => null),
-          getIntelligenceTimeline().catch(() => null),
+          getPortfolioPriority(),
+          getPortfolioSummaryV2A(),
+          getIntelligenceTimeline(),
         ]);
+
+      const summary = summaryResult.status === "fulfilled" ? summaryResult.value : null;
+      const allocation = allocationResult.status === "fulfilled" ? allocationResult.value : null;
+      const risk = riskResult.status === "fulfilled" ? riskResult.value : null;
+      const priority = priorityResult.status === "fulfilled" ? priorityResult.value : null;
+      const intelligenceSummary = intelligenceResult.status === "fulfilled" ? intelligenceResult.value : null;
+      const timeline = timelineResult.status === "fulfilled" ? timelineResult.value : null;
 
       setData({
         summary,
-        allocation: Array.isArray(allocation.items) ? allocation.items : [],
+        allocation: Array.isArray(allocation?.items) ? allocation.items : [],
         risk,
         priority,
         intelligenceSummary,
         timeline,
       });
+      if (!summary || !risk || !allocation) {
+        setError(t("dashboard.degradedMessage"));
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Dashboard 載入失敗。");
+      setData(emptyState);
+      setError(err instanceof Error ? err.message : t("dashboard.degradedMessage"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -237,8 +256,8 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : error && !data ? (
-        <TerminalPanel title="Dashboard Error" meta="fallback">
-          <div className="text-sm text-red-200">{error}</div>
+        <TerminalPanel title={t("page.dashboard")} meta="degraded">
+          <div className="text-sm text-yellow-200">{error || t("dashboard.degradedMessage")}</div>
           <button
             className="mt-3 border border-red-400/50 px-3 py-2 text-xs text-red-100"
             onClick={() => void loadDashboard()}
@@ -249,6 +268,11 @@ export default function DashboardPage() {
         </TerminalPanel>
       ) : (
         <div className={preferences.compactMode ? "space-y-3" : "space-y-4"}>
+          {error && (
+            <div className="border border-yellow-500/30 bg-yellow-950/10 px-3 py-2 text-xs text-yellow-200">
+              {error}
+            </div>
+          )}
           {needsOnboarding && (
             <OnboardingChecklist
               status={{ hasAccount, hasPortfolio, hasHoldings }}
@@ -358,7 +382,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="mt-1 text-lg font-semibold text-zinc-100">{money(item.value)}</div>
                   <div className="mt-1 font-mono text-xs text-zinc-500">
-                    {item.percentage.toFixed(1)}%
+                    {pct(item.percentage)}
                   </div>
                 </div>
               ))}

@@ -154,19 +154,35 @@ export default function AlertsPage() {
   const [filter, setFilter] = useState<Filter>("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [loadedAt, setLoadedAt] = useState("");
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       setError("");
-      const [riskData, priorityData] = await Promise.all([
-        getMyRiskOverview().catch(() => null),
-        getPortfolioPriority().catch(() => null),
-      ]);
-      setRisk(riskData);
-      setPriority(Array.isArray(priorityData?.top_alerts) ? priorityData.top_alerts : []);
-      if (!riskData && !priorityData) setError("Alerts center temporarily unavailable.");
-      setLoading(false);
+      try {
+        const [riskData, priorityData] = await Promise.allSettled([
+          getMyRiskOverview(),
+          getPortfolioPriority(),
+        ]);
+        const nextRisk = riskData.status === "fulfilled" ? riskData.value : null;
+        const nextPriority = priorityData.status === "fulfilled" ? priorityData.value : null;
+        setRisk(nextRisk);
+        setPriority(Array.isArray(nextPriority?.top_alerts) ? nextPriority.top_alerts : []);
+        if (!nextRisk && !nextPriority) {
+          setError(t("errors.portfolio"));
+          setLoadedAt("");
+        } else {
+          setLoadedAt(new Date().toLocaleString());
+        }
+      } catch {
+        setRisk(null);
+        setPriority([]);
+        setLoadedAt("");
+        setError(t("errors.portfolio"));
+      } finally {
+        setLoading(false);
+      }
     }
     const timer = window.setTimeout(() => {
       void load();
@@ -202,7 +218,7 @@ export default function AlertsPage() {
           </div>
         )}
 
-        <TerminalPanel title={labels.header} meta={loading ? "loading" : alerts.length > 0 ? "active" : "clear"}>
+        <TerminalPanel title={labels.header} meta={loading ? t("status.loading") : error ? "degraded" : alerts.length > 0 ? t("common.active") : t("status.clear")}>
           <div className="grid gap-3 md:grid-cols-5">
             <div>
               <div className="font-mono text-[10px] uppercase text-zinc-600">{labels.total}</div>
@@ -222,7 +238,7 @@ export default function AlertsPage() {
             </div>
             <div>
               <div className="font-mono text-[10px] uppercase text-zinc-600">{labels.lastUpdated}</div>
-              <div className="mt-1 text-sm text-zinc-300">{new Date().toLocaleString()}</div>
+              <div className="mt-1 text-sm text-zinc-300">{loadedAt || "pending"}</div>
             </div>
           </div>
         </TerminalPanel>

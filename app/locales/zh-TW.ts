@@ -150,6 +150,7 @@ const zhTW: Dictionary = {
     openAlertsCenter: "開啟警示中心 →",
     marketRegime: "市場 Regime",
     riskDecomposition: "風險拆解",
+    degradedMessage: "部分資料暫時無法載入，系統仍可顯示已取得的投資組合資料。",
   },
   intelligence: {
     title: "AI 分析",

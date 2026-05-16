@@ -153,6 +153,7 @@ const en: Dictionary = {
     openAlertsCenter: "Open alerts center →",
     marketRegime: "Market regime",
     riskDecomposition: "Risk decomposition",
+    degradedMessage: "Some data is temporarily unavailable. Available portfolio data is still shown.",
   },
   intelligence: {
     title: "Intelligence",
@@ -215,7 +216,7 @@ const en: Dictionary = {
     cryptoVolatility: "Crypto volatility",
     fcnNews: "FCN news",
     visible: "visible",
-    noNews: "No portfolio-relevant market news found yet.",
+    noNews: "No portfolio-related market news yet.",
     marketNarrativeBuilding: "Market narrative is still building from portfolio-relevant signals.",
     relatedNewsCounts: "FCN related news: {fcn}. Crypto related news: {crypto}. Macro / rates related news: {macro}.",
     complianceNote: "Market intelligence and risk awareness only — no trading instruction.",

@@ -136,18 +136,29 @@ export default function MarketPage() {
     async function load() {
       setLoading(true);
       setError("");
-      const [newsData, priorityData, intelligenceData] = await Promise.all([
-        getPortfolioNews().catch(() => null),
-        getPortfolioPriority().catch(() => null),
-        getPortfolioIntelligence().catch(() => null),
-      ]);
-      setNews(newsData);
-      setPriority(priorityData);
-      setIntelligence(intelligenceData);
-      if (!newsData && !priorityData && !intelligenceData) {
-        setError("Market intelligence temporarily unavailable.");
+      try {
+        const [newsData, priorityData, intelligenceData] = await Promise.allSettled([
+          getPortfolioNews(),
+          getPortfolioPriority(),
+          getPortfolioIntelligence(),
+        ]);
+        const nextNews = newsData.status === "fulfilled" ? newsData.value : null;
+        const nextPriority = priorityData.status === "fulfilled" ? priorityData.value : null;
+        const nextIntelligence = intelligenceData.status === "fulfilled" ? intelligenceData.value : null;
+        setNews(nextNews);
+        setPriority(nextPriority);
+        setIntelligence(nextIntelligence);
+        if (!nextNews && !nextPriority && !nextIntelligence) {
+          setError(t("errors.market"));
+        }
+      } catch {
+        setNews(null);
+        setPriority(null);
+        setIntelligence(null);
+        setError(t("errors.market"));
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     const timer = window.setTimeout(() => {
       void load();
@@ -185,7 +196,7 @@ export default function MarketPage() {
 
         <MarketEnginePanel portfolioId={marketWorkspaceCtx.context.selectedPortfolioId} />
 
-        <TerminalPanel title={labels.header} meta={loading ? "loading" : news?.is_stale ? "stale" : "active"}>
+        <TerminalPanel title={labels.header} meta={loading ? t("status.loading") : news?.is_stale ? t("status.stale") : error ? "data limited" : t("common.active")}>
           <div className="grid gap-3 md:grid-cols-4">
             <div>
               <div className="font-mono text-[10px] uppercase text-zinc-600">Regime</div>
@@ -208,7 +219,7 @@ export default function MarketPage() {
           </div>
         </TerminalPanel>
 
-        <TerminalPanel title={labels.pulse} meta="phase mock + intelligence state">
+        <TerminalPanel title={labels.pulse} meta="reference state">
           <div className="grid gap-2 font-mono text-xs md:grid-cols-6">
             {pulse.map((item) => (
               <div className="border border-zinc-800 bg-black/20 p-2" key={item.label}>
