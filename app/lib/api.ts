@@ -146,6 +146,23 @@ export type FCNPositionResponse = {
   distance_to_ko_pct?: number | string | null;
   price_source?: string | null;
   is_stale?: boolean | null;
+  underlying_results?: FCNUnderlyingResult[] | null;
+  prices?: FCNUnderlyingResult[] | null;
+};
+
+export type FCNUnderlyingResult = {
+  symbol?: string | null;
+  initial_price?: number | string | null;
+  current_price?: number | string | null;
+  performance?: number | string | null;
+  distance_to_KI?: number | string | null;
+  distance_to_KO?: number | string | null;
+  distance_to_ki?: number | string | null;
+  distance_to_ko?: number | string | null;
+  distance_to_ki_pct?: number | string | null;
+  distance_to_ko_pct?: number | string | null;
+  price_source?: string | null;
+  is_stale?: boolean | null;
 };
 
 export type CryptoPositionResponse = {
