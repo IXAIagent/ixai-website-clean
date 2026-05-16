@@ -4,6 +4,9 @@ export type SupportedLocale = "zh-TW" | "en" | "ja" | "ko" | "zh-CN";
 
 export type Namespace =
   | "common"
+  | "nav"
+  | "page"
+  | "empty"
   | "dashboard"
   | "intelligence"
   | "market"

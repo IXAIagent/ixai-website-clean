@@ -1,8 +1,9 @@
 "use client";
 
 // v4D: locale registry + nested-key lookup. Backward-compatible with the
-// v3E flat-key shape ("dashboard.aiOverview") thanks to dotted-path
-// traversal. Missing keys fall back through:
+// v3E flat-key shape ("dashboard.aiOverview") AND with true nested objects
+// ({ dashboard: { onboarding: { step1: "..." } } }). Missing keys fall
+// back through:
 //   requested locale namespace → en namespace → key string itself.
 
 import {
@@ -22,30 +23,58 @@ function safeDictionary(locale: SupportedLocale): Dictionary {
 }
 
 /**
- * Resolve a dotted key against a dictionary.
- * Supports namespace.key and namespace.group.subkey, but flattening at one
- * level matches the legacy v3E shape (e.g. "dashboard.onboarding.step1"
- * stored as { dashboard: { "onboarding.step1": "..." } }).
+ * Walk a dotted path against any plain object. Each segment is tried both
+ * (a) as the next nested object key and (b) as part of a flat-within-parent
+ * compound key. This lets the resolver handle three storage styles:
+ *
+ *   { dashboard: { aiOverview: "..." } }
+ *   { dashboard: { "onboarding.step1": "..." } }    // v3E legacy shape
+ *   { dashboard: { onboarding: { step1: "..." } } } // pure nested
+ *
+ * Returns undefined on any miss; never throws.
+ *
+ * Exported separately for unit-testability and so callers can implement
+ * their own fallback strategies without re-importing the locale state.
  */
-function lookup(dict: Dictionary, key: string): string | undefined {
-  if (!key) return undefined;
-  const parts = key.split(".");
-  if (parts.length < 2) return undefined;
-  const namespace = parts[0] as keyof Dictionary;
-  const rest = parts.slice(1).join(".");
-  const ns = dict[namespace];
-  if (!ns) return undefined;
-  const direct = ns[rest];
-  if (typeof direct === "string") return direct;
-  // nested object support: { dashboard: { onboarding: { step1: "..." } } }
-  if (parts.length >= 3) {
-    let cursor: unknown = ns;
-    for (const segment of parts.slice(1)) {
-      if (!cursor || typeof cursor !== "object") return undefined;
-      cursor = (cursor as Record<string, unknown>)[segment];
-    }
+export function resolveNestedKey(
+  source: unknown,
+  path: string,
+): string | undefined {
+  if (typeof path !== "string" || path.length === 0) return undefined;
+  if (!source || typeof source !== "object") return undefined;
+  const parts = path.split(".").filter(Boolean);
+  if (parts.length === 0) return undefined;
+
+  return walk(source as Record<string, unknown>, parts);
+}
+
+function walk(
+  cursor: Record<string, unknown> | string | undefined,
+  parts: string[],
+): string | undefined {
+  if (parts.length === 0) {
     return typeof cursor === "string" ? cursor : undefined;
   }
+  if (!cursor || typeof cursor !== "object") return undefined;
+
+  // 1) Try the longest-prefix flat key. This handles legacy v3E entries
+  //    like { "onboarding.step1": "..." } stored under a parent namespace.
+  for (let split = parts.length; split >= 1; split--) {
+    const joined = parts.slice(0, split).join(".");
+    const candidate = (cursor as Record<string, unknown>)[joined];
+    if (typeof candidate === "string" && split === parts.length) {
+      return candidate;
+    }
+    if (
+      candidate &&
+      typeof candidate === "object" &&
+      split < parts.length
+    ) {
+      const tail = walk(candidate as Record<string, unknown>, parts.slice(split));
+      if (typeof tail === "string") return tail;
+    }
+  }
+
   return undefined;
 }
 
@@ -53,10 +82,12 @@ export function translate(
   key: string,
   locale: SupportedLocale = defaultPreferences.locale,
 ): string {
-  const primary = lookup(safeDictionary(locale), key);
+  const primary = resolveNestedKey(safeDictionary(locale), key);
   if (primary !== undefined) return primary;
-  const fallback = lookup(safeDictionary(FALLBACK_LOCALE), key);
-  if (fallback !== undefined) return fallback;
+  if (locale !== FALLBACK_LOCALE) {
+    const fallback = resolveNestedKey(safeDictionary(FALLBACK_LOCALE), key);
+    if (fallback !== undefined) return fallback;
+  }
   return key;
 }
 
