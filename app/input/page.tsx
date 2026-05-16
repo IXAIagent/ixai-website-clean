@@ -26,9 +26,11 @@ type RecentPosition = { type: string; label: string; detail: string };
 // v4.9D: labels resolved through useI18n inside the component (was hardcoded
 // bilingual "Input / 資產輸入" etc., which never reflected the active locale).
 
-function numberValue(value: string) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+function positiveNumber(value: string) {
+  const raw = value.trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function textValue(value: unknown, fallback = "-") {
@@ -53,15 +55,16 @@ export default function InputWorkspacePage() {
       portfolio: t("input.portfolio"),
       assetType: t("input.assetType"),
       recent: t("input.recent"),
+      submitAsset: t("input.submitAsset"),
     }),
     [t],
   );
   const assetTypes = useMemo<Array<{ id: AssetType; label: string; hint: string }>>(
     () => [
-      { id: "stock", label: "Stock", hint: t("input.hints.stock") },
+      { id: "stock", label: t("input.asset.stock"), hint: t("input.hints.stock") },
       { id: "fcn", label: "FCN", hint: t("input.fcnHint") },
-      { id: "crypto", label: "Crypto", hint: t("input.hints.crypto") },
-      { id: "cash", label: "Cash", hint: t("input.hints.cash") },
+      { id: "crypto", label: t("input.asset.crypto"), hint: t("input.hints.crypto") },
+      { id: "cash", label: t("input.asset.cash"), hint: t("input.hints.cash") },
     ],
     [t],
   );
@@ -75,9 +78,9 @@ export default function InputWorkspacePage() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [stock, setStock] = useState({ symbol: "", quantity: "", avg_price: "" });
+  const [stock, setStock] = useState({ symbol: "", quantity: "", avg_price: "", current_price: "" });
   const [fcn, setFcn] = useState({ name: "", worst_of: "", notional: "", ki: "", ko: "" });
-  const [crypto, setCrypto] = useState({ symbol: "", quantity: "", avg_price: "" });
+  const [crypto, setCrypto] = useState({ symbol: "", quantity: "", avg_price: "", current_price: "" });
   const [cash, setCash] = useState({ currency: "USD", amount: "" });
 
   async function loadAccounts() {
@@ -116,7 +119,10 @@ export default function InputWorkspacePage() {
         ...fcns.slice(0, 3).map((item) => ({
           type: "FCN",
           label: textValue(item.fcn_code || item.name, "FCN"),
-          detail: `notional ${money(item.notional_amount || item.notional)}`,
+          detail:
+            Number(item.notional_amount || item.notional || 0) > 0
+              ? `notional ${money(item.notional_amount || item.notional)}`
+              : "data incomplete",
         })),
         ...cryptos.slice(0, 3).map((item) => ({
           type: "Crypto",
@@ -150,24 +156,98 @@ export default function InputWorkspacePage() {
     setStatus("");
     try {
       if (assetType === "stock") {
+        const symbol = stock.symbol.trim().toUpperCase();
+        const quantity = positiveNumber(stock.quantity);
+        const avgPrice = positiveNumber(stock.avg_price);
+        const currentPrice = positiveNumber(stock.current_price);
+        if (!symbol) {
+          setError(t("input.errors.symbolRequired"));
+          setSaving(false);
+          return;
+        }
+        if (quantity === null) {
+          setError(t("input.errors.quantityRequired"));
+          setSaving(false);
+          return;
+        }
+        if (avgPrice === null) {
+          setError(t("input.errors.avgPriceRequired"));
+          setSaving(false);
+          return;
+        }
+        if (currentPrice === null) {
+          setError(t("input.errors.currentPriceRequired"));
+          setSaving(false);
+          return;
+        }
+        if (process.env.NODE_ENV === "development") {
+          console.debug("IXAI stock payload", { symbol, quantity, avg_price: avgPrice, current_price: currentPrice });
+        }
         await addStock({
-          symbol: stock.symbol.trim().toUpperCase(),
-          quantity: numberValue(stock.quantity),
-          avg_price: numberValue(stock.avg_price),
+          symbol,
+          quantity,
+          avg_price: avgPrice,
+          current_price: currentPrice,
         });
-        setStock({ symbol: "", quantity: "", avg_price: "" });
+        setStock({ symbol: "", quantity: "", avg_price: "", current_price: "" });
       } else if (assetType === "crypto") {
+        const symbol = crypto.symbol.trim().toUpperCase();
+        const quantity = positiveNumber(crypto.quantity);
+        const avgPrice = crypto.avg_price.trim() ? positiveNumber(crypto.avg_price) : null;
+        const currentPrice = positiveNumber(crypto.current_price);
+        if (!symbol) {
+          setError(t("input.errors.symbolRequired"));
+          setSaving(false);
+          return;
+        }
+        if (quantity === null) {
+          setError(t("input.errors.quantityRequired"));
+          setSaving(false);
+          return;
+        }
+        if (crypto.avg_price.trim() && avgPrice === null) {
+          setError(t("input.errors.avgPriceRequired"));
+          setSaving(false);
+          return;
+        }
+        if (currentPrice === null) {
+          setError(t("input.errors.currentPriceRequired"));
+          setSaving(false);
+          return;
+        }
+        if (process.env.NODE_ENV === "development") {
+          console.debug("IXAI crypto payload", {
+            symbol,
+            quantity,
+            avg_price: avgPrice,
+            current_price: currentPrice,
+            asset_type: "spot",
+          });
+        }
         await addCrypto({
-          symbol: crypto.symbol.trim().toUpperCase(),
-          quantity: numberValue(crypto.quantity),
-          avg_price: numberValue(crypto.avg_price),
+          symbol,
+          quantity,
+          avg_price: avgPrice,
+          current_price: currentPrice,
           asset_type: "spot",
         });
-        setCrypto({ symbol: "", quantity: "", avg_price: "" });
+        setCrypto({ symbol: "", quantity: "", avg_price: "", current_price: "" });
       } else if (assetType === "cash") {
+        const currency = cash.currency.trim().toUpperCase();
+        const amount = positiveNumber(cash.amount);
+        if (!currency) {
+          setError(t("input.errors.currencyRequired"));
+          setSaving(false);
+          return;
+        }
+        if (amount === null) {
+          setError(t("input.errors.amountRequired"));
+          setSaving(false);
+          return;
+        }
         await addCash({
-          currency: cash.currency.trim().toUpperCase() || "USD",
-          amount: numberValue(cash.amount),
+          currency,
+          amount,
         });
         setCash({ currency: "USD", amount: "" });
       } else {
@@ -219,7 +299,8 @@ export default function InputWorkspacePage() {
       setStatus(t("input.statusOk"));
       await loadRecent();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("input.statusError"));
+      const detail = err instanceof Error ? err.message : t("input.statusError");
+      setError(`${t("input.statusError")} ${detail}`);
     } finally {
       setSaving(false);
     }
@@ -302,23 +383,25 @@ export default function InputWorkspacePage() {
 
           <form className="space-y-3" onSubmit={handleSubmit}>
             {assetType === "stock" && (
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-4">
                 <Field label="Symbol" value={stock.symbol} onChange={(value) => setStock({ ...stock, symbol: value })} placeholder="AAPL / 2330" />
-                <Field label="Quantity" value={stock.quantity} onChange={(value) => setStock({ ...stock, quantity: value })} />
-                <Field label="Avg Cost" value={stock.avg_price} onChange={(value) => setStock({ ...stock, avg_price: value })} />
+                <Field label={t("input.quantity")} value={stock.quantity} onChange={(value) => setStock({ ...stock, quantity: value })} />
+                <Field label={t("input.avgCost")} value={stock.avg_price} onChange={(value) => setStock({ ...stock, avg_price: value })} />
+                <Field label={t("input.currentPrice")} value={stock.current_price} onChange={(value) => setStock({ ...stock, current_price: value })} />
               </div>
             )}
             {assetType === "crypto" && (
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-4">
                 <Field label="Symbol" value={crypto.symbol} onChange={(value) => setCrypto({ ...crypto, symbol: value })} placeholder="BTC / ETH" />
-                <Field label="Quantity" value={crypto.quantity} onChange={(value) => setCrypto({ ...crypto, quantity: value })} />
-                <Field label="Avg Cost" value={crypto.avg_price} onChange={(value) => setCrypto({ ...crypto, avg_price: value })} />
+                <Field label={t("input.quantity")} value={crypto.quantity} onChange={(value) => setCrypto({ ...crypto, quantity: value })} />
+                <Field label={t("input.avgCost")} value={crypto.avg_price} onChange={(value) => setCrypto({ ...crypto, avg_price: value })} />
+                <Field label={t("input.currentPrice")} value={crypto.current_price} onChange={(value) => setCrypto({ ...crypto, current_price: value })} />
               </div>
             )}
             {assetType === "cash" && (
               <div className="grid gap-3 md:grid-cols-2">
                 <Field label="Currency" value={cash.currency} onChange={(value) => setCash({ ...cash, currency: value })} />
-                <Field label="Amount" value={cash.amount} onChange={(value) => setCash({ ...cash, amount: value })} />
+                <Field label={t("input.amount")} value={cash.amount} onChange={(value) => setCash({ ...cash, amount: value })} />
               </div>
             )}
             {assetType === "fcn" && (
@@ -339,7 +422,7 @@ export default function InputWorkspacePage() {
               disabled={saving}
               type="submit"
             >
-              {saving ? t("input.submitting") : t("input.submitTicket")}
+              {saving ? t("input.submitting") : labels.submitAsset}
             </button>
           </form>
         </TerminalPanel>

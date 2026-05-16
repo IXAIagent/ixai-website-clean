@@ -18,7 +18,7 @@ export const API_BASE =
   (process.env.NODE_ENV === "production" ? "" : LOCAL_API_BASE);
 
 type ErrorPayload = {
-  detail?: string;
+  detail?: unknown;
   message?: string;
   [key: string]: unknown;
 };
@@ -830,6 +830,18 @@ function readableError(payload: unknown, fallback: string) {
   if (typeof payload === "object") {
     const data = payload as ErrorPayload;
     if (typeof data.detail === "string") return data.detail;
+    if (Array.isArray(data.detail)) {
+      const messages = data.detail
+        .map((item) => {
+          if (!item || typeof item !== "object") return "";
+          const record = item as { loc?: unknown; msg?: unknown };
+          const path = Array.isArray(record.loc) ? record.loc.slice(1).join(".") : "";
+          const message = typeof record.msg === "string" ? record.msg : "";
+          return [path, message].filter(Boolean).join(": ");
+        })
+        .filter(Boolean);
+      if (messages.length > 0) return messages.join("; ");
+    }
     if (typeof data.message === "string") return data.message;
   }
 

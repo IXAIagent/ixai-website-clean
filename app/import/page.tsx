@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, DragEvent, useEffect, useState } from "react";
+import { ChangeEvent, DragEvent, ReactNode, useEffect, useState } from "react";
 
 import { AppShell } from "../components/layout/AppShell";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
@@ -38,6 +38,10 @@ export default function ImportWorkspacePage() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [allowErrorImport, setAllowErrorImport] = useState(false);
+  const previewRows = Array.isArray(preview?.rows) ? preview.rows : [];
+  const previewErrorCount = Number(preview?.summary?.errors ?? 0);
+  const canConfirm = Boolean(file && preview && !loading && (previewErrorCount === 0 || allowErrorImport));
 
   async function loadHistory() {
     try {
@@ -60,6 +64,7 @@ export default function ImportWorkspacePage() {
     setStatus("");
     setPreview(null);
     setResult(null);
+    setAllowErrorImport(false);
     if (!nextFile) return;
     if (!nextFile.name.toLowerCase().endsWith(".csv")) {
       setError("請上傳 .csv 檔案。");
@@ -83,6 +88,7 @@ export default function ImportWorkspacePage() {
     try {
       const response = await previewPortfolioCsv(file);
       setPreview(response);
+      setAllowErrorImport(false);
       setStatus("Preview completed. Confirm import when ready.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Preview failed.");
@@ -93,12 +99,14 @@ export default function ImportWorkspacePage() {
   }
 
   async function handleConfirm() {
-    if (!file || !preview) return;
+    if (!canConfirm) return;
+    const selectedFile = file;
+    if (!selectedFile) return;
     setLoading(true);
     setError("");
     setStatus("Confirm import running...");
     try {
-      const response = await uploadPortfolioCsv(file);
+      const response = await uploadPortfolioCsv(selectedFile);
       setResult(response);
       setStatus("Import completed.");
       await loadHistory();
@@ -156,13 +164,24 @@ export default function ImportWorkspacePage() {
               </button>
               <button
                 className="border border-emerald-400/60 px-4 py-2 text-sm text-emerald-100 disabled:opacity-50"
-                disabled={!file || !preview || loading}
+                disabled={!canConfirm}
                 onClick={() => void handleConfirm()}
                 type="button"
               >
-                Confirm Import
+                {t("import.confirm")}
               </button>
             </div>
+            {previewErrorCount > 0 && preview && (
+              <label className="mt-3 flex items-start gap-2 border border-yellow-400/30 bg-yellow-400/10 px-3 py-2 font-mono text-xs text-yellow-100">
+                <input
+                  checked={allowErrorImport}
+                  className="mt-0.5"
+                  onChange={(event) => setAllowErrorImport(event.target.checked)}
+                  type="checkbox"
+                />
+                <span>Preview contains row errors. Confirm that skipped/error rows should be ignored before import.</span>
+              </label>
+            )}
 
             {status && <div className="mt-3 border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-200">{status}</div>}
             {error && <div className="mt-3 border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200">{error}</div>}
@@ -176,6 +195,68 @@ export default function ImportWorkspacePage() {
                 <Metric label="will update" value={preview.summary.will_update} />
                 <Metric label="will skip" value={preview.summary.will_skip} />
                 <Metric label="errors" value={preview.summary.errors} />
+              </div>
+            )}
+            {preview && (
+              <div className="mt-4">
+                <div className="mb-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+                  {t("import.preview")}
+                </div>
+                {previewRows.length === 0 ? (
+                  <EmptyLine>No preview rows returned.</EmptyLine>
+                ) : (
+                  <div className="overflow-x-auto border border-zinc-800">
+                    <table className="min-w-[900px] w-full border-collapse font-mono text-xs">
+                      <thead className="bg-zinc-950 text-left uppercase text-zinc-500">
+                        <tr>
+                          <PreviewHead>{t("import.row")}</PreviewHead>
+                          <PreviewHead>{t("import.assetType")}</PreviewHead>
+                          <PreviewHead>{t("import.inputSymbol")}</PreviewHead>
+                          <PreviewHead>{t("import.canonicalSymbol")}</PreviewHead>
+                          <PreviewHead>{t("import.action")}</PreviewHead>
+                          <PreviewHead>quantity</PreviewHead>
+                          <PreviewHead>avg_price</PreviewHead>
+                          <PreviewHead>current_price</PreviewHead>
+                          <PreviewHead>currency</PreviewHead>
+                          <PreviewHead>amount</PreviewHead>
+                          <PreviewHead>{t("import.errors")}</PreviewHead>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewRows.map((row) => {
+                          const rowErrors = Array.isArray(row.errors) ? row.errors.filter(Boolean) : [];
+                          const action = textValue(row.action).toLowerCase();
+                          const hasError = rowErrors.length > 0;
+                          const isSkipped = action === "skip" || action === "skipped";
+                          return (
+                            <tr
+                              className={`border-t border-zinc-800 ${
+                                hasError
+                                  ? "bg-red-950/30 text-red-100"
+                                  : isSkipped
+                                    ? "bg-yellow-950/20 text-yellow-100"
+                                    : "text-zinc-200"
+                              }`}
+                              key={`${row.row}-${row.asset_type}-${row.input_symbol}-${row.action}`}
+                            >
+                              <PreviewCell>{textValue(row.row)}</PreviewCell>
+                              <PreviewCell>{textValue(row.asset_type)}</PreviewCell>
+                              <PreviewCell>{textValue(row.input_symbol)}</PreviewCell>
+                              <PreviewCell>{textValue(row.canonical_symbol)}</PreviewCell>
+                              <PreviewCell>{textValue(row.action)}</PreviewCell>
+                              <PreviewCell>{textValue(row.quantity)}</PreviewCell>
+                              <PreviewCell>{textValue(row.avg_price)}</PreviewCell>
+                              <PreviewCell>{textValue(row.current_price)}</PreviewCell>
+                              <PreviewCell>{textValue(row.currency)}</PreviewCell>
+                              <PreviewCell>{textValue(row.amount)}</PreviewCell>
+                              <PreviewCell>{rowErrors.length > 0 ? rowErrors.join("; ") : "-"}</PreviewCell>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
             {result && (
@@ -230,4 +311,12 @@ function Metric({ label, value }: { label: string; value: unknown }) {
       <div className="mt-1 text-zinc-200">{textValue(value, "0")}</div>
     </div>
   );
+}
+
+function PreviewHead({ children }: { children: ReactNode }) {
+  return <th className="whitespace-nowrap px-3 py-2 font-medium">{children}</th>;
+}
+
+function PreviewCell({ children }: { children: ReactNode }) {
+  return <td className="max-w-[220px] whitespace-nowrap px-3 py-2 align-top">{children}</td>;
 }

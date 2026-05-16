@@ -16,6 +16,7 @@ export type Namespace =
   | "settings"
   | "accounts"
   | "input"
+  | "import"
   | "errors"
   | "status"
   | "copilot"
