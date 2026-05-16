@@ -205,6 +205,20 @@ export default function DashboardPage() {
             <div className="border-l border-emerald-400/40 bg-black/30 px-3 py-2 font-mono text-sm leading-6 text-zinc-300">
               {overviewLine}
             </div>
+            <div className="mt-3 flex flex-wrap gap-2 font-mono text-xs">
+              <Link
+                className="border border-zinc-700 px-3 py-2 text-zinc-300 transition hover:border-emerald-400/60 hover:text-emerald-200"
+                href="/input"
+              >
+                Open Input Workspace
+              </Link>
+              <Link
+                className="border border-zinc-700 px-3 py-2 text-zinc-300 transition hover:border-emerald-400/60 hover:text-emerald-200"
+                href="/import"
+              >
+                Open Import Workspace
+              </Link>
+            </div>
             <div className="mt-3 grid gap-2 font-mono text-xs md:grid-cols-3">
               <div>
                 <span className="text-zinc-600">DOMINANT RISK</span>

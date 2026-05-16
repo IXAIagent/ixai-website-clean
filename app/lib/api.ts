@@ -184,6 +184,64 @@ export type CashUpdatePayload = {
   amount?: number | null;
 };
 
+export type AccountResponse = {
+  id?: string | null;
+  name?: string | null;
+  owner_user_id?: string | null;
+  account_type?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type AccountsListResponse = {
+  items?: AccountResponse[] | null;
+};
+
+export type AccountPortfolioResponse = {
+  id?: string | null;
+  name?: string | null;
+  base_currency?: string | null;
+  user_id?: string | null;
+  account_id?: string | null;
+  created_at?: string | null;
+};
+
+export type AccountPortfoliosResponse = {
+  items?: AccountPortfolioResponse[] | null;
+};
+
+export type AddStockPayload = {
+  symbol: string;
+  quantity: number;
+  avg_price: number;
+  current_price?: number | null;
+};
+
+export type AddCryptoPayload = {
+  symbol: string;
+  quantity: number;
+  avg_price?: number | null;
+  current_price?: number | null;
+  asset_type?: string;
+  leverage?: number | null;
+};
+
+export type AddCashPayload = {
+  currency: string;
+  amount: number;
+};
+
+export type AddFcnPayload = {
+  name?: string | null;
+  fcn_code?: string | null;
+  notional_amount?: number | null;
+  underlyings?: string | null;
+  underlying_details?: Array<{ symbol: string; initial_price?: number | null }> | null;
+  worst_of_symbol?: string | null;
+  ki_level?: number | null;
+  ko_level?: number | null;
+};
+
 export type AssetCandidate = {
   canonical_symbol?: string | null;
   display_name?: string | null;
@@ -659,6 +717,33 @@ export function getMyRiskOverview() {
   return apiFetch<RiskOverviewResponse>("/api/v1/dashboard/my-risk-overview");
 }
 
+export function getAccounts() {
+  return apiFetch<AccountsListResponse>("/api/v1/accounts");
+}
+
+export function createAccount(name: string, accountType = "individual") {
+  return apiFetch<AccountResponse>("/api/v1/accounts", {
+    method: "POST",
+    body: JSON.stringify({ name, account_type: accountType }),
+  });
+}
+
+export function getAccountPortfolios(accountId: string) {
+  return apiFetch<AccountPortfoliosResponse>(
+    `/api/v1/accounts/${encodeURIComponent(accountId)}/portfolios`,
+  );
+}
+
+export function createAccountPortfolio(accountId: string, name: string, baseCurrency = "USD") {
+  return apiFetch<AccountPortfolioResponse>(
+    `/api/v1/accounts/${encodeURIComponent(accountId)}/portfolios`,
+    {
+      method: "POST",
+      body: JSON.stringify({ name, base_currency: baseCurrency }),
+    },
+  );
+}
+
 export function getStocks() {
   return apiFetch<StockPositionResponse[]>("/api/v1/portfolio/stocks");
 }
@@ -673,6 +758,34 @@ export function getCrypto() {
 
 export function getCash() {
   return apiFetch<CashPositionResponse[]>("/api/v1/portfolio/cash");
+}
+
+export function addStock(payload: AddStockPayload) {
+  return apiFetch<{ status?: string; id?: string | number }>("/api/v1/portfolio/stock", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function addCrypto(payload: AddCryptoPayload) {
+  return apiFetch<{ status?: string; id?: string | number }>("/api/v1/portfolio/crypto", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function addCash(payload: AddCashPayload) {
+  return apiFetch<{ status?: string; id?: string | number }>("/api/v1/portfolio/cash", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function addFcn(payload: AddFcnPayload) {
+  return apiFetch<{ status?: string; id?: string | number }>("/api/v1/portfolio/fcn", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function getPortfolioNews() {

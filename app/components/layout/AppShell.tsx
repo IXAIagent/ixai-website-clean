@@ -13,6 +13,9 @@ const labels = {
   intelligence: "Intelligence / AI 分析",
   market: "Market / 市場",
   alerts: "Alerts / 警示",
+  input: "Input / 資產輸入",
+  import: "Import / 匯入",
+  accounts: "Accounts / 帳戶",
   settings: "Settings / 設定",
 };
 
@@ -23,6 +26,9 @@ const navItems = [
   { href: "/intelligence", label: labels.intelligence, short: "AI" },
   { href: "/market", label: labels.market, short: "Market" },
   { href: "/alerts", label: labels.alerts, short: "Alerts" },
+  { href: "/input", label: labels.input, short: "Input" },
+  { href: "/import", label: labels.import, short: "Import" },
+  { href: "/accounts", label: labels.accounts, short: "Accounts" },
   { href: "/settings", label: labels.settings, short: "Settings" },
 ];
 
