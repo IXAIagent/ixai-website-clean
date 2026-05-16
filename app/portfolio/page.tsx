@@ -23,15 +23,6 @@ import {
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 
-const labels = {
-  title: "Portfolio / 資產管理",
-  subtitle: "Manage holdings, exposure, and portfolio operating context.",
-  header: "Portfolio Header",
-  allocation: "Allocation / 配置",
-  holdings: "Holdings / 持倉",
-  exposure: "Exposure / 暴露",
-};
-
 type HoldingRow = {
   id?: string | number | null;
   label: string;
@@ -260,6 +251,17 @@ function HoldingSection({ title, rows }: { title: string; rows: HoldingRow[] }) 
 
 export default function PortfolioPage() {
   const { t } = useI18n();
+  const labels = useMemo(
+    () => ({
+      title: t("page.portfolio"),
+      subtitle: t("portfolio.subtitle"),
+      header: t("portfolio.header"),
+      allocation: t("portfolio.allocation"),
+      holdings: t("portfolio.holdings"),
+      exposure: t("portfolio.exposure"),
+    }),
+    [t],
+  );
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [allocation, setAllocation] = useState<AllocationItem[]>([]);
   const [stocks, setStocks] = useState<StockPositionResponse[]>([]);

@@ -161,6 +161,12 @@ export default function IntelligencePage() {
       todayFocusSubtitle: t("intelligence.todayFocusSubtitle"),
       connections: t("intelligence.connectionsPanel"),
       correlatedRisks: t("intelligence.correlatedRisksPanel"),
+      immediateAttention: t("dashboard.sections.immediateAttention"),
+      marketContext: t("dashboard.sections.marketContext"),
+      deepAnalysis: t("dashboard.sections.deepAnalysis"),
+      defaultCollapsed: t("dashboard.sections.defaultCollapsed"),
+      whatToMonitor: t("intelligence.whatToMonitor"),
+      noTrading: t("intelligence.noTradingInstruction"),
     }),
     [t],
   );
@@ -296,7 +302,7 @@ export default function IntelligencePage() {
           </div>
         </TerminalPanel>
 
-        <SectionDivider label="P0 · Executive summary" hint="immediate attention" />
+        <SectionDivider label={labels.immediateAttention} hint={t("dashboard.sections.immediateAttentionHint")} />
 
         <TerminalPanel title={labels.todayFocus} meta={todayStatus}>
           <div className="mb-3 flex flex-wrap items-center gap-2 font-mono text-xs">
@@ -328,13 +334,13 @@ export default function IntelligencePage() {
           </div>
         </TerminalPanel>
 
-        <SectionDivider label="P1 · Contextual intelligence" hint="why / what changed" />
+        <SectionDivider label={labels.marketContext} hint={t("intelligence.whyWhatChanged")} />
 
         <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
           <TerminalPanel title={labels.explainability} meta="why / what changed">
             <DataRow label="WHY NOW" value={explainability?.why_risk_increased || todayFocus[0]?.reason} />
             <DataRow label="WHAT CHANGED" value={explainability?.what_changed_today} />
-            <DataRow label="WHAT TO MONITOR" value={todayFocus.map((item) => item.recommended_monitoring_action).join(" · ")} />
+            <DataRow label={labels.whatToMonitor} value={todayFocus.map((item) => item.recommended_monitoring_action).join(" · ")} />
             <DataRow label="DRIVER" value={explainability?.dominant_driver} />
             <DataRow label="HIDDEN CORR" value={explainability?.hidden_correlation} />
             <DataRow label="SYSTEMIC" value={explainability?.systemic_risk} />
@@ -354,14 +360,14 @@ export default function IntelligencePage() {
         <PortfolioEnginePanel portfolioId={workspaceCtx.context.selectedPortfolioId} />
         <CopilotQuestionPanel portfolioId={workspaceCtx.context.selectedPortfolioId} />
 
-        <SectionDivider label="P2 · Deep analysis" hint="default collapsed" />
+        <SectionDivider label={labels.deepAnalysis} hint={labels.defaultCollapsed} />
 
         <ExpandablePanel title={labels.timeline} meta={timeline?.is_stale ? "history accumulating" : "7d / 30d / 90d"}>
           <div className="mb-3 text-sm text-zinc-300">
-            {textValue(timeline?.timeline_summary || timeline?.message, "History still accumulating / 歷史資料累積中")}
+            {textValue(timeline?.timeline_summary || timeline?.message, t("empty.timelineBuilding"))}
           </div>
           <div className="grid gap-3 lg:grid-cols-3">
-            {timelineWindows.length === 0 && <EmptyLine>History still accumulating / 歷史資料累積中</EmptyLine>}
+            {timelineWindows.length === 0 && <EmptyLine>{t("empty.timelineBuilding")}</EmptyLine>}
             {timelineWindows.map((item) => (
               <WindowCard item={item} key={textValue(item.window)} />
             ))}
@@ -460,7 +466,7 @@ export default function IntelligencePage() {
         </ExpandablePanel>
 
         <div className="border border-zinc-800 bg-zinc-950/60 px-3 py-2 font-mono text-[11px] text-zinc-500">
-          No trading instruction / 非交易指令 · Risk intelligence only / 僅供風險理解
+          {labels.noTrading}
         </div>
       </div>
     </AppShell>

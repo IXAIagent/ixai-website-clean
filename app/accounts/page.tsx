@@ -131,32 +131,32 @@ export default function AccountsPage() {
   return (
     <AppShell
       title={t("page.accounts")}
-      subtitle="Multi-account and multi-portfolio foundation for future client/family/business workspaces."
+      subtitle={t("accounts.subtitle")}
     >
       <div className="space-y-4">
         {accounts.length === 0 && (
-          <TerminalPanel title="Onboarding / 啟動流程" meta="multi-portfolio">
+          <TerminalPanel title={t("accounts.onboarding")} meta="multi-portfolio">
             <div className="grid gap-2 font-mono text-xs md:grid-cols-4">
-              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">1. Create Account</div>
-              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">2. Create Portfolio</div>
-              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">3. Add Asset / Import CSV</div>
-              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">4. Open Dashboard / Intelligence</div>
+              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">{t("onboarding.step1")}</div>
+              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">{t("onboarding.step2")}</div>
+              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">{t("onboarding.step3")}</div>
+              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">{t("onboarding.step4")}</div>
             </div>
             <div className="mt-3 text-sm text-zinc-500">
-              空帳戶狀態會先引導建立 account 與 portfolio，不會阻擋既有使用者。
+              {t("accounts.emptyOnboardingHint")}
             </div>
           </TerminalPanel>
         )}
 
-        <TerminalPanel title="Active Context / 目前操作組合" meta="workspace memory">
+        <TerminalPanel title={t("accounts.activeContext")} meta="workspace memory">
           <div className="grid gap-3 font-mono text-xs md:grid-cols-4">
             <div className="border border-zinc-800 bg-black/20 p-3">
-              <div className="text-zinc-600">ACCOUNT</div>
-              <div className="mt-1 text-zinc-100">{context.selectedAccountName || selected?.name || "Select account / 選擇帳戶"}</div>
+              <div className="text-zinc-600">{t("common.account")}</div>
+              <div className="mt-1 text-zinc-100">{context.selectedAccountName || selected?.name || t("common.selectAccount")}</div>
             </div>
             <div className="border border-zinc-800 bg-black/20 p-3">
-              <div className="text-zinc-600">PORTFOLIO</div>
-              <div className="mt-1 text-zinc-100">{context.selectedPortfolioName || selectedPortfolio?.name || "Select portfolio / 選擇投資組合"}</div>
+              <div className="text-zinc-600">{t("common.portfolio")}</div>
+              <div className="mt-1 text-zinc-100">{context.selectedPortfolioName || selectedPortfolio?.name || t("common.selectPortfolio")}</div>
             </div>
             <div className="border border-zinc-800 bg-black/20 p-3">
               <div className="text-zinc-600">LAST WORKSPACE</div>

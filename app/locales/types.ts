@@ -11,6 +11,7 @@ export type Namespace =
   | "intelligence"
   | "market"
   | "portfolio"
+  | "fcn"
   | "alerts"
   | "onboarding"
   | "settings"

@@ -14,14 +14,6 @@ import {
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 
-const labels = {
-  title: "Alerts / 警示中心",
-  subtitle: "Portfolio alerts, FCN warnings, market risk signals, and system health.",
-  header: "Alerts Header / 警示總覽",
-  list: "Alert List / 警示列表",
-  grouped: "Grouped Alerts / 分組警示",
-};
-
 const filters = ["All", "Critical", "High", "FCN", "Crypto", "Stock", "Macro"] as const;
 type Filter = (typeof filters)[number];
 
@@ -137,6 +129,26 @@ function AlertRow({ alert }: { alert: UnifiedAlert }) {
 
 export default function AlertsPage() {
   const { t } = useI18n();
+  const labels = useMemo(
+    () => ({
+      subtitle: t("alerts.subtitle"),
+      header: t("alerts.header"),
+      list: t("alerts.list"),
+      grouped: t("alerts.grouped"),
+      total: t("alerts.total"),
+      critical: t("alerts.critical"),
+      highMedium: t("alerts.highMedium"),
+      low: t("alerts.low"),
+      lastUpdated: t("alerts.lastUpdated"),
+      systemClear: t("alerts.systemClear"),
+      noSignals: t("alerts.noSignals"),
+      noMatch: t("alerts.noMatch"),
+      marketMacro: t("alerts.marketMacro"),
+      portfolioAllocation: t("alerts.portfolioAllocation"),
+      systemData: t("alerts.systemData"),
+    }),
+    [t],
+  );
   const [risk, setRisk] = useState<RiskOverviewResponse | null>(null);
   const [priority, setPriority] = useState<NewsArticle[]>([]);
   const [filter, setFilter] = useState<Filter>("All");
@@ -174,11 +186,11 @@ export default function AlertsPage() {
   const mediumCount = alerts.filter((alert) => alert.severity.toLowerCase().includes("medium") || alert.severity.toLowerCase().includes("warning")).length;
   const lowCount = Math.max(alerts.length - criticalCount - highCount - mediumCount, 0);
   const groups: Array<{ title: string; items: UnifiedAlert[] }> = [
-    { title: "Critical", items: alerts.filter((alert) => alert.severity.toLowerCase().includes("critical") || alert.severity.toLowerCase().includes("high")) },
+    { title: labels.critical, items: alerts.filter((alert) => alert.severity.toLowerCase().includes("critical") || alert.severity.toLowerCase().includes("high")) },
     { title: "FCN", items: alerts.filter((alert) => alert.category === "FCN") },
-    { title: "Market / Macro", items: alerts.filter((alert) => alert.category === "Macro") },
-    { title: "Portfolio / Allocation", items: alerts.filter((alert) => ["Portfolio", "Stock", "Crypto"].includes(alert.category)) },
-    { title: "System / Data", items: alerts.filter((alert) => alert.category === "System") },
+    { title: labels.marketMacro, items: alerts.filter((alert) => alert.category === "Macro") },
+    { title: labels.portfolioAllocation, items: alerts.filter((alert) => ["Portfolio", "Stock", "Crypto"].includes(alert.category)) },
+    { title: labels.systemData, items: alerts.filter((alert) => alert.category === "System") },
   ];
 
   return (
@@ -193,23 +205,23 @@ export default function AlertsPage() {
         <TerminalPanel title={labels.header} meta={loading ? "loading" : alerts.length > 0 ? "active" : "clear"}>
           <div className="grid gap-3 md:grid-cols-5">
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">Total Alerts</div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">{labels.total}</div>
               <div className="mt-1 text-2xl font-semibold text-zinc-100">{alerts.length}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">Critical</div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">{labels.critical}</div>
               <div className="mt-1 text-2xl font-semibold text-red-300">{criticalCount}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">High / Medium</div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">{labels.highMedium}</div>
               <div className="mt-1 text-2xl font-semibold text-yellow-300">{highCount + mediumCount}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">Low</div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">{labels.low}</div>
               <div className="mt-1 text-2xl font-semibold text-emerald-300">{lowCount}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">Last Updated</div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">{labels.lastUpdated}</div>
               <div className="mt-1 text-sm text-zinc-300">{new Date().toLocaleString()}</div>
             </div>
           </div>
@@ -232,7 +244,7 @@ export default function AlertsPage() {
           </div>
           <div className="divide-y divide-zinc-900 border border-zinc-800">
             {filteredAlerts.length === 0 && (
-              <EmptyLine>{alerts.length === 0 ? "SYSTEM HEALTH: CLEAR" : "No alerts match this filter."}</EmptyLine>
+              <EmptyLine>{alerts.length === 0 ? labels.systemClear : labels.noMatch}</EmptyLine>
             )}
             {filteredAlerts.map((alert) => (
               <AlertRow alert={alert} key={alert.id} />
@@ -240,7 +252,7 @@ export default function AlertsPage() {
           </div>
         </TerminalPanel>
 
-        <TerminalPanel title={labels.grouped} meta="critical / fcn / market / portfolio / system">
+        <TerminalPanel title={labels.grouped} meta="critical · fcn · market · portfolio · system">
           <div className="grid gap-3 lg:grid-cols-2">
             {groups.map((group) => (
               <div className="border border-zinc-800 bg-zinc-950/70" key={group.title}>
@@ -249,7 +261,7 @@ export default function AlertsPage() {
                   <span className="font-mono text-[10px] text-zinc-500">{group.items.length}</span>
                 </div>
                 <div className="divide-y divide-zinc-900">
-                  {group.items.length === 0 && <EmptyLine>No signals.</EmptyLine>}
+                  {group.items.length === 0 && <EmptyLine>{labels.noSignals}</EmptyLine>}
                   {group.items.slice(0, 5).map((alert) => (
                     <div className="px-3 py-2 text-xs" key={`${group.title}-${alert.id}`}>
                       <div className="flex items-center gap-2">

@@ -160,8 +160,8 @@ export function PortfolioEnginePanel({
               <StatusBadge value={concentration.risk_level || "clear"} />
             </div>
             <div className="mt-2 grid gap-1 font-mono text-[11px] text-zinc-400">
-              <div>Single name: {pct(concentration.single_name_pct)}</div>
-              <div>Theme cluster: {pct(concentration.theme_pct)}</div>
+              <div>Single-name concentration: {pct(concentration.single_name_pct)}</div>
+              <div>Theme concentration: {pct(concentration.theme_pct)}</div>
               <div>FCN underlying: {pct(concentration.fcn_underlying_pct)}</div>
               <div>Crypto bucket: {pct(concentration.crypto_pct)}</div>
               <div>Cash buffer: {pct(concentration.cash_buffer_pct)}</div>

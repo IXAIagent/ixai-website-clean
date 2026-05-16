@@ -10,6 +10,7 @@ import {
 } from "./api";
 
 export const PREFERENCES_STORAGE_KEY = "ixai_preferences_v1";
+export const PREFERENCES_CHANGED_EVENT = "ixai:preferences-changed";
 
 export type SupportedLocale = "zh-TW" | "en" | "ja" | "ko" | "zh-CN";
 export type DefaultLandingPage =
@@ -121,10 +122,9 @@ export function writePreferences(preferences: IXAIPreferences) {
   if (typeof window === "undefined") return;
 
   try {
-    window.localStorage.setItem(
-      PREFERENCES_STORAGE_KEY,
-      JSON.stringify(coercePreferences(preferences)),
-    );
+    const normalized = coercePreferences(preferences);
+    window.localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(normalized));
+    window.dispatchEvent(new CustomEvent(PREFERENCES_CHANGED_EVENT, { detail: normalized }));
   } catch {
     // localStorage can fail in private mode; keep runtime safe.
   }
@@ -267,12 +267,17 @@ export function usePreferences() {
         setPreferencesState(readPreferences());
       }
     }
+    function handlePreferencesChanged() {
+      setPreferencesState(readPreferences());
+    }
 
     window.addEventListener("storage", handleStorage);
+    window.addEventListener(PREFERENCES_CHANGED_EVENT, handlePreferencesChanged);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
       window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(PREFERENCES_CHANGED_EVENT, handlePreferencesChanged);
     };
   }, []);
 

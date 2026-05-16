@@ -14,17 +14,6 @@ import {
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
 
-const labels = {
-  title: "FCN Risk Workspace / FCN 風險監控",
-  subtitle: "Worst-of monitoring, KI / KO distance, coupon windows, and linked exposure.",
-  header: "FCN Header",
-  table: "FCN Risk Table",
-  worst: "Worst-of Underlying Monitor",
-  exposure: "FCN Exposure Map",
-  timeline: "Coupon / Observation Timeline",
-  interpretation: "Risk Interpretation",
-};
-
 type FcnView = FCNPositionResponse & {
   mergedKey: string;
   notionalValue: number;
@@ -262,6 +251,20 @@ function UnderlyingMiniTable({ rows }: { rows: FCNUnderlyingResult[] }) {
 
 export default function FcnPage() {
   const { t } = useI18n();
+  const labels = useMemo(
+    () => ({
+      title: t("page.fcn"),
+      subtitle: t("fcn.subtitle"),
+      header: t("fcn.header"),
+      table: t("fcn.table"),
+      worst: t("fcn.worst"),
+      exposure: t("fcn.exposure"),
+      timeline: t("fcn.timeline"),
+      interpretation: t("fcn.interpretation"),
+      underlyingDetail: t("fcn.underlyingDetail"),
+    }),
+    [t],
+  );
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [rawFcns, setRawFcns] = useState<FCNPositionResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -439,7 +442,7 @@ export default function FcnPage() {
           </TerminalPanel>
         </section>
 
-        <TerminalPanel title="Underlying Detail" meta="current price / performance / source">
+        <TerminalPanel title={labels.underlyingDetail} meta="current price · performance · source">
           <div className="space-y-3">
             {fcns.length === 0 && <EmptyLine>No FCN underlying detail yet.</EmptyLine>}
             {fcns.map((fcn) => (

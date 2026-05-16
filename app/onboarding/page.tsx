@@ -4,38 +4,23 @@ import Link from "next/link";
 
 import { AppShell } from "../components/layout/AppShell";
 import { TerminalPanel } from "../components/layout/TerminalPanel";
-
-const steps = [
-  {
-    title: "1. Create Account",
-    detail: "建立個人、家庭或 business account context。",
-    href: "/accounts",
-  },
-  {
-    title: "2. Create Portfolio",
-    detail: "在 account 底下建立第一個 portfolio。",
-    href: "/accounts",
-  },
-  {
-    title: "3. Add Asset / Import CSV",
-    detail: "手動新增資產，或匯入 CSV portfolio。",
-    href: "/input",
-  },
-  {
-    title: "4. Open Dashboard / Intelligence",
-    detail: "查看總覽、FCN 風險與 intelligence workspace。",
-    href: "/dashboard",
-  },
-];
+import { useI18n } from "../lib/i18n";
 
 export default function OnboardingPage() {
+  const { t } = useI18n();
+  const steps = [
+    { title: t("onboarding.step1"), detail: t("onboarding.step1Detail"), href: "/accounts" },
+    { title: t("onboarding.step2"), detail: t("onboarding.step2Detail"), href: "/accounts" },
+    { title: t("onboarding.step3"), detail: t("onboarding.step3Detail"), href: "/input" },
+    { title: t("onboarding.step4"), detail: t("onboarding.step4Detail"), href: "/dashboard" },
+  ];
   return (
     <AppShell
-      title="Onboarding / 啟動流程"
-      subtitle="A lightweight path into IXAI multi-portfolio operating mode."
+      title={t("page.onboarding")}
+      subtitle={t("onboarding.subtitle")}
     >
       <div className="space-y-4">
-        <TerminalPanel title="Start Here" meta="v3A">
+        <TerminalPanel title={t("onboarding.startHere")} meta="v3A">
           <div className="grid gap-3 md:grid-cols-2">
             {steps.map((step) => (
               <Link

@@ -19,13 +19,14 @@
  */
 
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const localesDir = resolve(__dirname, "..", "app", "locales");
+const appDir = resolve(__dirname, "..", "app");
 
 // ---------------------------------------------------------------------------
 // Mirror of resolveNestedKey() from app/lib/i18n.ts.
@@ -147,7 +148,12 @@ const REQUIRED_NAMESPACES = [
   "intelligence",
   "market",
   "portfolio",
+  "fcn",
   "alerts",
+  "accounts",
+  "onboarding",
+  "input",
+  "import",
   "settings",
   "errors",
   "status",
@@ -170,6 +176,7 @@ const REQUIRED_KEYS_EN = [
   "nav.import",
   "nav.accounts",
   "nav.settings",
+  "nav.short.dashboard",
   "page.dashboard",
   "page.portfolio",
   "page.fcn",
@@ -177,6 +184,8 @@ const REQUIRED_KEYS_EN = [
   "page.market",
   "page.alerts",
   "page.settings",
+  "page.accounts",
+  "page.onboarding",
   "empty.noPortfolio",
   "empty.noPortfolio.hint",
   "empty.noHoldings",
@@ -186,7 +195,21 @@ const REQUIRED_KEYS_EN = [
   "dashboard.aiOverview",
   "dashboard.assetAllocation",
   "dashboard.todayFocus",
+  "dashboard.sections.immediateAttention",
+  "dashboard.sections.analysisOverview",
+  "dashboard.sections.deepAnalysis",
   "dashboard.onboarding.step1",
+  "intelligence.whatToMonitor",
+  "intelligence.noTradingInstruction",
+  "market.news",
+  "portfolio.holdings",
+  "fcn.table",
+  "alerts.grouped",
+  "accounts.activeContext",
+  "onboarding.step1",
+  "settings.language",
+  "input.submitAsset",
+  "import.preview",
   "engine.portfolioTitle",
   "engine.marketTitle",
   "engine.fields.repeatedUnderlyings",
@@ -365,4 +388,72 @@ test("translate-style fallback: requested locale → en → key", () => {
   assert.equal(translate("common.retry", "en"), "Retry");
   assert.equal(translate("common.retry", "ja"), "Retry"); // falls back to en
   assert.equal(translate("common.missing", "ja"), "common.missing"); // raw key
+});
+
+test("ja and ko fallback to en, not zh-TW", () => {
+  const en = { page: { portfolio: "Portfolio Management" } };
+  const zhTW = { page: { portfolio: "資產管理" } };
+  const ja = { page: {} };
+  const ko = { page: {} };
+
+  function translate(key, locale) {
+    const dict = locale === "ja" ? ja : locale === "ko" ? ko : locale === "zh-TW" || locale === "zh-CN" ? zhTW : en;
+    const direct = resolveNestedKey(dict, key);
+    if (direct !== undefined) return direct;
+    const fallback = resolveNestedKey(locale === "zh-CN" ? zhTW : en, key);
+    return fallback ?? key;
+  }
+
+  assert.equal(translate("page.portfolio", "ja"), "Portfolio Management");
+  assert.equal(translate("page.portfolio", "ko"), "Portfolio Management");
+  assert.notEqual(translate("page.portfolio", "ja"), "資產管理");
+  assert.notEqual(translate("page.portfolio", "ko"), "資產管理");
+  assert.equal(translate("page.portfolio", "zh-CN"), "資產管理");
+});
+
+function listTsxFiles(dir) {
+  const files = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === "node_modules" || entry.name === ".next") continue;
+    const full = resolve(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...listTsxFiles(full));
+    } else if (entry.isFile() && entry.name.endsWith(".tsx")) {
+      files.push(full);
+    }
+  }
+  return files;
+}
+
+function stripComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+}
+
+test("visible UI does not expose hardcoded bilingual chrome or product-internal bands", () => {
+  const scopedFiles = listTsxFiles(appDir).filter((file) => !file.includes(`${"/login"}/`));
+  const bilingualPattern = /["'`](?=[^"'`]*[A-Za-z])(?=[^"'`]*[\u4e00-\u9fff])[^"'`]*\s\/\s[^"'`]*["'`]/;
+  const forbiddenPatterns = [
+    /const\s+labels\s*=\s*\{/,
+    /["'`]P[012]\s*·/,
+    /Top 3 monitoring priorities/,
+    /single name/i,
+    /theme cluster/i,
+  ];
+
+  for (const file of scopedFiles) {
+    const source = stripComments(readFileSync(file, "utf8"));
+    assert.ok(!bilingualPattern.test(source), `${file} contains hardcoded bilingual visible text`);
+    for (const pattern of forbiddenPatterns) {
+      assert.ok(!pattern.test(source), `${file} contains forbidden product language ${pattern}`);
+    }
+  }
+});
+
+test("preferences module dispatches same-tab locale sync event", () => {
+  const source = readFileSync(resolve(__dirname, "..", "app", "lib", "preferences.ts"), "utf8");
+  assert.match(source, /PREFERENCES_CHANGED_EVENT\s*=\s*"ixai:preferences-changed"/);
+  assert.match(source, /dispatchEvent\(new CustomEvent\(PREFERENCES_CHANGED_EVENT/);
+  assert.match(source, /addEventListener\(PREFERENCES_CHANGED_EVENT/);
 });

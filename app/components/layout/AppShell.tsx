@@ -17,16 +17,16 @@ import { landingPath, usePreferences } from "../../lib/preferences";
 import { useWorkspaceContext } from "../../lib/workspace-context";
 
 const navItems = [
-  { href: "/dashboard", labelKey: "nav.dashboard", short: "Home" },
-  { href: "/portfolio", labelKey: "nav.portfolio", short: "Portfolio" },
-  { href: "/fcn", labelKey: "nav.fcn", short: "FCN" },
-  { href: "/intelligence", labelKey: "nav.intelligence", short: "AI" },
-  { href: "/market", labelKey: "nav.market", short: "Market" },
-  { href: "/alerts", labelKey: "nav.alerts", short: "Alerts" },
-  { href: "/input", labelKey: "nav.input", short: "Input" },
-  { href: "/import", labelKey: "nav.import", short: "Import" },
-  { href: "/accounts", labelKey: "nav.accounts", short: "Accounts" },
-  { href: "/settings", labelKey: "nav.settings", short: "Settings" },
+  { href: "/dashboard", labelKey: "nav.dashboard", shortKey: "nav.short.dashboard" },
+  { href: "/portfolio", labelKey: "nav.portfolio", shortKey: "nav.short.portfolio" },
+  { href: "/fcn", labelKey: "nav.fcn", shortKey: "nav.short.fcn" },
+  { href: "/intelligence", labelKey: "nav.intelligence", shortKey: "nav.short.intelligence" },
+  { href: "/market", labelKey: "nav.market", shortKey: "nav.short.market" },
+  { href: "/alerts", labelKey: "nav.alerts", shortKey: "nav.short.alerts" },
+  { href: "/input", labelKey: "nav.input", shortKey: "nav.short.input" },
+  { href: "/import", labelKey: "nav.import", shortKey: "nav.short.import" },
+  { href: "/accounts", labelKey: "nav.accounts", shortKey: "nav.short.accounts" },
+  { href: "/settings", labelKey: "nav.settings", shortKey: "nav.short.settings" },
 ];
 
 export function AppShell({
@@ -148,46 +148,46 @@ export function AppShell({
             IXAI
           </div>
           <Link className="mt-1 block text-sm text-zinc-500 hover:text-zinc-300" href={defaultPath}>
-            Portfolio OS
+            {t("common.portfolioOS")}
           </Link>
 
           <div className="mt-4 space-y-2 border border-zinc-800 bg-black/20 p-2">
             <label className="block">
-              <span className="mb-1 block font-mono text-[10px] uppercase text-zinc-600">Account</span>
+              <span className="mb-1 block font-mono text-[10px] uppercase text-zinc-600">{t("common.account")}</span>
               <select
                 className="w-full border border-zinc-800 bg-black px-2 py-1.5 text-xs text-zinc-300 outline-none"
                 onChange={(event) => handleAccountChange(event.target.value)}
                 value={context.selectedAccountId}
               >
-                <option value="">Select account</option>
+                <option value="">{t("common.selectAccount")}</option>
                 {accounts.map((account) => (
                   <option key={account.id || account.name} value={account.id || ""}>
-                    {account.name || "Account"}
+                    {account.name || t("common.account")}
                   </option>
                 ))}
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block font-mono text-[10px] uppercase text-zinc-600">Portfolio</span>
+              <span className="mb-1 block font-mono text-[10px] uppercase text-zinc-600">{t("common.portfolio")}</span>
               <select
                 className="w-full border border-zinc-800 bg-black px-2 py-1.5 text-xs text-zinc-300 outline-none"
                 onChange={(event) => handlePortfolioChange(event.target.value)}
                 value={context.selectedPortfolioId}
               >
-                <option value="">Select portfolio</option>
+                <option value="">{t("common.selectPortfolio")}</option>
                 {portfolios.map((portfolio) => (
                   <option key={portfolio.id || portfolio.name} value={portfolio.id || ""}>
-                    {portfolio.name || "Portfolio"}
+                    {portfolio.name || t("common.portfolio")}
                   </option>
                 ))}
               </select>
             </label>
             <div className="truncate font-mono text-[10px] text-zinc-600">
-              Workspace: {context.lastActiveWorkspace || "dashboard"}
+              {t("common.workspace")}: {context.lastActiveWorkspace || "dashboard"}
             </div>
             {contextError && (
               <Link className="font-mono text-[10px] text-yellow-300" href="/accounts">
-                Select portfolio / 選擇投資組合
+                {t("common.selectPortfolio")}
               </Link>
             )}
           </div>
@@ -216,7 +216,7 @@ export function AppShell({
             onClick={handleLogout}
             type="button"
           >
-            Logout
+            {t("common.logout")}
           </button>
         </aside>
 
@@ -227,14 +227,14 @@ export function AppShell({
                 <div className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-300">
                   IXAI
                 </div>
-                <Link className="text-xs text-zinc-500" href={defaultPath}>Portfolio OS</Link>
+                <Link className="text-xs text-zinc-500" href={defaultPath}>{t("common.portfolioOS")}</Link>
               </div>
               <button
                 className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300"
                 onClick={handleLogout}
                 type="button"
               >
-                Logout
+                {t("common.logout")}
               </button>
             </div>
             <nav className="mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -250,17 +250,17 @@ export function AppShell({
                     href={item.href}
                     key={item.href}
                   >
-                    {item.short}
+                    {t(item.shortKey)}
                   </Link>
                 );
               })}
             </nav>
             <div className="mt-2 flex gap-2 overflow-x-auto pb-1 font-mono text-[10px] text-zinc-500">
               <Link className="shrink-0 border border-zinc-800 px-2 py-1" href="/accounts">
-                {context.selectedAccountName || "Select account"}
+                {context.selectedAccountName || t("common.selectAccount")}
               </Link>
               <Link className="shrink-0 border border-zinc-800 px-2 py-1" href="/accounts">
-                {context.selectedPortfolioName || "Select portfolio / 選擇投資組合"}
+                {context.selectedPortfolioName || t("common.selectPortfolio")}
               </Link>
             </div>
           </div>
@@ -268,19 +268,19 @@ export function AppShell({
           <div className={`mx-auto max-w-7xl px-4 md:px-6 ${compact ? "py-4 md:py-6" : "py-6 md:py-8"}`}>
             <header className={`border-b border-zinc-800 ${compact ? "mb-4 pb-4" : "mb-6 pb-5"}`}>
               <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-emerald-300">
-                IXAI Agent / 一玄AI · {preferences.locale}
+                {t("common.productName")} · {preferences.locale}
               </div>
               <h1 className={`${compact ? "mt-1 text-xl md:text-2xl" : "mt-2 text-2xl md:text-3xl"} font-semibold`}>{title}</h1>
               {subtitle && <p className="mt-2 text-sm text-zinc-500">{subtitle}</p>}
               <div className="mt-3 flex flex-wrap gap-2 font-mono text-[10px] text-zinc-500">
                 <Link className="border border-zinc-800 px-2 py-1 hover:text-emerald-300" href="/accounts">
-                  {context.selectedAccountName || "Select account"}
+                  {context.selectedAccountName || t("common.selectAccount")}
                 </Link>
                 <Link className="border border-zinc-800 px-2 py-1 hover:text-emerald-300" href="/accounts">
-                  {context.selectedPortfolioName || "Select portfolio / 選擇投資組合"}
+                  {context.selectedPortfolioName || t("common.selectPortfolio")}
                 </Link>
                 <span className="border border-zinc-800 px-2 py-1">
-                  Last active: {context.lastActiveWorkspace || "dashboard"}
+                  {t("common.lastActive")}: {context.lastActiveWorkspace || "dashboard"}
                 </span>
               </div>
             </header>

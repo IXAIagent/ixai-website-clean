@@ -277,9 +277,9 @@ export default function DashboardPage() {
           )}
           {hasHoldings && (
             <>
-              <SectionDivider label="P0 · Immediate attention" hint="top 3 focus" />
+              <SectionDivider label={t("dashboard.sections.immediateAttention")} hint={t("dashboard.sections.topObservationPriorities")} />
               <DashboardTodayFocus items={todayFocusItems} status={todayFocusStatus} />
-              <SectionDivider label="P1 · Engines" hint="compact view" />
+              <SectionDivider label={t("dashboard.sections.analysisOverview")} hint={t("dashboard.sections.compactView")} />
               <PortfolioEnginePanel
                 portfolioId={dashWorkspaceCtx.context.selectedPortfolioId}
                 compact
@@ -290,7 +290,7 @@ export default function DashboardPage() {
               />
             </>
           )}
-          <TerminalPanel title={t("dashboard.aiOverview")} meta={preferences.compactMode ? "P0 · compact" : "P0"}>
+          <TerminalPanel title={t("dashboard.aiOverview")} meta={preferences.compactMode ? t("dashboard.meta.compact") : t("dashboard.meta.overview")}>
             <div className="border-l border-emerald-400/40 bg-black/30 px-3 py-2 font-mono text-sm leading-6 text-zinc-300">
               {overviewLine}
             </div>
@@ -352,7 +352,7 @@ export default function DashboardPage() {
             <div className="border border-zinc-800 bg-zinc-950 p-3">
               <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">Memory</div>
               <div className={isStale ? "mt-2 text-xl font-semibold text-yellow-300" : "mt-2 text-xl font-semibold text-emerald-300"}>
-                {isStale ? "STALE / BUILDING" : "FRESH"}
+                {isStale ? t("dashboard.status.staleBuilding") : t("common.fresh")}
               </div>
             </div>
           </section>
@@ -428,7 +428,7 @@ export default function DashboardPage() {
             </TerminalPanel>
           </section>
 
-          <SectionDivider label="P2 · Deep analysis" hint="default collapsed" />
+          <SectionDivider label={t("dashboard.sections.deepAnalysis")} hint={t("dashboard.sections.defaultCollapsed")} />
           <TerminalPanel title={t("dashboard.scheduler")} meta="history">
             <div className="grid gap-2 font-mono text-xs md:grid-cols-4">
               <div>
