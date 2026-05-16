@@ -8,20 +8,36 @@ import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
 import {
   CopilotExplainResponse,
   explainCopilot,
+  AllocationItem,
+  FCNPositionResponse,
   getIntelligenceGraph,
   getIntelligenceReasoning,
   getIntelligenceScenarios,
   getIntelligenceTimeline,
+  getMyAssetAllocation,
+  getMyRiskOverview,
+  getMySummary,
+  getPortfolioPriority,
   getPortfolioSummaryV2A,
   IntelligenceGraphResponse,
+  PortfolioPriorityResponse,
   PortfolioSummaryV2AResponse,
   ReasoningSystemResponse,
+  RiskOverviewResponse,
   ScenarioResult,
   ScenarioResponse,
+  SummaryResponse,
   TimelineIntelligenceResponse,
   TimelineWindowResponse,
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
+import {
+  buildCrossAssetRisks,
+  buildTodayFocus,
+  focusStatus,
+  sanitizeAdviceText,
+  TodayFocusItem,
+} from "../lib/intelligence-priority";
 
 const labels = {
   title: "Intelligence / AI 分析",
@@ -33,6 +49,8 @@ const labels = {
   scenarios: "Scenario Watch / 情境監控",
   graph: "Intelligence Graph / 關聯圖",
   copilot: "Copilot Insight / 助理解讀",
+  todayFocus: "Today Focus / 今日重點",
+  crossAsset: "Cross-Asset Reasoning / 跨資產推理",
 };
 
 function textValue(value: unknown, fallback = "-") {
@@ -79,6 +97,28 @@ function DataRow({ label, value }: { label: string; value: unknown }) {
   );
 }
 
+function severityClass(value?: string | null) {
+  const normalized = (value || "").toLowerCase();
+  if (normalized.includes("critical")) return "border-red-500/50 text-red-300";
+  if (normalized.includes("elevated") || normalized.includes("high")) return "border-yellow-500/50 text-yellow-300";
+  if (normalized.includes("clear")) return "border-emerald-500/50 text-emerald-300";
+  return "border-zinc-700 text-zinc-400";
+}
+
+function mergeFcns(summary: SummaryResponse | null) {
+  const items = [
+    ...(Array.isArray(summary?.fcn_positions) ? summary.fcn_positions : []),
+    ...(Array.isArray(summary?.fcn_summary) ? summary.fcn_summary : []),
+    ...(Array.isArray(summary?.fcn_analysis) ? summary.fcn_analysis : []),
+  ];
+  const map = new Map<string, FCNPositionResponse>();
+  items.forEach((item, index) => {
+    const key = String(item.id || item.fcn_code || item.name || item.code || index);
+    map.set(key, { ...map.get(key), ...item });
+  });
+  return Array.from(map.values());
+}
+
 function WindowCard({ item }: { item: TimelineWindowResponse }) {
   return (
     <div className="border border-zinc-800 bg-black/20 p-3">
@@ -106,6 +146,10 @@ function WindowCard({ item }: { item: TimelineWindowResponse }) {
 export default function IntelligencePage() {
   const { t } = useI18n();
   const [summary, setSummary] = useState<PortfolioSummaryV2AResponse | null>(null);
+  const [portfolioSummary, setPortfolioSummary] = useState<SummaryResponse | null>(null);
+  const [riskOverview, setRiskOverview] = useState<RiskOverviewResponse | null>(null);
+  const [allocation, setAllocation] = useState<AllocationItem[]>([]);
+  const [priority, setPriority] = useState<PortfolioPriorityResponse | null>(null);
   const [timeline, setTimeline] = useState<TimelineIntelligenceResponse | null>(null);
   const [reasoning, setReasoning] = useState<ReasoningSystemResponse | null>(null);
   const [scenarios, setScenarios] = useState<ScenarioResult[]>([]);
@@ -125,6 +169,10 @@ export default function IntelligencePage() {
         scenarioData,
         graphData,
         copilotData,
+        portfolioSummaryData,
+        riskOverviewData,
+        allocationData,
+        priorityData,
       ] = await Promise.all([
         getPortfolioSummaryV2A().catch((err) => {
           nextErrors.push(err instanceof Error ? err.message : "portfolio-summary unavailable");
@@ -135,9 +183,17 @@ export default function IntelligencePage() {
         getIntelligenceScenarios().catch(() => null as ScenarioResponse | null),
         getIntelligenceGraph().catch(() => null),
         explainCopilot("Explain the current portfolio intelligence state in one short paragraph.").catch(() => null),
+        getMySummary().catch(() => null),
+        getMyRiskOverview().catch(() => null),
+        getMyAssetAllocation().catch(() => null),
+        getPortfolioPriority().catch(() => null),
       ]);
 
       setSummary(summaryData);
+      setPortfolioSummary(portfolioSummaryData);
+      setRiskOverview(riskOverviewData);
+      setAllocation(Array.isArray(allocationData?.items) ? allocationData.items : []);
+      setPriority(priorityData);
       setTimeline(timelineData);
       setReasoning(reasoningData);
       setScenarios(Array.isArray(scenarioData?.scenarios) ? scenarioData.scenarios : []);
@@ -160,6 +216,31 @@ export default function IntelligencePage() {
   const graphConnections = listItems(graph?.strongest_connections, "Connections still building").slice(0, 6);
   const graphRisks = listItems(graph?.top_correlated_risks, "No correlated risk yet").slice(0, 6);
   const scenarioRows = useMemo(() => scenarios.slice(0, 6), [scenarios]);
+  const fcns = useMemo(() => mergeFcns(portfolioSummary), [portfolioSummary]);
+  const todayFocus = useMemo(
+    () =>
+      buildTodayFocus({
+        summary: portfolioSummary,
+        risk: riskOverview,
+        fcnItems: fcns,
+        priorityArticles: Array.isArray(priority?.top_alerts) ? priority.top_alerts : [],
+        intelligenceSummary: summary,
+        timeline,
+        allocation,
+      }),
+    [allocation, fcns, portfolioSummary, priority, riskOverview, summary, timeline],
+  );
+  const crossAssetRisks = useMemo(
+    () =>
+      buildCrossAssetRisks({
+        summary: portfolioSummary,
+        fcnItems: fcns,
+        intelligenceSummary: summary,
+        timeline,
+      }),
+    [fcns, portfolioSummary, summary, timeline],
+  );
+  const todayStatus = focusStatus(todayFocus);
 
   return (
     <AppShell title={t("page.intelligence")} subtitle={labels.subtitle}>
@@ -196,10 +277,38 @@ export default function IntelligencePage() {
           </div>
         </TerminalPanel>
 
+        <TerminalPanel title={labels.todayFocus} meta={todayStatus}>
+          <div className="mb-3 flex flex-wrap items-center gap-2 font-mono text-xs">
+            <span className={`border px-2 py-1 uppercase ${severityClass(todayStatus)}`}>
+              STATUS: {todayStatus}
+            </span>
+            <span className="text-zinc-500">Top 3 monitoring priorities · no trading instruction</span>
+          </div>
+          <div className="divide-y divide-zinc-900 border border-zinc-800">
+            {todayFocus.map((item: TodayFocusItem) => (
+              <div className="grid gap-2 px-3 py-2 text-xs md:grid-cols-[0.8fr_1fr_1.8fr_1fr]" key={`${item.category}-${item.symbol}-${item.title}`}>
+                <div>
+                  <span className={`border px-2 py-0.5 font-mono text-[10px] uppercase ${severityClass(item.severity)}`}>
+                    {item.severity}
+                  </span>
+                  <div className="mt-1 font-mono text-zinc-500">{item.category}</div>
+                </div>
+                <div>
+                  <div className="font-semibold text-zinc-100">{item.title}</div>
+                  <div className="font-mono text-[10px] text-zinc-500">{item.symbol}</div>
+                </div>
+                <div className="text-zinc-400">{sanitizeAdviceText(item.reason)}</div>
+                <div className="font-mono text-zinc-300">Action: {item.recommended_monitoring_action}</div>
+              </div>
+            ))}
+          </div>
+        </TerminalPanel>
+
         <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
           <TerminalPanel title={labels.explainability} meta="why / what changed">
-            <DataRow label="WHY RISK" value={explainability?.why_risk_increased} />
-            <DataRow label="CHANGED TODAY" value={explainability?.what_changed_today} />
+            <DataRow label="WHY NOW" value={explainability?.why_risk_increased || todayFocus[0]?.reason} />
+            <DataRow label="WHAT CHANGED" value={explainability?.what_changed_today} />
+            <DataRow label="WHAT TO MONITOR" value={todayFocus.map((item) => item.recommended_monitoring_action).join(" · ")} />
             <DataRow label="DRIVER" value={explainability?.dominant_driver} />
             <DataRow label="HIDDEN CORR" value={explainability?.hidden_correlation} />
             <DataRow label="SYSTEMIC" value={explainability?.systemic_risk} />
@@ -222,6 +331,26 @@ export default function IntelligencePage() {
             {timelineWindows.length === 0 && <EmptyLine>History still accumulating / 歷史資料累積中</EmptyLine>}
             {timelineWindows.map((item) => (
               <WindowCard item={item} key={textValue(item.window)} />
+            ))}
+          </div>
+        </TerminalPanel>
+
+        <TerminalPanel title={labels.crossAsset} meta="equity / fcn / crypto / macro / cash">
+          <div className="grid gap-3 lg:grid-cols-5">
+            {crossAssetRisks.map((risk) => (
+              <div className="border border-zinc-800 bg-black/20 p-3" key={risk.label}>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="font-mono text-xs uppercase text-zinc-300">{risk.label}</div>
+                  <span className={`border px-2 py-0.5 font-mono text-[10px] uppercase ${severityClass(risk.state)}`}>
+                    {risk.state}
+                  </span>
+                </div>
+                <div className="text-xs leading-5 text-zinc-400">{risk.driver}</div>
+                <div className="mt-2 font-mono text-[10px] text-zinc-600">
+                  {risk.relatedSymbols.length > 0 ? risk.relatedSymbols.join(" · ") : "symbols pending"}
+                </div>
+                <div className="mt-2 text-[11px] leading-5 text-zinc-500">{risk.monitoringNote}</div>
+              </div>
             ))}
           </div>
         </TerminalPanel>

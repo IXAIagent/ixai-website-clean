@@ -9,10 +9,13 @@ import {
   AccountResponse,
   createAccount,
   createAccountPortfolio,
+  getAccountIntelligenceSummary,
   getAccountPortfolios,
   getAccounts,
+  PortfolioSummaryV2AResponse,
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
+import { useWorkspaceContext } from "../lib/workspace-context";
 
 function textValue(value: unknown, fallback = "-") {
   if (typeof value === "string" && value.trim()) return value.trim();
@@ -22,8 +25,10 @@ function textValue(value: unknown, fallback = "-") {
 
 export default function AccountsPage() {
   const { t } = useI18n();
+  const { context, setWorkspaceContext } = useWorkspaceContext();
   const [accounts, setAccounts] = useState<AccountResponse[]>([]);
   const [portfolios, setPortfolios] = useState<AccountPortfolioResponse[]>([]);
+  const [accountIntel, setAccountIntel] = useState<PortfolioSummaryV2AResponse | null>(null);
   const [selectedAccount, setSelectedAccount] = useState("");
   const [accountName, setAccountName] = useState("");
   const [accountType, setAccountType] = useState("individual");
@@ -40,8 +45,11 @@ export default function AccountsPage() {
     try {
       const response = await getAccountPortfolios(accountId);
       setPortfolios(Array.isArray(response.items) ? response.items : []);
+      const intel = await getAccountIntelligenceSummary(accountId).catch(() => null);
+      setAccountIntel(intel);
     } catch {
       setPortfolios([]);
+      setAccountIntel(null);
     }
   }, []);
 
@@ -50,14 +58,14 @@ export default function AccountsPage() {
       const response = await getAccounts();
       const items = Array.isArray(response.items) ? response.items : [];
       setAccounts(items);
-      const firstId = items[0]?.id || "";
+      const firstId = context.selectedAccountId || items[0]?.id || "";
       setSelectedAccount((current) => current || firstId);
       if (firstId) await loadPortfolios(firstId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Accounts unavailable.");
       setAccounts([]);
     }
-  }, [loadPortfolios]);
+  }, [context.selectedAccountId, loadPortfolios]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -78,6 +86,12 @@ export default function AccountsPage() {
       await loadAccounts();
       if (account.id) {
         setSelectedAccount(account.id);
+        setWorkspaceContext({
+          selectedAccountId: account.id,
+          selectedAccountName: account.name || "",
+          selectedPortfolioId: "",
+          selectedPortfolioName: "",
+        });
         await loadPortfolios(account.id);
       }
     } catch (err) {
@@ -94,9 +108,15 @@ export default function AccountsPage() {
     setError("");
     setStatus("");
     try {
-      await createAccountPortfolio(selectedAccount, portfolioName || "New Portfolio");
+      const portfolio = await createAccountPortfolio(selectedAccount, portfolioName || "New Portfolio");
       setStatus("Portfolio created.");
       setPortfolioName("");
+      if (portfolio.id) {
+        setWorkspaceContext({
+          selectedPortfolioId: portfolio.id,
+          selectedPortfolioName: portfolio.name || portfolioName || "New Portfolio",
+        });
+      }
       await loadPortfolios(selectedAccount);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create portfolio failed.");
@@ -106,12 +126,50 @@ export default function AccountsPage() {
   }
 
   const selected = accounts.find((account) => account.id === selectedAccount);
+  const selectedPortfolio = portfolios.find((portfolio) => portfolio.id === context.selectedPortfolioId);
 
   return (
     <AppShell
       title={t("page.accounts")}
       subtitle="Multi-account and multi-portfolio foundation for future client/family/business workspaces."
     >
+      <div className="space-y-4">
+        {accounts.length === 0 && (
+          <TerminalPanel title="Onboarding / 啟動流程" meta="multi-portfolio">
+            <div className="grid gap-2 font-mono text-xs md:grid-cols-4">
+              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">1. Create Account</div>
+              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">2. Create Portfolio</div>
+              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">3. Add Asset / Import CSV</div>
+              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">4. Open Dashboard / Intelligence</div>
+            </div>
+            <div className="mt-3 text-sm text-zinc-500">
+              空帳戶狀態會先引導建立 account 與 portfolio，不會阻擋既有使用者。
+            </div>
+          </TerminalPanel>
+        )}
+
+        <TerminalPanel title="Active Context / 目前操作組合" meta="workspace memory">
+          <div className="grid gap-3 font-mono text-xs md:grid-cols-4">
+            <div className="border border-zinc-800 bg-black/20 p-3">
+              <div className="text-zinc-600">ACCOUNT</div>
+              <div className="mt-1 text-zinc-100">{context.selectedAccountName || selected?.name || "Select account / 選擇帳戶"}</div>
+            </div>
+            <div className="border border-zinc-800 bg-black/20 p-3">
+              <div className="text-zinc-600">PORTFOLIO</div>
+              <div className="mt-1 text-zinc-100">{context.selectedPortfolioName || selectedPortfolio?.name || "Select portfolio / 選擇投資組合"}</div>
+            </div>
+            <div className="border border-zinc-800 bg-black/20 p-3">
+              <div className="text-zinc-600">LAST WORKSPACE</div>
+              <div className="mt-1 text-zinc-100">{context.lastActiveWorkspace}</div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <a className="border border-zinc-700 px-3 py-2 text-zinc-300 hover:text-emerald-200" href="/input">Input</a>
+              <a className="border border-zinc-700 px-3 py-2 text-zinc-300 hover:text-emerald-200" href="/import">Import</a>
+              <a className="border border-zinc-700 px-3 py-2 text-zinc-300 hover:text-emerald-200" href="/dashboard">Dashboard</a>
+            </div>
+          </div>
+        </TerminalPanel>
+
       <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-4">
           <TerminalPanel title="Create Account" meta="v3">
@@ -153,6 +211,12 @@ export default function AccountsPage() {
                   onClick={() => {
                     const accountId = account.id || "";
                     setSelectedAccount(accountId);
+                    setWorkspaceContext({
+                      selectedAccountId: accountId,
+                      selectedAccountName: account.name || "",
+                      selectedPortfolioId: "",
+                      selectedPortfolioName: "",
+                    });
                     void loadPortfolios(accountId);
                   }}
                   type="button"
@@ -185,6 +249,10 @@ export default function AccountsPage() {
                   <div className="text-zinc-600">PORTFOLIOS</div>
                   <div className="mt-1 text-zinc-100">{portfolios.length}</div>
                 </div>
+                <div className="border border-zinc-800 bg-black/20 p-3">
+                  <div className="text-zinc-600">INTEL</div>
+                  <div className="mt-1 text-zinc-100">{textValue(accountIntel?.regime || accountIntel?.dominant_risk, "fail-soft ready")}</div>
+                </div>
               </div>
             )}
           </TerminalPanel>
@@ -208,8 +276,27 @@ export default function AccountsPage() {
             <div className="divide-y divide-zinc-800 border border-zinc-800">
               {portfolios.length === 0 && <EmptyLine>No portfolios in this account.</EmptyLine>}
               {portfolios.map((portfolio) => (
-                <div className="px-3 py-2 font-mono text-xs" key={portfolio.id || portfolio.name}>
-                  <div className="text-zinc-100">{textValue(portfolio.name, "Portfolio")}</div>
+                <div
+                  className={`px-3 py-2 font-mono text-xs ${
+                    context.selectedPortfolioId === portfolio.id ? "bg-emerald-400/10" : ""
+                  }`}
+                  key={portfolio.id || portfolio.name}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-zinc-100">{textValue(portfolio.name, "Portfolio")}</div>
+                    <button
+                      className="border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300 hover:border-emerald-400/60 hover:text-emerald-200"
+                      onClick={() => setWorkspaceContext({
+                        selectedAccountId: selectedAccount,
+                        selectedAccountName: selected?.name || "",
+                        selectedPortfolioId: portfolio.id || "",
+                        selectedPortfolioName: portfolio.name || "",
+                      })}
+                      type="button"
+                    >
+                      {context.selectedPortfolioId === portfolio.id ? "ACTIVE" : "Set active"}
+                    </button>
+                  </div>
                   <div className="mt-1 text-zinc-500">
                     {textValue(portfolio.base_currency, "USD")} · {textValue(portfolio.id, "id pending")}
                   </div>
@@ -218,6 +305,7 @@ export default function AccountsPage() {
             </div>
           </TerminalPanel>
         </div>
+      </div>
       </div>
     </AppShell>
   );

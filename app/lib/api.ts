@@ -751,6 +751,10 @@ export function getAccounts() {
   return apiFetch<AccountsListResponse>("/api/v1/accounts");
 }
 
+export function getAccount(accountId: string) {
+  return apiFetch<AccountResponse>(`/api/v1/accounts/${encodeURIComponent(accountId)}`);
+}
+
 export function createAccount(name: string, accountType = "individual") {
   return apiFetch<AccountResponse>("/api/v1/accounts", {
     method: "POST",
@@ -771,6 +775,12 @@ export function createAccountPortfolio(accountId: string, name: string, baseCurr
       method: "POST",
       body: JSON.stringify({ name, base_currency: baseCurrency }),
     },
+  );
+}
+
+export function getAccountIntelligenceSummary(accountId: string) {
+  return apiFetch<PortfolioSummaryV2AResponse>(
+    `/api/v1/accounts/${encodeURIComponent(accountId)}/intelligence/summary`,
   );
 }
 
