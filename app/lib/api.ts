@@ -241,6 +241,8 @@ export type AddCryptoPayload = {
   current_price?: number | null;
   asset_type?: string;
   leverage?: number | null;
+  grid_lower?: number | null;
+  grid_upper?: number | null;
 };
 
 export type AddCashPayload = {
@@ -251,12 +253,20 @@ export type AddCashPayload = {
 export type AddFcnPayload = {
   name?: string | null;
   fcn_code?: string | null;
+  issuer?: string | null;
   notional_amount?: number | null;
   underlyings?: string | null;
-  underlying_details?: Array<{ symbol: string; initial_price?: number | null }> | null;
+  underlying_details?: Array<{ symbol: string; initial_price?: number | null; weight?: number | null }> | null;
   worst_of_symbol?: string | null;
   ki_level?: number | null;
   ko_level?: number | null;
+  strike_level?: number | null;
+  coupon_rate?: number | null;
+  tenor_months?: number | null;
+  settlement_currency?: string | null;
+  coupon_frequency?: string | null;
+  observation_dates_json?: string | null;
+  coupon_dates_json?: string | null;
 };
 
 export type AssetCandidate = {

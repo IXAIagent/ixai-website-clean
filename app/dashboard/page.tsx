@@ -10,6 +10,7 @@ import { OnboardingChecklist } from "../components/dashboard/OnboardingChecklist
 import { PortfolioEnginePanel } from "../components/intelligence/PortfolioEnginePanel";
 import { MarketEnginePanel } from "../components/market/MarketEnginePanel";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
+import { ExpandablePanel } from "../components/primitives/ExpandablePanel";
 import { SectionDivider } from "../components/primitives/SectionDivider";
 import { useWorkspaceContext } from "../lib/workspace-context";
 import {
@@ -279,15 +280,6 @@ export default function DashboardPage() {
             <>
               <SectionDivider label={t("dashboard.sections.immediateAttention")} hint={t("dashboard.sections.topObservationPriorities")} />
               <DashboardTodayFocus items={todayFocusItems} status={todayFocusStatus} />
-              <SectionDivider label={t("dashboard.sections.analysisOverview")} hint={t("dashboard.sections.compactView")} />
-              <PortfolioEnginePanel
-                portfolioId={dashWorkspaceCtx.context.selectedPortfolioId}
-                compact
-              />
-              <MarketEnginePanel
-                portfolioId={dashWorkspaceCtx.context.selectedPortfolioId}
-                compact
-              />
             </>
           )}
           <TerminalPanel title={t("dashboard.aiOverview")} meta={preferences.compactMode ? t("dashboard.meta.compact") : t("dashboard.meta.overview")}>
@@ -429,6 +421,20 @@ export default function DashboardPage() {
           </section>
 
           <SectionDivider label={t("dashboard.sections.deepAnalysis")} hint={t("dashboard.sections.defaultCollapsed")} />
+          <div className="grid gap-3 lg:grid-cols-2">
+            <ExpandablePanel title={t("dashboard.marketRegime")} meta={t("dashboard.sections.defaultCollapsed")}>
+              <MarketEnginePanel
+                portfolioId={dashWorkspaceCtx.context.selectedPortfolioId}
+                compact
+              />
+            </ExpandablePanel>
+            <ExpandablePanel title={t("dashboard.riskDecomposition")} meta={t("dashboard.sections.defaultCollapsed")}>
+              <PortfolioEnginePanel
+                portfolioId={dashWorkspaceCtx.context.selectedPortfolioId}
+                compact
+              />
+            </ExpandablePanel>
+          </div>
           <TerminalPanel title={t("dashboard.scheduler")} meta="history">
             <div className="grid gap-2 font-mono text-xs md:grid-cols-4">
               <div>

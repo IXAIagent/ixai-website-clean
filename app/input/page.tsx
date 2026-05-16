@@ -19,8 +19,10 @@ import {
   getStocks,
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
+import { normalizeStockTicker, type StockMarket } from "../lib/workflow-utils";
 
 type AssetType = "stock" | "fcn" | "crypto" | "cash";
+type CryptoMode = "spot" | "grid" | "dual" | "earn";
 type RecentPosition = { type: string; label: string; detail: string };
 
 // v4.9D: labels resolved through useI18n inside the component (was hardcoded
@@ -45,6 +47,12 @@ function money(value: unknown) {
 function inputClass() {
   return "w-full border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-emerald-400";
 }
+
+const stockMarkets: StockMarket[] = ["US", "TW", "HK", "JP", "KR"];
+const cashCurrencies = ["USD", "TWD", "HKD", "JPY", "KRW", "EUR", "GBP", "USDT", "USDC"];
+const observationTypes = ["American", "European"];
+const couponFrequencies = ["monthly", "quarterly"];
+const cryptoModes: CryptoMode[] = ["spot", "grid", "dual", "earn"];
 
 export default function InputWorkspacePage() {
   const { t } = useI18n();
@@ -83,9 +91,28 @@ export default function InputWorkspacePage() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [stock, setStock] = useState({ symbol: "", quantity: "", avg_price: "", current_price: "" });
-  const [fcn, setFcn] = useState({ name: "", worst_of: "", notional: "", ki: "", ko: "" });
+  const [stock, setStock] = useState({ symbol: "", market: "US" as StockMarket, quantity: "", avg_price: "", current_price: "" });
+  const [fcn, setFcn] = useState({
+    name: "",
+    issuer: "",
+    currency: "USD",
+    coupon_rate: "",
+    tenor_months: "",
+    notional: "",
+    strike: "",
+    ki: "",
+    ko: "",
+    observation_type: "American",
+    coupon_frequency: "monthly",
+    observation_dates: "",
+    coupon_dates: "",
+  });
+  const [underlyings, setUnderlyings] = useState([{ symbol: "", initial_price: "", weight: "" }]);
+  const [cryptoMode, setCryptoMode] = useState<CryptoMode>("spot");
   const [crypto, setCrypto] = useState({ symbol: "", quantity: "", avg_price: "", current_price: "" });
+  const [cryptoGrid, setCryptoGrid] = useState({ symbol: "", lower: "", upper: "", grid_count: "", leverage: "", margin: "", direction: "Long grid" });
+  const [cryptoDual, setCryptoDual] = useState({ asset: "BTC", direction: "Buy low", target_price: "", apr: "", settlement_date: "" });
+  const [cryptoEarn, setCryptoEarn] = useState({ asset: "USDT", apr: "", amount: "", duration: "" });
   const [cash, setCash] = useState({ currency: "USD", amount: "" });
 
   async function loadAccounts() {
@@ -119,7 +146,7 @@ export default function InputWorkspacePage() {
         ...stocks.slice(0, 3).map((item) => ({
           type: labels.stock,
           label: textValue(item.symbol, "STOCK"),
-          detail: `${textValue(item.quantity, "0")} sh · ${money(item.current_value)}`,
+          detail: `${t("input.shares")} ${textValue(item.quantity, "0")} · ${t("input.avgCost")} ${money(item.avg_price)} · ${t("input.currentPrice")} ${money(item.current_price)}`,
         })),
         ...fcns.slice(0, 3).map((item) => ({
           type: "FCN",
@@ -161,7 +188,7 @@ export default function InputWorkspacePage() {
     setStatus("");
     try {
       if (assetType === "stock") {
-        const symbol = stock.symbol.trim().toUpperCase();
+        const symbol = normalizeStockTicker(stock.symbol, stock.market);
         const quantity = positiveNumber(stock.quantity);
         const avgPrice = positiveNumber(stock.avg_price);
         const currentPrice = positiveNumber(stock.current_price);
@@ -194,49 +221,70 @@ export default function InputWorkspacePage() {
           avg_price: avgPrice,
           current_price: currentPrice,
         });
-        setStock({ symbol: "", quantity: "", avg_price: "", current_price: "" });
+        setStock({ symbol: "", market: "US", quantity: "", avg_price: "", current_price: "" });
       } else if (assetType === "crypto") {
-        const symbol = crypto.symbol.trim().toUpperCase();
-        const quantity = positiveNumber(crypto.quantity);
-        const avgPrice = crypto.avg_price.trim() ? positiveNumber(crypto.avg_price) : null;
-        const currentPrice = positiveNumber(crypto.current_price);
-        if (!symbol) {
-          setError(t("input.errors.symbolRequired"));
-          setSaving(false);
-          return;
+        if (cryptoMode === "spot") {
+          const symbol = crypto.symbol.trim().toUpperCase();
+          const quantity = positiveNumber(crypto.quantity);
+          const avgPrice = positiveNumber(crypto.avg_price);
+          const currentPrice = positiveNumber(crypto.current_price);
+          if (!symbol) {
+            setError(t("input.errors.symbolRequired"));
+            setSaving(false);
+            return;
+          }
+          if (quantity === null) {
+            setError(t("input.errors.quantityRequired"));
+            setSaving(false);
+            return;
+          }
+          if (avgPrice === null) {
+            setError(t("input.errors.avgPriceRequired"));
+            setSaving(false);
+            return;
+          }
+          if (currentPrice === null) {
+            setError(t("input.errors.currentPriceRequired"));
+            setSaving(false);
+            return;
+          }
+          await addCrypto({ symbol, quantity, avg_price: avgPrice, current_price: currentPrice, asset_type: "spot" });
+          setCrypto({ symbol: "", quantity: "", avg_price: "", current_price: "" });
+        } else if (cryptoMode === "grid") {
+          const symbol = cryptoGrid.symbol.trim().toUpperCase();
+          const lower = positiveNumber(cryptoGrid.lower);
+          const upper = positiveNumber(cryptoGrid.upper);
+          const gridCount = positiveNumber(cryptoGrid.grid_count);
+          const leverage = positiveNumber(cryptoGrid.leverage);
+          const margin = positiveNumber(cryptoGrid.margin);
+          if (!symbol || lower === null || upper === null || gridCount === null || leverage === null || margin === null) {
+            setError(t("input.errors.cryptoStrategyRequired"));
+            setSaving(false);
+            return;
+          }
+          await addCrypto({ symbol, quantity: margin, avg_price: lower, current_price: upper, asset_type: `grid:${cryptoGrid.direction}`, leverage, grid_lower: lower, grid_upper: upper });
+          setCryptoGrid({ symbol: "", lower: "", upper: "", grid_count: "", leverage: "", margin: "", direction: "Long grid" });
+        } else if (cryptoMode === "dual") {
+          const target = positiveNumber(cryptoDual.target_price);
+          const apr = positiveNumber(cryptoDual.apr);
+          if (!cryptoDual.asset.trim() || target === null || apr === null || !cryptoDual.settlement_date.trim()) {
+            setError(t("input.errors.cryptoStrategyRequired"));
+            setSaving(false);
+            return;
+          }
+          await addCrypto({ symbol: cryptoDual.asset.trim().toUpperCase(), quantity: 1, avg_price: apr, current_price: target, asset_type: `dual:${cryptoDual.direction}` });
+          setCryptoDual({ asset: "BTC", direction: "Buy low", target_price: "", apr: "", settlement_date: "" });
+        } else {
+          const amount = positiveNumber(cryptoEarn.amount);
+          const apr = positiveNumber(cryptoEarn.apr);
+          if (!cryptoEarn.asset.trim() || amount === null || apr === null || !cryptoEarn.duration.trim()) {
+            setError(t("input.errors.cryptoStrategyRequired"));
+            setSaving(false);
+            return;
+          }
+          await addCrypto({ symbol: cryptoEarn.asset.trim().toUpperCase(), quantity: amount, avg_price: 1, current_price: 1, asset_type: `stablecoin_earn:${cryptoEarn.duration}:${apr}` });
+          setCryptoEarn({ asset: "USDT", apr: "", amount: "", duration: "" });
         }
-        if (quantity === null) {
-          setError(t("input.errors.quantityRequired"));
-          setSaving(false);
-          return;
-        }
-        if (crypto.avg_price.trim() && avgPrice === null) {
-          setError(t("input.errors.avgPriceRequired"));
-          setSaving(false);
-          return;
-        }
-        if (currentPrice === null) {
-          setError(t("input.errors.currentPriceRequired"));
-          setSaving(false);
-          return;
-        }
-        if (process.env.NODE_ENV === "development") {
-          console.debug("IXAI crypto payload", {
-            symbol,
-            quantity,
-            avg_price: avgPrice,
-            current_price: currentPrice,
-            asset_type: "spot",
-          });
-        }
-        await addCrypto({
-          symbol,
-          quantity,
-          avg_price: avgPrice,
-          current_price: currentPrice,
-          asset_type: "spot",
-        });
-        setCrypto({ symbol: "", quantity: "", avg_price: "", current_price: "" });
       } else if (assetType === "cash") {
         const currency = cash.currency.trim().toUpperCase();
         const amount = positiveNumber(cash.amount);
@@ -259,10 +307,15 @@ export default function InputWorkspacePage() {
         // v4.9E: FCN validation — `numberValue("")` silently returned 0 so
         // empty notional was submitted as $0. Validate explicitly and surface
         // a localized error before sending the payload.
-        const notionalRaw = fcn.notional.trim();
-        const notionalNum = Number(notionalRaw);
-        if (!notionalRaw || !Number.isFinite(notionalNum) || notionalNum <= 0) {
+        const notionalNum = positiveNumber(fcn.notional);
+        const strikeNum = positiveNumber(fcn.strike);
+        if (notionalNum === null) {
           setError(t("input.errors.fcnNotionalRequired"));
+          setSaving(false);
+          return;
+        }
+        if (strikeNum === null) {
+          setError(t("input.errors.fcnInvalidStrike"));
           setSaving(false);
           return;
         }
@@ -288,18 +341,58 @@ export default function InputWorkspacePage() {
           }
           koNum = parsedKo;
         }
+        if (kiNum === null || koNum === null) {
+          setError(t("input.errors.fcnBarrierRequired"));
+          setSaving(false);
+          return;
+        }
+        const normalizedUnderlyings = underlyings
+          .map((item) => ({
+            symbol: item.symbol.trim().toUpperCase(),
+            initial_price: positiveNumber(item.initial_price),
+            weight: item.weight.trim() ? positiveNumber(item.weight) : null,
+          }))
+          .filter((item) => item.symbol && item.initial_price !== null);
+        if (normalizedUnderlyings.length === 0) {
+          setError(t("input.errors.fcnUnderlyingRequired"));
+          setSaving(false);
+          return;
+        }
+        const worstOfSymbol = normalizedUnderlyings[0]?.symbol || "";
         await addFcn({
           name: fcn.name.trim(),
           fcn_code: fcn.name.trim().toUpperCase(),
+          issuer: fcn.issuer.trim() || null,
           notional_amount: notionalNum,
-          worst_of_symbol: fcn.worst_of.trim().toUpperCase(),
+          settlement_currency: fcn.currency,
+          coupon_rate: positiveNumber(fcn.coupon_rate),
+          tenor_months: positiveNumber(fcn.tenor_months),
+          coupon_frequency: fcn.coupon_frequency,
+          observation_dates_json: fcn.observation_dates.trim() || null,
+          coupon_dates_json: fcn.coupon_dates.trim() || null,
+          worst_of_symbol: worstOfSymbol,
           ki_level: kiNum,
           ko_level: koNum,
-          underlying_details: fcn.worst_of.trim()
-            ? [{ symbol: fcn.worst_of.trim().toUpperCase(), initial_price: null }]
-            : [],
+          strike_level: strikeNum,
+          underlyings: normalizedUnderlyings.map((item) => item.symbol).join(","),
+          underlying_details: normalizedUnderlyings,
         });
-        setFcn({ name: "", worst_of: "", notional: "", ki: "", ko: "" });
+        setFcn({
+          name: "",
+          issuer: "",
+          currency: "USD",
+          coupon_rate: "",
+          tenor_months: "",
+          notional: "",
+          strike: "",
+          ki: "",
+          ko: "",
+          observation_type: "American",
+          coupon_frequency: "monthly",
+          observation_dates: "",
+          coupon_dates: "",
+        });
+        setUnderlyings([{ symbol: "", initial_price: "", weight: "" }]);
       }
       setStatus(t("input.statusOk"));
       await loadRecent();
@@ -398,24 +491,78 @@ export default function InputWorkspacePage() {
 
           <form className="space-y-3" onSubmit={handleSubmit}>
             {assetType === "stock" && (
-              <div className="grid gap-3 md:grid-cols-4">
-                <Field label={t("input.symbol")} value={stock.symbol} onChange={(value) => setStock({ ...stock, symbol: value })} placeholder="AAPL / 2330" />
-                <Field label={t("input.quantity")} value={stock.quantity} onChange={(value) => setStock({ ...stock, quantity: value })} />
+              <div className="grid gap-3 md:grid-cols-5">
+                <Field label={t("input.symbolTicker")} value={stock.symbol} onChange={(value) => setStock({ ...stock, symbol: value })} placeholder="AAPL / 2330" />
+                <Field label={t("input.shares")} value={stock.quantity} onChange={(value) => setStock({ ...stock, quantity: value })} />
                 <Field label={t("input.avgCost")} value={stock.avg_price} onChange={(value) => setStock({ ...stock, avg_price: value })} />
                 <Field label={t("input.currentPrice")} value={stock.current_price} onChange={(value) => setStock({ ...stock, current_price: value })} />
+                <SelectField
+                  label={t("input.market")}
+                  value={stock.market}
+                  options={stockMarkets}
+                  onChange={(value) => setStock({ ...stock, market: value as StockMarket })}
+                />
               </div>
             )}
             {assetType === "crypto" && (
-              <div className="grid gap-3 md:grid-cols-4">
-                <Field label={t("input.symbol")} value={crypto.symbol} onChange={(value) => setCrypto({ ...crypto, symbol: value })} placeholder="BTC / ETH" />
-                <Field label={t("input.quantity")} value={crypto.quantity} onChange={(value) => setCrypto({ ...crypto, quantity: value })} />
-                <Field label={t("input.avgCost")} value={crypto.avg_price} onChange={(value) => setCrypto({ ...crypto, avg_price: value })} />
-                <Field label={t("input.currentPrice")} value={crypto.current_price} onChange={(value) => setCrypto({ ...crypto, current_price: value })} />
+              <div className="space-y-3">
+                <div className="grid gap-2 sm:grid-cols-4">
+                  {cryptoModes.map((mode) => (
+                    <button
+                      className={`border px-3 py-2 text-left font-mono text-xs ${
+                        cryptoMode === mode
+                          ? "border-emerald-400/70 text-emerald-200"
+                          : "border-zinc-800 text-zinc-500 hover:border-zinc-600"
+                      }`}
+                      key={mode}
+                      onClick={() => setCryptoMode(mode)}
+                      type="button"
+                    >
+                      {t(`input.crypto.${mode}`)}
+                    </button>
+                  ))}
+                </div>
+                {cryptoMode === "spot" && (
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <Field label={t("input.symbol")} value={crypto.symbol} onChange={(value) => setCrypto({ ...crypto, symbol: value })} placeholder="BTC / ETH" />
+                    <Field label={t("input.quantity")} value={crypto.quantity} onChange={(value) => setCrypto({ ...crypto, quantity: value })} />
+                    <Field label={t("input.avgCost")} value={crypto.avg_price} onChange={(value) => setCrypto({ ...crypto, avg_price: value })} />
+                    <Field label={t("input.currentPrice")} value={crypto.current_price} onChange={(value) => setCrypto({ ...crypto, current_price: value })} />
+                  </div>
+                )}
+                {cryptoMode === "grid" && (
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Field label={t("input.symbol")} value={cryptoGrid.symbol} onChange={(value) => setCryptoGrid({ ...cryptoGrid, symbol: value })} placeholder="BTC" />
+                    <Field label={t("input.lowerRange")} value={cryptoGrid.lower} onChange={(value) => setCryptoGrid({ ...cryptoGrid, lower: value })} />
+                    <Field label={t("input.upperRange")} value={cryptoGrid.upper} onChange={(value) => setCryptoGrid({ ...cryptoGrid, upper: value })} />
+                    <Field label={t("input.gridCount")} value={cryptoGrid.grid_count} onChange={(value) => setCryptoGrid({ ...cryptoGrid, grid_count: value })} />
+                    <Field label={t("input.leverage")} value={cryptoGrid.leverage} onChange={(value) => setCryptoGrid({ ...cryptoGrid, leverage: value })} />
+                    <Field label={t("input.margin")} value={cryptoGrid.margin} onChange={(value) => setCryptoGrid({ ...cryptoGrid, margin: value })} />
+                    <SelectField label={t("input.direction")} value={cryptoGrid.direction} options={["Long grid", "Neutral grid"]} onChange={(value) => setCryptoGrid({ ...cryptoGrid, direction: value })} />
+                  </div>
+                )}
+                {cryptoMode === "dual" && (
+                  <div className="grid gap-3 md:grid-cols-5">
+                    <Field label={t("input.asset")} value={cryptoDual.asset} onChange={(value) => setCryptoDual({ ...cryptoDual, asset: value })} />
+                    <SelectField label={t("input.direction")} value={cryptoDual.direction} options={["Buy low", "Sell high"]} onChange={(value) => setCryptoDual({ ...cryptoDual, direction: value })} />
+                    <Field label={t("input.targetPrice")} value={cryptoDual.target_price} onChange={(value) => setCryptoDual({ ...cryptoDual, target_price: value })} />
+                    <Field label="APR" value={cryptoDual.apr} onChange={(value) => setCryptoDual({ ...cryptoDual, apr: value })} />
+                    <Field label={t("input.settlementDate")} value={cryptoDual.settlement_date} onChange={(value) => setCryptoDual({ ...cryptoDual, settlement_date: value })} placeholder="2026-06-30" />
+                  </div>
+                )}
+                {cryptoMode === "earn" && (
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <SelectField label={t("input.asset")} value={cryptoEarn.asset} options={["USDT", "USDC"]} onChange={(value) => setCryptoEarn({ ...cryptoEarn, asset: value })} />
+                    <Field label="APR" value={cryptoEarn.apr} onChange={(value) => setCryptoEarn({ ...cryptoEarn, apr: value })} />
+                    <Field label={t("input.amount")} value={cryptoEarn.amount} onChange={(value) => setCryptoEarn({ ...cryptoEarn, amount: value })} />
+                    <Field label={t("input.duration")} value={cryptoEarn.duration} onChange={(value) => setCryptoEarn({ ...cryptoEarn, duration: value })} />
+                  </div>
+                )}
               </div>
             )}
             {assetType === "cash" && (
               <div className="grid gap-3 md:grid-cols-2">
-                <Field label={t("input.currency")} value={cash.currency} onChange={(value) => setCash({ ...cash, currency: value })} />
+                <SelectField label={t("input.currency")} value={cash.currency} options={cashCurrencies} onChange={(value) => setCash({ ...cash, currency: value })} />
                 <Field label={t("input.cashBalance")} value={cash.amount} onChange={(value) => setCash({ ...cash, amount: value })} />
               </div>
             )}
@@ -424,13 +571,17 @@ export default function InputWorkspacePage() {
                 <div className="mb-3 text-sm leading-6 text-zinc-300">
                   {t("input.fcnFlagship")}
                 </div>
-                <div className="grid gap-3 md:grid-cols-[1.1fr_1fr_1fr]">
+                <div className="grid gap-3 md:grid-cols-[1.1fr_1.2fr_1fr]">
                   <div>
                     <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                       {t("input.fcnTerms")}
                     </div>
                     <div className="grid gap-3">
                       <Field label={t("input.nameCode")} value={fcn.name} onChange={(value) => setFcn({ ...fcn, name: value })} />
+                      <Field label={t("input.issuer")} value={fcn.issuer} onChange={(value) => setFcn({ ...fcn, issuer: value })} />
+                      <SelectField label={t("input.currency")} value={fcn.currency} options={cashCurrencies} onChange={(value) => setFcn({ ...fcn, currency: value })} />
+                      <Field label={t("input.couponRate")} value={fcn.coupon_rate} onChange={(value) => setFcn({ ...fcn, coupon_rate: value })} />
+                      <Field label={t("input.tenorMonths")} value={fcn.tenor_months} onChange={(value) => setFcn({ ...fcn, tenor_months: value })} />
                       <Field label={t("input.notional")} value={fcn.notional} onChange={(value) => setFcn({ ...fcn, notional: value })} />
                     </div>
                   </div>
@@ -438,15 +589,48 @@ export default function InputWorkspacePage() {
                     <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                       {t("input.fcnUnderlyings")}
                     </div>
-                    <Field label="Worst-of" value={fcn.worst_of} onChange={(value) => setFcn({ ...fcn, worst_of: value })} placeholder="MDB" />
+                    <div className="space-y-2">
+                      {underlyings.map((item, index) => (
+                        <div className="grid gap-2 border border-zinc-800 bg-black/20 p-2 sm:grid-cols-[1fr_1fr_0.7fr_auto]" key={index}>
+                          <Field label={t("input.symbol")} value={item.symbol} onChange={(value) => setUnderlyings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, symbol: value } : row))} placeholder="MDB" />
+                          <Field label={t("input.initialPrice")} value={item.initial_price} onChange={(value) => setUnderlyings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, initial_price: value } : row))} />
+                          <Field label={t("input.weightOptional")} value={item.weight} onChange={(value) => setUnderlyings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, weight: value } : row))} />
+                          <button
+                            className="self-end border border-zinc-700 px-2 py-2 font-mono text-xs text-zinc-400 disabled:opacity-40"
+                            disabled={underlyings.length === 1}
+                            onClick={() => setUnderlyings((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}
+                            type="button"
+                          >
+                            {t("input.remove")}
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        className="border border-yellow-400/40 px-3 py-2 font-mono text-xs text-yellow-100"
+                        onClick={() => setUnderlyings((rows) => [...rows, { symbol: "", initial_price: "", weight: "" }])}
+                        type="button"
+                      >
+                        {t("input.addUnderlying")}
+                      </button>
+                      {underlyings.length > 1 && (
+                        <div className="font-mono text-xs text-yellow-200">
+                          {t("input.worstOfActive")}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                       {t("input.fcnBarriers")}
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
+                      <Field label="Strike" value={fcn.strike} onChange={(value) => setFcn({ ...fcn, strike: value })} />
                       <Field label="KI" value={fcn.ki} onChange={(value) => setFcn({ ...fcn, ki: value })} />
                       <Field label="KO" value={fcn.ko} onChange={(value) => setFcn({ ...fcn, ko: value })} />
+                      <SelectField label={t("input.observationType")} value={fcn.observation_type} options={observationTypes} onChange={(value) => setFcn({ ...fcn, observation_type: value })} />
+                      <SelectField label={t("input.observationFrequency")} value={fcn.coupon_frequency} options={couponFrequencies} onChange={(value) => setFcn({ ...fcn, coupon_frequency: value })} />
+                      <Field label={t("input.observationDates")} value={fcn.observation_dates} onChange={(value) => setFcn({ ...fcn, observation_dates: value })} />
+                      <Field label={t("input.paymentDates")} value={fcn.coupon_dates} onChange={(value) => setFcn({ ...fcn, coupon_dates: value })} />
                     </div>
                   </div>
                 </div>
@@ -505,6 +689,35 @@ function Field({
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
+    </label>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block font-mono text-xs text-zinc-500">
+      {label}
+      <select
+        className={`${inputClass()} mt-2`}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
     </label>
   );
 }

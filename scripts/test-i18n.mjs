@@ -223,6 +223,14 @@ const REQUIRED_KEYS_EN = [
   "input.fcnFlagship",
   "input.activeWriteHint",
   "input.awaitingReferenceData",
+  "input.shares",
+  "input.market",
+  "input.addUnderlying",
+  "input.worstOfActive",
+  "input.crypto.grid",
+  "input.crypto.dual",
+  "input.crypto.earn",
+  "input.errors.fcnUnderlyingRequired",
   "import.preview",
   "import.workflowGuide",
   "import.previewGuide",
@@ -569,4 +577,21 @@ test("preferences module dispatches same-tab locale sync event", () => {
   assert.match(source, /PREFERENCES_CHANGED_EVENT\s*=\s*"ixai:preferences-changed"/);
   assert.match(source, /dispatchEvent\(new CustomEvent\(PREFERENCES_CHANGED_EVENT/);
   assert.match(source, /addEventListener\(PREFERENCES_CHANGED_EVENT/);
+});
+
+test("workflow completion source keeps investment workflows explicit", () => {
+  const inputSource = readFileSync(resolve(appDir, "input", "page.tsx"), "utf8");
+  const dashboardSource = readFileSync(resolve(appDir, "dashboard", "page.tsx"), "utf8");
+  const workflowUtils = readFileSync(resolve(appDir, "lib", "workflow-utils.ts"), "utf8");
+
+  assert.ok(workflowUtils.includes('market === "TW"') && workflowUtils.includes('${clean}.TW'), "stock normalization should support TW tickers");
+  assert.match(workflowUtils, /return clean;/, "US tickers should stay canonical through default return");
+  assert.match(inputSource, /underlyings\.map/, "FCN underlying builder should support dynamic rows");
+  assert.match(inputSource, /setUnderlyings\(\(rows\) => \[\.\.\.rows/, "FCN builder should add underlyings");
+  assert.match(inputSource, /cryptoModes\.map/, "crypto workflow switcher should render strategy modes");
+  assert.match(inputSource, /cryptoMode === "grid"/, "crypto grid workflow should exist");
+  assert.match(inputSource, /cryptoMode === "dual"/, "dual investment workflow should exist");
+  assert.match(inputSource, /cryptoMode === "earn"/, "stablecoin earn workflow should exist");
+  assert.match(dashboardSource, /DashboardTodayFocus items=\{todayFocusItems\}/, "dashboard should keep Today priorities first");
+  assert.match(readLocaleSource("en.ts"), /today.?s priorities/i);
 });
