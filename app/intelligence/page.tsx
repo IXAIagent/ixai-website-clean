@@ -9,6 +9,8 @@ import { MemoryNarrativePanel } from "../components/intelligence/MemoryNarrative
 import { PortfolioEnginePanel } from "../components/intelligence/PortfolioEnginePanel";
 import { ScenarioSensitivityPanel } from "../components/intelligence/ScenarioSensitivityPanel";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
+import { ExpandablePanel } from "../components/primitives/ExpandablePanel";
+import { SectionDivider } from "../components/primitives/SectionDivider";
 import { useWorkspaceContext } from "../lib/workspace-context";
 import {
   CopilotExplainResponse,
@@ -283,6 +285,8 @@ export default function IntelligencePage() {
           </div>
         </TerminalPanel>
 
+        <SectionDivider label="P0 · Executive summary" hint="immediate attention" />
+
         <TerminalPanel title={labels.todayFocus} meta={todayStatus}>
           <div className="mb-3 flex flex-wrap items-center gap-2 font-mono text-xs">
             <span className={`border px-2 py-1 uppercase ${severityClass(todayStatus)}`}>
@@ -310,6 +314,8 @@ export default function IntelligencePage() {
           </div>
         </TerminalPanel>
 
+        <SectionDivider label="P1 · Contextual intelligence" hint="why / what changed" />
+
         <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
           <TerminalPanel title={labels.explainability} meta="why / what changed">
             <DataRow label="WHY NOW" value={explainability?.why_risk_increased || todayFocus[0]?.reason} />
@@ -329,7 +335,14 @@ export default function IntelligencePage() {
           </TerminalPanel>
         </section>
 
-        <TerminalPanel title={labels.timeline} meta={timeline?.is_stale ? "history accumulating" : "7d / 30d / 90d"}>
+        {/* v4.9A: P1 engines + Copilot stay visible — they are the
+            primary v4 surfaces. */}
+        <PortfolioEnginePanel portfolioId={workspaceCtx.context.selectedPortfolioId} />
+        <CopilotQuestionPanel portfolioId={workspaceCtx.context.selectedPortfolioId} />
+
+        <SectionDivider label="P2 · Deep analysis" hint="default collapsed" />
+
+        <ExpandablePanel title={labels.timeline} meta={timeline?.is_stale ? "history accumulating" : "7d / 30d / 90d"}>
           <div className="mb-3 text-sm text-zinc-300">
             {textValue(timeline?.timeline_summary || timeline?.message, "History still accumulating / 歷史資料累積中")}
           </div>
@@ -339,9 +352,9 @@ export default function IntelligencePage() {
               <WindowCard item={item} key={textValue(item.window)} />
             ))}
           </div>
-        </TerminalPanel>
+        </ExpandablePanel>
 
-        <TerminalPanel title={labels.crossAsset} meta="equity / fcn / crypto / macro / cash">
+        <ExpandablePanel title={labels.crossAsset} meta="equity / fcn / crypto / macro / cash">
           <div className="grid gap-3 lg:grid-cols-5">
             {crossAssetRisks.map((risk) => (
               <div className="border border-zinc-800 bg-black/20 p-3" key={risk.label}>
@@ -359,9 +372,9 @@ export default function IntelligencePage() {
               </div>
             ))}
           </div>
-        </TerminalPanel>
+        </ExpandablePanel>
 
-        <TerminalPanel title={labels.scenarios} meta="risk awareness only">
+        <ExpandablePanel title={labels.scenarios} meta="risk awareness only">
           <div className="divide-y divide-zinc-900 border border-zinc-800">
             {scenarioRows.length === 0 && <EmptyLine>Scenario engine unavailable or still building.</EmptyLine>}
             {scenarioRows.map((scenario, index) => (
@@ -377,49 +390,60 @@ export default function IntelligencePage() {
               </div>
             ))}
           </div>
-        </TerminalPanel>
+        </ExpandablePanel>
 
-        <section className="grid gap-5 lg:grid-cols-3">
-          <TerminalPanel title={labels.graph} meta="themes">
-            <div className="space-y-2">
-              {dominantThemes.map((theme) => (
-                <div className="border-b border-zinc-900 pb-2 font-mono text-xs text-zinc-300" key={theme}>{theme}</div>
-              ))}
+        <ExpandablePanel title="Graph / 圖譜" meta="themes · connections · risks">
+          <section className="grid gap-5 lg:grid-cols-3">
+            <div>
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+                {labels.graph}
+              </div>
+              <div className="space-y-2">
+                {dominantThemes.map((theme) => (
+                  <div className="border-b border-zinc-900 pb-2 font-mono text-xs text-zinc-300" key={theme}>{theme}</div>
+                ))}
+              </div>
             </div>
-          </TerminalPanel>
-          <TerminalPanel title="Connections / 連結" meta="adjacency">
-            <div className="space-y-2">
-              {graphConnections.map((connection) => (
-                <div className="border-b border-zinc-900 pb-2 font-mono text-xs text-zinc-300" key={connection}>{connection}</div>
-              ))}
+            <div>
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+                Connections / 連結
+              </div>
+              <div className="space-y-2">
+                {graphConnections.map((connection) => (
+                  <div className="border-b border-zinc-900 pb-2 font-mono text-xs text-zinc-300" key={connection}>{connection}</div>
+                ))}
+              </div>
             </div>
-          </TerminalPanel>
-          <TerminalPanel title="Correlated Risks / 相關風險" meta="compact">
-            <div className="space-y-2">
-              {graphRisks.map((risk) => (
-                <div className="border-b border-zinc-900 pb-2 font-mono text-xs text-zinc-300" key={risk}>{risk}</div>
-              ))}
+            <div>
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+                Correlated Risks / 相關風險
+              </div>
+              <div className="space-y-2">
+                {graphRisks.map((risk) => (
+                  <div className="border-b border-zinc-900 pb-2 font-mono text-xs text-zinc-300" key={risk}>{risk}</div>
+                ))}
+              </div>
             </div>
-          </TerminalPanel>
-        </section>
+          </section>
+        </ExpandablePanel>
 
-        <PortfolioEnginePanel portfolioId={workspaceCtx.context.selectedPortfolioId} />
+        <ExpandablePanel title="Scenario sensitivity" meta="hypothetical">
+          <ScenarioSensitivityPanel
+            summary={portfolioSummary}
+            intelligenceSummary={summary}
+            fcnItems={fcns}
+          />
+        </ExpandablePanel>
 
-        <CopilotQuestionPanel portfolioId={workspaceCtx.context.selectedPortfolioId} />
+        <ExpandablePanel title="Memory narrative" meta="7d / 30d snapshot history">
+          <MemoryNarrativePanel timeline={timeline} reasoning={reasoning} />
+        </ExpandablePanel>
 
-        <ScenarioSensitivityPanel
-          summary={portfolioSummary}
-          intelligenceSummary={summary}
-          fcnItems={fcns}
-        />
-
-        <MemoryNarrativePanel timeline={timeline} reasoning={reasoning} />
-
-        <TerminalPanel title={labels.copilot} meta={copilot ? "read-only fallback" : "legacy"}>
+        <ExpandablePanel title={labels.copilot} meta={copilot ? "legacy fallback" : "legacy"}>
           <p className="text-sm leading-6 text-zinc-300">
             {textValue(copilot?.answer, "Copilot explain is interactive above. This panel shows the legacy non-interactive narrative as a fallback.")}
           </p>
-        </TerminalPanel>
+        </ExpandablePanel>
 
         <div className="border border-zinc-800 bg-zinc-950/60 px-3 py-2 font-mono text-[11px] text-zinc-500">
           No trading instruction / 非交易指令 · Risk intelligence only / 僅供風險理解

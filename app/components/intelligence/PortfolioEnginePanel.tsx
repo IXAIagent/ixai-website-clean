@@ -6,9 +6,12 @@ import {
   getPortfolioEngineSummary,
   type PortfolioEngineSummaryResponse,
 } from "../../lib/api";
+import { summarizeTopRisk } from "../../lib/compression";
 import { formatPercent } from "../../lib/formatters";
 import { useI18n } from "../../lib/i18n";
 import { sanitizeAdviceText } from "../../lib/intelligence-priority";
+import { localizeFinancialNarrative } from "../../lib/localization";
+import { InlineInsight } from "../primitives/InlineInsight";
 import { StatusBadge } from "../layout/StatusBadge";
 import { TerminalPanel } from "../layout/TerminalPanel";
 
@@ -90,6 +93,17 @@ export function PortfolioEnginePanel({
   const propagation = data.risk_propagation || {};
   const propagationChains = Array.isArray(propagation.chains) ? propagation.chains : [];
   const overallStatus = data.is_stale ? "stale" : data.status || unified.risk_state || "clear";
+  // v4.9C: compressed one-line headline. Sits above the dense panel grid so
+  // dashboard / intelligence readers can grok state in a single line.
+  const compressedHeadline = summarizeTopRisk(data, locale);
+  const insightTone =
+    overallStatus === "critical" || overallStatus === "unavailable"
+      ? "critical"
+      : overallStatus === "elevated"
+        ? "elevated"
+        : overallStatus === "watch" || overallStatus === "stale" || overallStatus === "partial"
+          ? "watch"
+          : "good";
 
   return (
     <TerminalPanel
@@ -109,6 +123,14 @@ export function PortfolioEnginePanel({
           </span>
         )}
       </div>
+
+      {compressedHeadline && (
+        <div className="mb-3">
+          <InlineInsight tone={insightTone}>
+            {localizeFinancialNarrative(compressedHeadline, locale, { maxLength: 140 })}
+          </InlineInsight>
+        </div>
+      )}
 
       <div className={`grid gap-2 font-mono text-xs ${compact ? "md:grid-cols-3" : "md:grid-cols-6"}`}>
         {(

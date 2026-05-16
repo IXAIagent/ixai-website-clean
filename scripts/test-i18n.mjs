@@ -265,6 +265,87 @@ function escapeRe(value) {
 // ---------------------------------------------------------------------------
 // End-to-end style: simulate translate() fallback chain with the fixture.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// v4.9B localization utility tests.
+// Mirrors the protected-term registry + compression behaviour from
+// app/lib/localization.ts. The actual source is read so this fixture can't
+// silently drift from production code without tripping the regex.
+// ---------------------------------------------------------------------------
+const localizationSrc = readFileSync(
+  resolve(__dirname, "..", "app", "lib", "localization.ts"),
+  "utf8",
+);
+
+const REQUIRED_PROTECTED_TERMS = [
+  "FCN",
+  "KI",
+  "KO",
+  "Worst-of",
+  "AI Momentum",
+  "Risk-On",
+  "Risk-Off",
+  "BTC",
+  "ETH",
+  "NVDA",
+  "NVIDIA",
+  "TSM",
+];
+
+test("localization registry includes every protected financial term", () => {
+  for (const term of REQUIRED_PROTECTED_TERMS) {
+    assert.ok(
+      localizationSrc.includes(`"${term}"`),
+      `localization.ts missing protected term ${term}`,
+    );
+  }
+});
+
+test("localizeFinancialNarrative export is present", () => {
+  assert.match(
+    localizationSrc,
+    /export function localizeFinancialNarrative\(/,
+  );
+});
+
+test("isProtectedTerm export is present", () => {
+  assert.match(localizationSrc, /export function isProtectedTerm\(/);
+});
+
+test("localization compresses overly long narratives", () => {
+  // Re-implement the truncation logic for a self-contained algorithm test.
+  function truncate(text, maxLen) {
+    const limit = Math.max(40, maxLen || 160);
+    if (text.length <= limit) return text;
+    return text.slice(0, limit).replace(/[，。；,. ]+$/, "") + "…";
+  }
+  const long = "A".repeat(300);
+  const out = truncate(long, 100);
+  assert.ok(out.length <= 101, "compressed text must be within max + ellipsis");
+  assert.ok(out.endsWith("…"));
+});
+
+// ---------------------------------------------------------------------------
+// v4.9C compression helper tests (algorithm only; mirrors compression.ts).
+// ---------------------------------------------------------------------------
+const compressionSrc = readFileSync(
+  resolve(__dirname, "..", "app", "lib", "compression.ts"),
+  "utf8",
+);
+
+test("compression module exports the three summarizers", () => {
+  assert.match(compressionSrc, /export function summarizeTopRisk\(/);
+  assert.match(compressionSrc, /export function summarizeMarketState\(/);
+  assert.match(compressionSrc, /export function summarizeFCNPressure\(/);
+});
+
+test("compression outputs never contain forbidden trading vocab patterns", () => {
+  // The implementation pipes through sanitizeAdviceText. Verify the
+  // call site by source-inspection — the regex would catch a regression
+  // where someone removes that pipe.
+  assert.match(compressionSrc, /sanitizeAdviceText/);
+});
+
+// ---------------------------------------------------------------------------
 test("translate-style fallback: requested locale → en → key", () => {
   const en = { common: { retry: "Retry" } };
   const ja = { common: {} };

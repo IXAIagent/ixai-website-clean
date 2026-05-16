@@ -6,8 +6,11 @@ import {
   getMarketEngineSummary,
   type MarketEngineSummaryResponse,
 } from "../../lib/api";
+import { summarizeMarketState } from "../../lib/compression";
 import { useI18n } from "../../lib/i18n";
 import { sanitizeAdviceText } from "../../lib/intelligence-priority";
+import { localizeFinancialNarrative } from "../../lib/localization";
+import { InlineInsight } from "../primitives/InlineInsight";
 import { StatusBadge } from "../layout/StatusBadge";
 import { TerminalPanel } from "../layout/TerminalPanel";
 
@@ -45,7 +48,7 @@ export function MarketEnginePanel({
   portfolioId?: string;
   compact?: boolean;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [data, setData] = useState<MarketEngineSummaryResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -132,8 +135,26 @@ export function MarketEnginePanel({
         )}
       </div>
 
-      <div className="mt-3 text-xs text-zinc-300">
-        {sanitizeAdviceText(regime.narrative || "")}
+      <div className="mt-3">
+        <InlineInsight
+          tone={
+            overallStatus === "critical" || overallStatus === "unavailable"
+              ? "critical"
+              : overallStatus === "elevated"
+                ? "elevated"
+                : overallStatus === "watch" || overallStatus === "stale"
+                  ? "watch"
+                  : "good"
+          }
+        >
+          {localizeFinancialNarrative(summarizeMarketState(data, locale), locale, {
+            maxLength: 140,
+          })}
+        </InlineInsight>
+      </div>
+
+      <div className="mt-2 text-xs text-zinc-300">
+        {localizeFinancialNarrative(regime.narrative || "", locale, { maxLength: 180 })}
       </div>
 
       {!compact && (

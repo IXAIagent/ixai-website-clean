@@ -10,6 +10,7 @@ import { OnboardingChecklist } from "../components/dashboard/OnboardingChecklist
 import { PortfolioEnginePanel } from "../components/intelligence/PortfolioEnginePanel";
 import { MarketEnginePanel } from "../components/market/MarketEnginePanel";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
+import { SectionDivider } from "../components/primitives/SectionDivider";
 import { useWorkspaceContext } from "../lib/workspace-context";
 import {
   AllocationItem,
@@ -275,19 +276,19 @@ export default function DashboardPage() {
             />
           )}
           {hasHoldings && (
-            <DashboardTodayFocus items={todayFocusItems} status={todayFocusStatus} />
-          )}
-          {hasHoldings && (
-            <PortfolioEnginePanel
-              portfolioId={dashWorkspaceCtx.context.selectedPortfolioId}
-              compact
-            />
-          )}
-          {hasHoldings && (
-            <MarketEnginePanel
-              portfolioId={dashWorkspaceCtx.context.selectedPortfolioId}
-              compact
-            />
+            <>
+              <SectionDivider label="P0 · Immediate attention" hint="top 3 focus" />
+              <DashboardTodayFocus items={todayFocusItems} status={todayFocusStatus} />
+              <SectionDivider label="P1 · Engines" hint="compact view" />
+              <PortfolioEnginePanel
+                portfolioId={dashWorkspaceCtx.context.selectedPortfolioId}
+                compact
+              />
+              <MarketEnginePanel
+                portfolioId={dashWorkspaceCtx.context.selectedPortfolioId}
+                compact
+              />
+            </>
           )}
           <TerminalPanel title={t("dashboard.aiOverview")} meta={preferences.compactMode ? "P0 · compact" : "P0"}>
             <div className="border-l border-emerald-400/40 bg-black/30 px-3 py-2 font-mono text-sm leading-6 text-zinc-300">
@@ -427,6 +428,7 @@ export default function DashboardPage() {
             </TerminalPanel>
           </section>
 
+          <SectionDivider label="P2 · Deep analysis" hint="default collapsed" />
           <TerminalPanel title={t("dashboard.scheduler")} meta="history">
             <div className="grid gap-2 font-mono text-xs md:grid-cols-4">
               <div>
