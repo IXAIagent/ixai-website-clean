@@ -1,15 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "../components/layout/AppShell";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
 import {
+  CopilotExplainResponse,
+  explainCopilot,
+  getIntelligenceGraph,
+  getIntelligenceReasoning,
+  getIntelligenceScenarios,
   getIntelligenceTimeline,
   getPortfolioSummaryV2A,
+  IntelligenceGraphResponse,
   PortfolioSummaryV2AResponse,
+  ReasoningSystemResponse,
+  ScenarioResult,
+  ScenarioResponse,
   TimelineIntelligenceResponse,
+  TimelineWindowResponse,
 } from "../lib/api";
+
+const labels = {
+  title: "Intelligence / AI 分析",
+  subtitle: "AI intelligence workspace for regime, drift, explainability, scenarios, and portfolio reasoning.",
+  header: "Intelligence Header / 智能總覽",
+  explainability: "Explainability / 解釋層",
+  timeline: "Timeline / 時間軸",
+  drift: "Drift & Regime / 漂移與市場狀態",
+  scenarios: "Scenario Watch / 情境監控",
+  graph: "Intelligence Graph / 關聯圖",
+  copilot: "Copilot Insight / 助理解讀",
+};
 
 function textValue(value: unknown, fallback = "-") {
   if (typeof value === "string" && value.trim()) return value.trim();
@@ -17,23 +40,109 @@ function textValue(value: unknown, fallback = "-") {
   return fallback;
 }
 
+function numberValue(value: unknown) {
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function percent(value: unknown) {
+  const parsed = numberValue(value);
+  return `${parsed <= 1 && parsed > 0 ? (parsed * 100).toFixed(0) : parsed.toFixed(0)}%`;
+}
+
+function statusClass(value?: string | null) {
+  const normalized = (value || "").toLowerCase();
+  if (normalized.includes("critical") || normalized.includes("high") || normalized.includes("risk_off")) return "border-red-500/50 text-red-300";
+  if (normalized.includes("medium") || normalized.includes("watch") || normalized.includes("mixed")) return "border-yellow-500/50 text-yellow-300";
+  if (normalized.includes("low") || normalized.includes("clear") || normalized.includes("risk_on")) return "border-emerald-500/50 text-emerald-300";
+  return "border-zinc-700 text-zinc-400";
+}
+
+function listItems(items: unknown, fallback = "No signal yet") {
+  return Array.isArray(items) && items.length > 0 ? items.map((item) => textValue(item)).filter(Boolean) : [fallback];
+}
+
+function timestamp(value?: string | null) {
+  if (!value) return "generated time pending";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
+function DataRow({ label, value }: { label: string; value: unknown }) {
+  return (
+    <div className="grid gap-2 border-b border-zinc-900 py-2 font-mono text-xs md:grid-cols-[180px_1fr]">
+      <span className="uppercase text-zinc-600">{label}</span>
+      <span className="text-zinc-300">{textValue(value, "Pending")}</span>
+    </div>
+  );
+}
+
+function WindowCard({ item }: { item: TimelineWindowResponse }) {
+  return (
+    <div className="border border-zinc-800 bg-black/20 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-300">
+          {textValue(item.window, "window")}
+        </div>
+        <span className="font-mono text-[10px] text-zinc-600">timeline</span>
+      </div>
+      <div className="space-y-1 font-mono text-[11px] leading-5">
+        <div><span className="text-zinc-600">REGIME</span> <span className="text-zinc-300">{textValue(item.regime_evolution)}</span></div>
+        <div><span className="text-zinc-600">RISK</span> <span className="text-zinc-300">{textValue(item.risk_score_trend)}</span></div>
+        <div><span className="text-zinc-600">CONC</span> <span className="text-zinc-300">{textValue(item.concentration_trend)}</span></div>
+        <div><span className="text-zinc-600">VOL</span> <span className="text-zinc-300">{textValue(item.volatility_trend)}</span></div>
+      </div>
+      <div className="mt-3 grid gap-2 text-[11px] text-zinc-500">
+        <div>Recurring: {listItems(item.recurring_risks, "none").slice(0, 2).join(" · ")}</div>
+        <div>Improving: {listItems(item.improving_signals, "none").slice(0, 2).join(" · ")}</div>
+        <div>Deteriorating: {listItems(item.deteriorating_signals, "none").slice(0, 2).join(" · ")}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function IntelligencePage() {
   const [summary, setSummary] = useState<PortfolioSummaryV2AResponse | null>(null);
   const [timeline, setTimeline] = useState<TimelineIntelligenceResponse | null>(null);
-  const [error, setError] = useState("");
+  const [reasoning, setReasoning] = useState<ReasoningSystemResponse | null>(null);
+  const [scenarios, setScenarios] = useState<ScenarioResult[]>([]);
+  const [graph, setGraph] = useState<IntelligenceGraphResponse | null>(null);
+  const [copilot, setCopilot] = useState<CopilotExplainResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errors, setErrors] = useState<string[]>([]);
 
   useEffect(() => {
     async function load() {
-      try {
-        const [summaryData, timelineData] = await Promise.all([
-          getPortfolioSummaryV2A().catch(() => null),
-          getIntelligenceTimeline().catch(() => null),
-        ]);
-        setSummary(summaryData);
-        setTimeline(timelineData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Intelligence workspace unavailable.");
-      }
+      setLoading(true);
+      const nextErrors: string[] = [];
+      const [
+        summaryData,
+        timelineData,
+        reasoningData,
+        scenarioData,
+        graphData,
+        copilotData,
+      ] = await Promise.all([
+        getPortfolioSummaryV2A().catch((err) => {
+          nextErrors.push(err instanceof Error ? err.message : "portfolio-summary unavailable");
+          return null;
+        }),
+        getIntelligenceTimeline().catch(() => null),
+        getIntelligenceReasoning().catch(() => null),
+        getIntelligenceScenarios().catch(() => null as ScenarioResponse | null),
+        getIntelligenceGraph().catch(() => null),
+        explainCopilot("Explain the current portfolio intelligence state in one short paragraph.").catch(() => null),
+      ]);
+
+      setSummary(summaryData);
+      setTimeline(timelineData);
+      setReasoning(reasoningData);
+      setScenarios(Array.isArray(scenarioData?.scenarios) ? scenarioData.scenarios : []);
+      setGraph(graphData);
+      setCopilot(copilotData);
+      setErrors(nextErrors);
+      setLoading(false);
     }
     const timer = window.setTimeout(() => {
       void load();
@@ -41,36 +150,131 @@ export default function IntelligencePage() {
     return () => window.clearTimeout(timer);
   }, []);
 
+  const timelineWindows = Array.isArray(timeline?.windows) ? timeline.windows : [];
+  const confidence = summary?.intelligence_confidence ?? timeline?.confidence ?? 0;
+  const isStale = Boolean(summary?.is_stale || timeline?.is_stale || reasoning?.is_stale);
+  const explainability = summary?.explainability;
+  const dominantThemes = listItems(reasoning?.themes?.dominant_themes || graph?.strongest_themes, "No dominant theme yet").slice(0, 5);
+  const graphConnections = listItems(graph?.strongest_connections, "Connections still building").slice(0, 6);
+  const graphRisks = listItems(graph?.top_correlated_risks, "No correlated risk yet").slice(0, 6);
+  const scenarioRows = useMemo(() => scenarios.slice(0, 6), [scenarios]);
+
   return (
-    <AppShell
-      title="Intelligence / AI 分析"
-      subtitle="Advanced intelligence workspace foundation: timeline, explainability and drift."
-    >
-      <div className="space-y-4">
-        {error && <EmptyLine>{error}</EmptyLine>}
-        <TerminalPanel title="Timeline Intelligence" meta={timeline?.is_stale ? "building" : "active"}>
-          <div className="font-mono text-xs text-zinc-300">
-            {textValue(timeline?.timeline_summary, "Timeline unavailable / Waiting for scheduler history")}
+    <AppShell title={labels.title} subtitle={labels.subtitle}>
+      <div className="space-y-5">
+        {errors.length > 0 && (
+          <div className="border border-yellow-500/30 bg-yellow-950/10 px-3 py-2 text-xs text-yellow-200">
+            Some intelligence panels are temporarily unavailable. Core workspace remains active.
           </div>
-          <div className="mt-3 grid gap-2 md:grid-cols-3">
-            {(timeline?.windows || []).map((windowItem) => (
-              <div className="border border-zinc-800 bg-black/20 p-2 font-mono text-xs" key={textValue(windowItem.window)}>
-                <div className="text-zinc-500">{textValue(windowItem.window).toUpperCase()}</div>
-                <div className="mt-1 text-zinc-300">{textValue(windowItem.regime_evolution)}</div>
-                <div className="text-zinc-500">{textValue(windowItem.risk_score_trend)}</div>
+        )}
+
+        <TerminalPanel title={labels.header} meta={loading ? "loading" : isStale ? "stale memory" : "fresh"}>
+          <div className="grid gap-3 md:grid-cols-5">
+            <div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">Regime</div>
+              <div className="mt-1 text-lg font-semibold text-zinc-100">{textValue(summary?.regime, "Pending")}</div>
+            </div>
+            <div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">Confidence</div>
+              <div className="mt-1 text-lg font-semibold text-emerald-300">{percent(confidence)}</div>
+            </div>
+            <div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">Dominant Risk</div>
+              <div className="mt-1 text-sm text-zinc-300">{textValue(summary?.dominant_risk, "Pending")}</div>
+            </div>
+            <div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">Generated</div>
+              <div className="mt-1 text-sm text-zinc-300">{timestamp(summary?.generated_at || timeline?.generated_at)}</div>
+            </div>
+            <div className="flex flex-wrap content-start gap-2">
+              <Link className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-emerald-400 hover:text-emerald-200" href="/dashboard">Dashboard</Link>
+              <Link className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-emerald-400 hover:text-emerald-200" href="/portfolio">Portfolio</Link>
+              <Link className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-emerald-400 hover:text-emerald-200" href="/fcn">FCN</Link>
+            </div>
+          </div>
+        </TerminalPanel>
+
+        <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
+          <TerminalPanel title={labels.explainability} meta="why / what changed">
+            <DataRow label="WHY RISK" value={explainability?.why_risk_increased} />
+            <DataRow label="CHANGED TODAY" value={explainability?.what_changed_today} />
+            <DataRow label="DRIVER" value={explainability?.dominant_driver} />
+            <DataRow label="HIDDEN CORR" value={explainability?.hidden_correlation} />
+            <DataRow label="SYSTEMIC" value={explainability?.systemic_risk} />
+          </TerminalPanel>
+
+          <TerminalPanel title={labels.drift} meta="regime / concentration">
+            <DataRow label="DRIFT" value={summary?.drift_summary || reasoning?.timeline?.what_changed_today} />
+            <DataRow label="REGIME" value={summary?.regime} />
+            <DataRow label="DOMINANT DRIVER" value={summary?.explainability?.dominant_driver || reasoning?.reasoning?.why_workspace_mode} />
+            <DataRow label="CONCENTRATION" value={summary?.concentration_score ? percent(summary.concentration_score) : "Pending"} />
+            <DataRow label="VOLATILITY" value={timeline?.volatility_trend || reasoning?.reasoning?.volatility_analysis} />
+          </TerminalPanel>
+        </section>
+
+        <TerminalPanel title={labels.timeline} meta={timeline?.is_stale ? "history accumulating" : "7d / 30d / 90d"}>
+          <div className="mb-3 text-sm text-zinc-300">
+            {textValue(timeline?.timeline_summary || timeline?.message, "History still accumulating / 歷史資料累積中")}
+          </div>
+          <div className="grid gap-3 lg:grid-cols-3">
+            {timelineWindows.length === 0 && <EmptyLine>History still accumulating / 歷史資料累積中</EmptyLine>}
+            {timelineWindows.map((item) => (
+              <WindowCard item={item} key={textValue(item.window)} />
+            ))}
+          </div>
+        </TerminalPanel>
+
+        <TerminalPanel title={labels.scenarios} meta="risk awareness only">
+          <div className="divide-y divide-zinc-900 border border-zinc-800">
+            {scenarioRows.length === 0 && <EmptyLine>Scenario engine unavailable or still building.</EmptyLine>}
+            {scenarioRows.map((scenario, index) => (
+              <div className="grid gap-2 px-3 py-2 text-xs md:grid-cols-[1fr_0.7fr_1.2fr]" key={`${textValue(scenario.scenario_name, "scenario")}-${index}`}>
+                <div>
+                  <div className="font-mono font-semibold text-zinc-100">{textValue(scenario.scenario_name, "Scenario")}</div>
+                  <div className="font-mono text-[10px] text-zinc-500">{listItems(scenario.affected_assets, "portfolio").slice(0, 4).join(" · ")}</div>
+                </div>
+                <span className={`w-fit border px-2 py-1 font-mono text-[10px] uppercase ${statusClass(scenario.impact_level)}`}>
+                  {textValue(scenario.impact_level, "watch")}
+                </span>
+                <div className="text-zinc-400">{textValue(scenario.narrative || scenario.portfolio_sensitivity, "Interpretation pending")}</div>
               </div>
             ))}
           </div>
         </TerminalPanel>
 
-        <TerminalPanel title="Explainability Detail" meta="compact">
-          <div className="grid gap-2 font-mono text-xs">
-            <div><span className="text-zinc-600">WHY RISK:</span> {textValue(summary?.explainability?.why_risk_increased, "Pending")}</div>
-            <div><span className="text-zinc-600">CHANGED:</span> {textValue(summary?.explainability?.what_changed_today, "Pending")}</div>
-            <div><span className="text-zinc-600">DRIVER:</span> {textValue(summary?.explainability?.dominant_driver, "Pending")}</div>
-            <div><span className="text-zinc-600">HIDDEN CORR:</span> {textValue(summary?.explainability?.hidden_correlation, "Pending")}</div>
-          </div>
+        <section className="grid gap-5 lg:grid-cols-3">
+          <TerminalPanel title={labels.graph} meta="themes">
+            <div className="space-y-2">
+              {dominantThemes.map((theme) => (
+                <div className="border-b border-zinc-900 pb-2 font-mono text-xs text-zinc-300" key={theme}>{theme}</div>
+              ))}
+            </div>
+          </TerminalPanel>
+          <TerminalPanel title="Connections / 連結" meta="adjacency">
+            <div className="space-y-2">
+              {graphConnections.map((connection) => (
+                <div className="border-b border-zinc-900 pb-2 font-mono text-xs text-zinc-300" key={connection}>{connection}</div>
+              ))}
+            </div>
+          </TerminalPanel>
+          <TerminalPanel title="Correlated Risks / 相關風險" meta="compact">
+            <div className="space-y-2">
+              {graphRisks.map((risk) => (
+                <div className="border-b border-zinc-900 pb-2 font-mono text-xs text-zinc-300" key={risk}>{risk}</div>
+              ))}
+            </div>
+          </TerminalPanel>
+        </section>
+
+        <TerminalPanel title={labels.copilot} meta={copilot ? "read-only" : "placeholder"}>
+          <p className="text-sm leading-6 text-zinc-300">
+            {textValue(copilot?.answer, "Copilot explain will be interactive next. Current workspace uses non-trading risk intelligence only.")}
+          </p>
         </TerminalPanel>
+
+        <div className="border border-zinc-800 bg-zinc-950/60 px-3 py-2 font-mono text-[11px] text-zinc-500">
+          No trading instruction / 非交易指令 · Risk intelligence only / 僅供風險理解
+        </div>
       </div>
     </AppShell>
   );
