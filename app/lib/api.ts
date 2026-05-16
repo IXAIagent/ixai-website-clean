@@ -602,6 +602,15 @@ export type TimelineIntelligenceResponse = {
   is_stale?: boolean | null;
 };
 
+export type BackendHealthResponse = {
+  status?: string | null;
+  ok?: boolean | null;
+  service?: string | null;
+  database?: string | null;
+  timestamp?: string | null;
+  [key: string]: unknown;
+};
+
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -732,6 +741,10 @@ export function getMyAssetAllocation() {
 
 export function getMyRiskOverview() {
   return apiFetch<RiskOverviewResponse>("/api/v1/dashboard/my-risk-overview");
+}
+
+export function getBackendHealth() {
+  return apiFetch<BackendHealthResponse>("/health", { skipAuthRedirect: true });
 }
 
 export function getAccounts() {
