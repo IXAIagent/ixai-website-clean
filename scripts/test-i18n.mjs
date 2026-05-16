@@ -225,6 +225,10 @@ const REQUIRED_KEYS_EN = [
   "input.awaitingReferenceData",
   "input.shares",
   "input.market",
+  "input.stockNameTicker",
+  "input.selectedTicker",
+  "input.stockPriceSystem",
+  "input.underlyingAsset",
   "input.addUnderlying",
   "input.worstOfActive",
   "input.crypto.grid",
@@ -585,13 +589,27 @@ test("workflow completion source keeps investment workflows explicit", () => {
   const workflowUtils = readFileSync(resolve(appDir, "lib", "workflow-utils.ts"), "utf8");
 
   assert.ok(workflowUtils.includes('market === "TW"') && workflowUtils.includes('${clean}.TW'), "stock normalization should support TW tickers");
-  assert.match(workflowUtils, /return clean;/, "US tickers should stay canonical through default return");
+  assert.match(workflowUtils, /stockAliasMap/, "stock resolver should include a deterministic local alias map");
+  assert.match(workflowUtils, /台積電/, "stock resolver should support 台積電");
+  assert.match(workflowUtils, /TSM/, "stock resolver should offer TSM as a candidate");
+  assert.ok(!inputSource.includes("positiveNumber(stock.current_price)"), "stock current price must not be user-required");
+  assert.match(inputSource, /current_price:\s*avgPrice/, "stock submit should send avg cost as a temporary backend contract fallback");
+  assert.match(inputSource, /stockPriceSystem/, "stock UI should explain system-filled current price behavior");
   assert.match(inputSource, /underlyings\.map/, "FCN underlying builder should support dynamic rows");
   assert.match(inputSource, /setUnderlyings\(\(rows\) => \[\.\.\.rows/, "FCN builder should add underlyings");
+  assert.match(inputSource, /strike_level:\s*strikeNum/, "FCN payload should include strike");
+  assert.match(inputSource, /ki_level:\s*kiNum/, "FCN payload should include KI");
+  assert.match(inputSource, /ko_level:\s*koNum/, "FCN payload should include KO");
+  assert.match(inputSource, /coupon_rate:\s*positiveNumber\(fcn\.coupon_rate\)/, "FCN payload should include coupon rate");
+  assert.match(inputSource, /underlying_details:\s*normalizedUnderlyings/, "FCN payload should include underlying details");
   assert.match(inputSource, /cryptoModes\.map/, "crypto workflow switcher should render strategy modes");
   assert.match(inputSource, /cryptoMode === "grid"/, "crypto grid workflow should exist");
   assert.match(inputSource, /cryptoMode === "dual"/, "dual investment workflow should exist");
   assert.match(inputSource, /cryptoMode === "earn"/, "stablecoin earn workflow should exist");
+  assert.match(inputSource, /asset_type:\s*`grid:/, "crypto grid payload should preserve subtype");
+  assert.match(inputSource, /asset_type:\s*`dual:/, "crypto dual payload should preserve subtype");
+  assert.match(inputSource, /asset_type:\s*`stablecoin_earn:/, "stablecoin earn payload should preserve subtype");
+  assert.match(inputSource, /cashCurrencies/, "cash currency selector should remain available");
   assert.match(dashboardSource, /DashboardTodayFocus items=\{todayFocusItems\}/, "dashboard should keep Today priorities first");
   assert.match(readLocaleSource("en.ts"), /today.?s priorities/i);
 });

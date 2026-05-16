@@ -19,7 +19,7 @@ import {
   getStocks,
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
-import { normalizeStockTicker, type StockMarket } from "../lib/workflow-utils";
+import { resolveStockSymbol, type StockMarket } from "../lib/workflow-utils";
 
 type AssetType = "stock" | "fcn" | "crypto" | "cash";
 type CryptoMode = "spot" | "grid" | "dual" | "earn";
@@ -48,7 +48,7 @@ function inputClass() {
   return "w-full border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-emerald-400";
 }
 
-const stockMarkets: StockMarket[] = ["US", "TW", "HK", "JP", "KR"];
+const stockMarkets: StockMarket[] = ["Auto", "US", "TW", "HK", "JP", "KR"];
 const cashCurrencies = ["USD", "TWD", "HKD", "JPY", "KRW", "EUR", "GBP", "USDT", "USDC"];
 const observationTypes = ["American", "European"];
 const couponFrequencies = ["monthly", "quarterly"];
@@ -91,7 +91,7 @@ export default function InputWorkspacePage() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const [stock, setStock] = useState({ symbol: "", market: "US" as StockMarket, quantity: "", avg_price: "", current_price: "" });
+  const [stock, setStock] = useState({ symbol: "", market: "Auto" as StockMarket, quantity: "", avg_price: "" });
   const [fcn, setFcn] = useState({
     name: "",
     issuer: "",
@@ -114,6 +114,7 @@ export default function InputWorkspacePage() {
   const [cryptoDual, setCryptoDual] = useState({ asset: "BTC", direction: "Buy low", target_price: "", apr: "", settlement_date: "" });
   const [cryptoEarn, setCryptoEarn] = useState({ asset: "USDT", apr: "", amount: "", duration: "" });
   const [cash, setCash] = useState({ currency: "USD", amount: "" });
+  const stockResolution = useMemo(() => resolveStockSymbol(stock.symbol, stock.market), [stock.market, stock.symbol]);
 
   async function loadAccounts() {
     try {
@@ -188,10 +189,9 @@ export default function InputWorkspacePage() {
     setStatus("");
     try {
       if (assetType === "stock") {
-        const symbol = normalizeStockTicker(stock.symbol, stock.market);
+        const symbol = stockResolution.normalizedSymbol;
         const quantity = positiveNumber(stock.quantity);
         const avgPrice = positiveNumber(stock.avg_price);
-        const currentPrice = positiveNumber(stock.current_price);
         if (!symbol) {
           setError(t("input.errors.symbolRequired"));
           setSaving(false);
@@ -207,21 +207,16 @@ export default function InputWorkspacePage() {
           setSaving(false);
           return;
         }
-        if (currentPrice === null) {
-          setError(t("input.errors.currentPriceRequired"));
-          setSaving(false);
-          return;
-        }
         if (process.env.NODE_ENV === "development") {
-          console.debug("IXAI stock payload", { symbol, quantity, avg_price: avgPrice, current_price: currentPrice });
+          console.debug("IXAI stock payload", { symbol, quantity, avg_price: avgPrice, current_price: avgPrice });
         }
         await addStock({
           symbol,
           quantity,
           avg_price: avgPrice,
-          current_price: currentPrice,
+          current_price: avgPrice,
         });
-        setStock({ symbol: "", market: "US", quantity: "", avg_price: "", current_price: "" });
+        setStock({ symbol: "", market: "Auto", quantity: "", avg_price: "" });
       } else if (assetType === "crypto") {
         if (cryptoMode === "spot") {
           const symbol = crypto.symbol.trim().toUpperCase();
@@ -352,7 +347,7 @@ export default function InputWorkspacePage() {
             initial_price: positiveNumber(item.initial_price),
             weight: item.weight.trim() ? positiveNumber(item.weight) : null,
           }))
-          .filter((item) => item.symbol && item.initial_price !== null);
+          .filter((item) => item.symbol);
         if (normalizedUnderlyings.length === 0) {
           setError(t("input.errors.fcnUnderlyingRequired"));
           setSaving(false);
@@ -491,17 +486,28 @@ export default function InputWorkspacePage() {
 
           <form className="space-y-3" onSubmit={handleSubmit}>
             {assetType === "stock" && (
-              <div className="grid gap-3 md:grid-cols-5">
-                <Field label={t("input.symbolTicker")} value={stock.symbol} onChange={(value) => setStock({ ...stock, symbol: value })} placeholder="AAPL / 2330" />
-                <Field label={t("input.shares")} value={stock.quantity} onChange={(value) => setStock({ ...stock, quantity: value })} />
-                <Field label={t("input.avgCost")} value={stock.avg_price} onChange={(value) => setStock({ ...stock, avg_price: value })} />
-                <Field label={t("input.currentPrice")} value={stock.current_price} onChange={(value) => setStock({ ...stock, current_price: value })} />
-                <SelectField
-                  label={t("input.market")}
-                  value={stock.market}
-                  options={stockMarkets}
-                  onChange={(value) => setStock({ ...stock, market: value as StockMarket })}
-                />
+              <div className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-4">
+                  <Field label={t("input.stockNameTicker")} value={stock.symbol} onChange={(value) => setStock({ ...stock, symbol: value })} placeholder={t("input.stockPlaceholder")} />
+                  <Field label={t("input.shares")} value={stock.quantity} onChange={(value) => setStock({ ...stock, quantity: value })} />
+                  <Field label={t("input.avgCost")} value={stock.avg_price} onChange={(value) => setStock({ ...stock, avg_price: value })} />
+                  <SelectField
+                    label={t("input.market")}
+                    value={stock.market}
+                    options={stockMarkets}
+                    onChange={(value) => setStock({ ...stock, market: value as StockMarket })}
+                  />
+                </div>
+                <div className="border border-zinc-800 bg-black/30 px-3 py-2 font-mono text-xs text-zinc-500">
+                  <span className="text-zinc-400">{t("input.selectedTicker")}:</span>{" "}
+                  <span className="text-emerald-200">{stockResolution.normalizedSymbol || t("common.dataPending")}</span>
+                  {stockResolution.candidates.length > 1 && (
+                    <span className="ml-2 text-zinc-600">
+                      {t("input.candidates")}: {stockResolution.candidates.join(" / ")}
+                    </span>
+                  )}
+                  <div className="mt-1 text-[11px] text-zinc-600">{t("input.stockPriceSystem")}</div>
+                </div>
               </div>
             )}
             {assetType === "crypto" && (
@@ -571,7 +577,7 @@ export default function InputWorkspacePage() {
                 <div className="mb-3 text-sm leading-6 text-zinc-300">
                   {t("input.fcnFlagship")}
                 </div>
-                <div className="grid gap-3 md:grid-cols-[1.1fr_1.2fr_1fr]">
+                <div className="grid gap-4 lg:grid-cols-2">
                   <div>
                     <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
                       {t("input.fcnTerms")}
@@ -587,12 +593,33 @@ export default function InputWorkspacePage() {
                   </div>
                   <div>
                     <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-                      {t("input.fcnUnderlyings")}
+                      {t("input.fcnBarriers")}
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field label="Strike" value={fcn.strike} onChange={(value) => setFcn({ ...fcn, strike: value })} />
+                      <Field label="KI" value={fcn.ki} onChange={(value) => setFcn({ ...fcn, ki: value })} />
+                      <Field label="KO" value={fcn.ko} onChange={(value) => setFcn({ ...fcn, ko: value })} />
+                      <SelectField label={t("input.observationType")} value={fcn.observation_type} options={observationTypes} onChange={(value) => setFcn({ ...fcn, observation_type: value })} />
+                      <SelectField label={t("input.observationFrequency")} value={fcn.coupon_frequency} options={couponFrequencies} onChange={(value) => setFcn({ ...fcn, coupon_frequency: value })} />
+                      <Field label={t("input.observationDates")} value={fcn.observation_dates} onChange={(value) => setFcn({ ...fcn, observation_dates: value })} />
+                      <Field label={t("input.paymentDates")} value={fcn.coupon_dates} onChange={(value) => setFcn({ ...fcn, coupon_dates: value })} />
+                    </div>
+                  </div>
+                  <div className="lg:col-span-2">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                        {t("input.fcnUnderlyings")}
+                      </div>
+                      {underlyings.length > 1 && (
+                        <div className="font-mono text-xs text-yellow-200">
+                          {t("input.worstOfActive")}
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2">
                       {underlyings.map((item, index) => (
                         <div className="grid gap-2 border border-zinc-800 bg-black/20 p-2 sm:grid-cols-[1fr_1fr_0.7fr_auto]" key={index}>
-                          <Field label={t("input.symbol")} value={item.symbol} onChange={(value) => setUnderlyings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, symbol: value } : row))} placeholder="MDB" />
+                          <Field label={t("input.underlyingAsset")} value={item.symbol} onChange={(value) => setUnderlyings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, symbol: value } : row))} placeholder="MDB" />
                           <Field label={t("input.initialPrice")} value={item.initial_price} onChange={(value) => setUnderlyings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, initial_price: value } : row))} />
                           <Field label={t("input.weightOptional")} value={item.weight} onChange={(value) => setUnderlyings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, weight: value } : row))} />
                           <button
@@ -612,25 +639,6 @@ export default function InputWorkspacePage() {
                       >
                         {t("input.addUnderlying")}
                       </button>
-                      {underlyings.length > 1 && (
-                        <div className="font-mono text-xs text-yellow-200">
-                          {t("input.worstOfActive")}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-                      {t("input.fcnBarriers")}
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
-                      <Field label="Strike" value={fcn.strike} onChange={(value) => setFcn({ ...fcn, strike: value })} />
-                      <Field label="KI" value={fcn.ki} onChange={(value) => setFcn({ ...fcn, ki: value })} />
-                      <Field label="KO" value={fcn.ko} onChange={(value) => setFcn({ ...fcn, ko: value })} />
-                      <SelectField label={t("input.observationType")} value={fcn.observation_type} options={observationTypes} onChange={(value) => setFcn({ ...fcn, observation_type: value })} />
-                      <SelectField label={t("input.observationFrequency")} value={fcn.coupon_frequency} options={couponFrequencies} onChange={(value) => setFcn({ ...fcn, coupon_frequency: value })} />
-                      <Field label={t("input.observationDates")} value={fcn.observation_dates} onChange={(value) => setFcn({ ...fcn, observation_dates: value })} />
-                      <Field label={t("input.paymentDates")} value={fcn.coupon_dates} onChange={(value) => setFcn({ ...fcn, coupon_dates: value })} />
                     </div>
                   </div>
                 </div>

@@ -175,6 +175,8 @@ export type CryptoPositionResponse = {
   current_price?: number | string | null;
   current_value?: number | string | null;
   leverage?: number | string | null;
+  grid_lower?: number | string | null;
+  grid_upper?: number | string | null;
   price_source?: string | null;
   is_stale?: boolean | null;
 };

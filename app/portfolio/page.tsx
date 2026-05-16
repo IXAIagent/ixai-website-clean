@@ -26,7 +26,7 @@ import { useI18n } from "../lib/i18n";
 type HoldingRow = {
   id?: string | number | null;
   label: string;
-  assetType: "Stock" | "Crypto" | "Cash" | "FCN";
+  assetType: "Stock" | "Crypto Spot" | "Crypto Grid" | "Dual Investment" | "Stablecoin Earn" | "Cash" | "FCN";
   quantity?: number;
   notional?: number;
   avgPrice?: number;
@@ -35,6 +35,7 @@ type HoldingRow = {
   source?: string | null;
   stale?: boolean | null;
   risk?: string | null;
+  detail?: string | null;
 };
 
 function numberValue(value: unknown) {
@@ -101,6 +102,31 @@ function displayCrypto(crypto: CryptoPositionResponse) {
     : symbol;
 }
 
+function cryptoSubtype(crypto: CryptoPositionResponse): HoldingRow["assetType"] {
+  const assetType = (crypto.asset_type || "").toLowerCase();
+  if (assetType.startsWith("grid")) return "Crypto Grid";
+  if (assetType.startsWith("dual")) return "Dual Investment";
+  if (assetType.includes("earn") || assetType.includes("stablecoin")) return "Stablecoin Earn";
+  return "Crypto Spot";
+}
+
+function cryptoDetail(crypto: CryptoPositionResponse) {
+  const assetType = (crypto.asset_type || "").toLowerCase();
+  if (assetType.startsWith("grid")) {
+    const direction = crypto.asset_type?.split(":")[1] || "grid";
+    return `Range ${price(crypto.grid_lower)}-${price(crypto.grid_upper)} · Lev ${optionalNumber(crypto.leverage) || "-"} · ${direction}`;
+  }
+  if (assetType.startsWith("dual")) {
+    const direction = crypto.asset_type?.split(":")[1] || "Dual";
+    return `${direction} · Target ${price(crypto.current_price)} · APR ${optionalNumber(crypto.avg_price) || "-"}%`;
+  }
+  if (assetType.includes("earn") || assetType.includes("stablecoin")) {
+    const [, duration, apr] = crypto.asset_type?.split(":") || [];
+    return `APR ${apr || "-"}% · Duration ${duration || "-"}`;
+  }
+  return null;
+}
+
 function displayFcn(fcn: FCNPositionResponse) {
   return fcn.fcn_code || fcn.name || fcn.code || "FCN";
 }
@@ -153,13 +179,14 @@ function cryptoRows(summary: SummaryResponse | null, raw: CryptoPositionResponse
     return {
       id: crypto.id,
       label: displayCrypto(crypto),
-      assetType: "Crypto",
+      assetType: cryptoSubtype(crypto),
       quantity,
       avgPrice: optionalNumber(crypto.avg_price) || undefined,
       currentPrice: optionalNumber(crypto.current_price) || undefined,
       marketValue: numberValue(crypto.current_value) || fallbackValue,
       source: currentPrice > 0 ? crypto.price_source : "input estimate",
       stale: crypto.is_stale || currentPrice <= 0,
+      detail: cryptoDetail(crypto),
     };
   });
 }
@@ -223,6 +250,7 @@ function HoldingSection({ title, rows }: { title: string; rows: HoldingRow[] }) 
             <div>
               <div className="font-semibold text-zinc-100">{row.label}</div>
               <div className="font-mono text-[10px] text-zinc-500">{row.assetType}</div>
+              {row.detail && <div className="mt-1 font-mono text-[10px] text-zinc-600">{row.detail}</div>}
             </div>
             <div className="font-mono text-zinc-400">
               {row.notional ? money(row.notional) : row.quantity ? row.quantity.toLocaleString() : "-"}
