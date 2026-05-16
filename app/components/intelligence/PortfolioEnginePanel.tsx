@@ -45,11 +45,11 @@ export function PortfolioEnginePanel({
       const response = await getPortfolioEngineSummary(portfolioId);
       setData(response);
     } catch {
-      setError("Portfolio engine temporarily unavailable.");
+      setError(t("engine.portfolioUnavailable"));
     } finally {
       setLoading(false);
     }
-  }, [portfolioId]);
+  }, [portfolioId, t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -67,7 +67,7 @@ export function PortfolioEnginePanel({
   }
   if (error || !data) {
     return (
-      <TerminalPanel title={t("engine.portfolioTitle")} meta="fallback">
+      <TerminalPanel title={t("engine.portfolioTitle")} meta={t("engine.fallback")}>
         <div className="flex items-center gap-2">
           <StatusBadge value="unavailable" />
           <span className="font-mono text-xs text-yellow-300">
@@ -93,8 +93,6 @@ export function PortfolioEnginePanel({
   const propagation = data.risk_propagation || {};
   const propagationChains = Array.isArray(propagation.chains) ? propagation.chains : [];
   const overallStatus = data.is_stale ? "stale" : data.status || unified.risk_state || "clear";
-  // v4.9C: compressed one-line headline. Sits above the dense panel grid so
-  // dashboard / intelligence readers can grok state in a single line.
   const compressedHeadline = summarizeTopRisk(data, locale);
   const insightTone =
     overallStatus === "critical" || overallStatus === "unavailable"
@@ -108,7 +106,7 @@ export function PortfolioEnginePanel({
   return (
     <TerminalPanel
       title={t("engine.portfolioTitle")}
-      meta={`v4A · ${unified.risk_state || "clear"}`}
+      meta={t("engine.meta.portfolioLens")}
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <StatusBadge value={overallStatus} />
@@ -119,7 +117,7 @@ export function PortfolioEnginePanel({
         )}
         {data.degraded_reason && (
           <span className="font-mono text-[10px] text-yellow-300">
-            {data.degraded_reason}
+            {t("engine.dataCoverageLimited")}
           </span>
         )}
       </div>
@@ -160,11 +158,11 @@ export function PortfolioEnginePanel({
               <StatusBadge value={concentration.risk_level || "clear"} />
             </div>
             <div className="mt-2 grid gap-1 font-mono text-[11px] text-zinc-400">
-              <div>Single-name concentration: {pct(concentration.single_name_pct)}</div>
-              <div>Theme concentration: {pct(concentration.theme_pct)}</div>
-              <div>FCN underlying: {pct(concentration.fcn_underlying_pct)}</div>
-              <div>Crypto bucket: {pct(concentration.crypto_pct)}</div>
-              <div>Cash buffer: {pct(concentration.cash_buffer_pct)}</div>
+              <div>{t("engine.fields.singleName")}: {pct(concentration.single_name_pct)}</div>
+              <div>{t("engine.fields.themeConcentration")}: {pct(concentration.theme_pct)}</div>
+              <div>{t("engine.fields.fcnUnderlying")}: {pct(concentration.fcn_underlying_pct)}</div>
+              <div>{t("engine.fields.cryptoBucket")}: {pct(concentration.crypto_pct)}</div>
+              <div>{t("engine.fields.cashBuffer")}: {pct(concentration.cash_buffer_pct)}</div>
             </div>
           </div>
 
@@ -176,7 +174,7 @@ export function PortfolioEnginePanel({
               <StatusBadge value={fcnRisk.risk_level || "clear"} />
             </div>
             <div className="mt-2 grid gap-1 font-mono text-[11px] text-zinc-400">
-              <div>Worst-of pressure: {pct(fcnRisk.worst_of_pressure_pct)}</div>
+              <div>{t("engine.fields.worstOfPressure")}: {pct(fcnRisk.worst_of_pressure_pct)}</div>
               <div>
                 {t("engine.fields.nearestKi")}:{" "}
                 {fcnRisk.nearest_ki_pct == null
@@ -191,7 +189,7 @@ export function PortfolioEnginePanel({
                 {t("engine.fields.kiCluster")}:{" "}
                 {(fcnRisk.ki_cluster_symbols || []).join(", ") || t("engine.none")}
               </div>
-              <div>Observation: {fcnRisk.observation_clustering || "unknown"}</div>
+              <div>{t("engine.fields.observation")}: {fcnRisk.observation_clustering || t("status.unknown")}</div>
             </div>
           </div>
         </div>
@@ -200,14 +198,14 @@ export function PortfolioEnginePanel({
       {!compact && (
         <div className="mt-3 border border-zinc-800 bg-black/20 p-3">
           <div className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
-            {t("engine.driftHeader")} · window {drift.history_window ?? 0}
+            {t("engine.driftHeader")} · {t("engine.labels.historyWindow")} {drift.history_window ?? 0}
           </div>
           <div className="mt-2 grid gap-2 font-mono text-[11px] text-zinc-400 md:grid-cols-5">
-            <div>Allocation: {drift.allocation_drift || "UNCHANGED"}</div>
-            <div>Concentration: {drift.concentration_drift || "UNCHANGED"}</div>
-            <div>Volatility: {drift.volatility_drift || "UNCHANGED"}</div>
-            <div>FCN pressure: {drift.fcn_pressure_drift || "UNCHANGED"}</div>
-            <div>Regime: {drift.regime_drift || "UNCHANGED"}</div>
+            <div>{t("engine.labels.allocation")}: {drift.allocation_drift || "UNCHANGED"}</div>
+            <div>{t("engine.score.concentration")}: {drift.concentration_drift || "UNCHANGED"}</div>
+            <div>{t("engine.score.volatility")}: {drift.volatility_drift || "UNCHANGED"}</div>
+            <div>{t("engine.labels.fcnPressure")}: {drift.fcn_pressure_drift || "UNCHANGED"}</div>
+            <div>{t("engine.labels.regime")}: {drift.regime_drift || "UNCHANGED"}</div>
           </div>
           <div className="mt-2 text-xs text-zinc-300">
             {sanitizeAdviceText(drift.drift_summary || "")}
@@ -236,7 +234,7 @@ export function PortfolioEnginePanel({
             ))}
             {propagationChains.length === 0 && (
               <div className="font-mono text-[11px] text-zinc-500">
-                No dominant chain detected.
+                {t("engine.labels.noDominantChain")}
               </div>
             )}
           </div>

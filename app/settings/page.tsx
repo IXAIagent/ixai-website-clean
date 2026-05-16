@@ -259,20 +259,20 @@ export default function SettingsPage() {
               onChange={() => setToggle("email")}
             />
             <label className="block border-b border-zinc-900 py-2">
-              <span className="block text-sm text-zinc-200">Alert mode</span>
+              <span className="block text-sm text-zinc-200">{t("settings.alertMode")}</span>
               <select
                 className="mt-2 w-full border border-zinc-700 bg-black px-2 py-2 text-sm text-zinc-200"
                 onChange={(event) => updatePreferences({ alertMode: event.target.value as AlertMode })}
                 value={preferences.alertMode}
               >
-                <option value="criticalOnly">Critical only</option>
-                <option value="all">All alerts</option>
-                <option value="dailyBrief">Daily brief</option>
+                <option value="criticalOnly">{t("settings.criticalOnly")}</option>
+                <option value="all">{t("settings.allAlerts")}</option>
+                <option value="dailyBrief">{t("settings.dailyBrief")}</option>
               </select>
             </label>
           </TerminalPanel>
 
-          <TerminalPanel title={t("settings.dataSources")} meta="safe placeholders">
+          <TerminalPanel title={t("settings.dataSources")} meta={t("settings.safePlaceholders")}>
             {dataSources.map((source) => (
               <SourceRow detail={source.detail} key={source.name} name={source.name} status={source.status} />
             ))}
@@ -281,22 +281,22 @@ export default function SettingsPage() {
 
         <section className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
           <TerminalPanel title={t("settings.system")} meta={healthStatus}>
-            <MetricRow label="BACKEND HEALTH" value={healthStatus} />
-            <MetricRow label="DATABASE READINESS" value={health?.database || "unknown"} />
-            <MetricRow label="REQUEST STATUS" value={healthError ? "failed soft" : health ? "ok" : "unknown"} />
-            <MetricRow label="LAST CHECKED" value={lastChecked || "pending"} />
+            <MetricRow label={t("settings.backendHealth")} value={healthStatus} />
+            <MetricRow label={t("settings.databaseReadiness")} value={health?.database || t("common.unknown")} />
+            <MetricRow label={t("settings.requestStatus")} value={healthError ? t("status.partial") : health ? t("status.healthy") : t("common.unknown")} />
+            <MetricRow label={t("settings.lastChecked")} value={lastChecked || t("common.dataPending")} />
             {healthError && (
               <div className="mt-3 border border-yellow-500/30 bg-yellow-950/10 px-3 py-2 text-xs text-yellow-200">
-                Health endpoint unavailable: {healthError}
+                {t("settings.healthUnavailable")}: {healthError}
               </div>
             )}
           </TerminalPanel>
 
-          <TerminalPanel title={t("settings.intelligence")} meta="risk interpretation only">
+          <TerminalPanel title={t("settings.intelligence")} meta={t("settings.riskInterpretationOnly")}>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="border border-zinc-800 bg-black/20 p-3">
-                <div className="font-mono text-[10px] uppercase text-zinc-600">Scheduler Snapshot Interval</div>
-                <div className="mt-1 text-sm text-zinc-300">60 minutes display placeholder</div>
+                <div className="font-mono text-[10px] uppercase text-zinc-600">{t("settings.schedulerSnapshotInterval")}</div>
+                <div className="mt-1 text-sm text-zinc-300">{t("settings.snapshotIntervalPlaceholder")}</div>
               </div>
               <div className="border border-zinc-800 bg-black/20 p-3">
                 <div className="font-mono text-[10px] uppercase text-zinc-600">Skip News In Scheduler</div>

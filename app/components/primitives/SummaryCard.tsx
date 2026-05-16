@@ -1,6 +1,6 @@
 "use client";
 
-// v4.9A: compact P0 metric card. Scan-friendly, single value per card.
+// Compact metric card. Scan-friendly, single value per card.
 
 import type { ReactNode } from "react";
 

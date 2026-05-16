@@ -1,6 +1,6 @@
 "use client";
 
-// v4.9A: priority-band divider. Quietly separates P0 / P1 / P2 sections
+// Priority-band divider. Quietly separates major dashboard sections
 // without adding visual weight.
 
 export function SectionDivider({

@@ -1,7 +1,7 @@
 "use client";
 
 // v4.9A: progressive disclosure primitive.
-// Wraps deep / P2 content in a native <details> element so:
+// Wraps deep analysis content in a native <details> element so:
 //   - Default collapsed on mobile + reduces vertical noise.
 //   - Browser-native keyboard accessibility (Enter/Space).
 //   - No JS state — SSR-safe and zero hydration cost.

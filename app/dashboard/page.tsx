@@ -227,7 +227,7 @@ export default function DashboardPage() {
   return (
     <AppShell
       title={t("page.dashboard")}
-      subtitle="P0 portfolio overview: risk, allocation, critical FCN watch and scheduler memory."
+      subtitle={t("dashboard.subtitle")}
     >
       {loading && !data ? (
         <div className="grid gap-3">
@@ -310,19 +310,19 @@ export default function DashboardPage() {
             </div>
             <div className="mt-3 grid gap-2 font-mono text-xs md:grid-cols-3">
               <div>
-                <span className="text-zinc-600">DOMINANT RISK</span>
+                <span className="text-zinc-600">{t("dashboard.dominantRisk")}</span>
                 <div className={riskClass(data?.intelligenceSummary?.dominant_risk)}>
                   {textValue(data?.intelligenceSummary?.dominant_risk || data?.risk?.top_risk || summary?.top_risk, "No dominant risk")}
                 </div>
               </div>
               <div>
-                <span className="text-zinc-600">WHAT CHANGED</span>
+                <span className="text-zinc-600">{t("dashboard.whatChanged")}</span>
                 <div className="text-zinc-300">
                   {textValue(data?.intelligenceSummary?.explainability?.what_changed_today, "Waiting for scheduler history")}
                 </div>
               </div>
               <div>
-                <span className="text-zinc-600">SYSTEMIC</span>
+                <span className="text-zinc-600">{t("dashboard.systemicRisk")}</span>
                 <div className="text-zinc-300">
                   {textValue(data?.intelligenceSummary?.explainability?.systemic_risk, "No systemic cluster detected")}
                 </div>
@@ -332,25 +332,25 @@ export default function DashboardPage() {
 
           <section className={`grid gap-3 lg:grid-cols-4 ${preferences.compactMode ? "text-sm" : ""}`}>
             <div className="border border-zinc-800 bg-zinc-950 p-3">
-              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">Regime</div>
+              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">{t("dashboard.regime")}</div>
               <div className="mt-2 text-xl font-semibold text-zinc-100">
                 {textValue(data?.intelligenceSummary?.regime, "BUILDING")}
               </div>
             </div>
             <div className="border border-zinc-800 bg-zinc-950 p-3">
-              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">Risk</div>
+              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">{t("dashboard.risk")}</div>
               <div className={`mt-2 text-xl font-semibold ${riskClass(riskLevel)}`}>
                 {textValue(riskLevel)} · {textValue(riskScore)}
               </div>
             </div>
             <div className="border border-zinc-800 bg-zinc-950 p-3">
-              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">Confidence</div>
+              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">{t("dashboard.confidence")}</div>
               <div className={Number.isFinite(confidence) && confidence >= 45 ? "mt-2 text-xl font-semibold text-emerald-300" : "mt-2 text-xl font-semibold text-yellow-300"}>
                 {Number.isFinite(confidence) ? `${confidence.toFixed(0)}%` : "pending"}
               </div>
             </div>
             <div className="border border-zinc-800 bg-zinc-950 p-3">
-              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">Memory</div>
+              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">{t("dashboard.memory")}</div>
               <div className={isStale ? "mt-2 text-xl font-semibold text-yellow-300" : "mt-2 text-xl font-semibold text-emerald-300"}>
                 {isStale ? t("dashboard.status.staleBuilding") : t("common.fresh")}
               </div>
@@ -402,7 +402,7 @@ export default function DashboardPage() {
                 })}
               </div>
               <Link className="mt-3 inline-block font-mono text-xs text-emerald-300" href="/fcn">
-                Open FCN workspace →
+                {t("dashboard.openFcnWorkspace")}
               </Link>
             </TerminalPanel>
 
@@ -423,7 +423,7 @@ export default function DashboardPage() {
                 ))}
               </div>
               <Link className="mt-3 inline-block font-mono text-xs text-emerald-300" href="/alerts">
-                Open alerts center →
+                {t("dashboard.openAlertsCenter")}
               </Link>
             </TerminalPanel>
           </section>
@@ -432,23 +432,23 @@ export default function DashboardPage() {
           <TerminalPanel title={t("dashboard.scheduler")} meta="history">
             <div className="grid gap-2 font-mono text-xs md:grid-cols-4">
               <div>
-                <span className="text-zinc-600">LAST GENERATED</span>
+                <span className="text-zinc-600">{t("dashboard.lastGenerated")}</span>
                 <div className="text-zinc-300">{compactTime(generatedAt)}</div>
               </div>
               <div>
-                <span className="text-zinc-600">TIMELINE</span>
+                <span className="text-zinc-600">{t("dashboard.timelineLabel")}</span>
                 <div className={isStale ? "text-yellow-300" : "text-emerald-300"}>
                   {textValue(data?.timeline?.message, "Waiting for scheduler history")}
                 </div>
               </div>
               <div>
-                <span className="text-zinc-600">30D RISK</span>
+                <span className="text-zinc-600">{t("dashboard.riskTrend30d")}</span>
                 <div className={riskClass(data?.timeline?.risk_score_trend)}>
                   {textValue(data?.timeline?.risk_score_trend, "pending")}
                 </div>
               </div>
               <div>
-                <span className="text-zinc-600">CONCENTRATION</span>
+                <span className="text-zinc-600">{t("dashboard.concentration")}</span>
                 <div className={riskClass(data?.timeline?.concentration_trend)}>
                   {textValue(data?.timeline?.concentration_trend, "pending")}
                 </div>

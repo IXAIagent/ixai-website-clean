@@ -71,7 +71,7 @@ const FIXTURE = {
     aiOverview: "AI Overview",
     "onboarding.step1": "Create account",
     "onboarding.step2": "Create portfolio",
-    "todayFocus.subtitle": "Top 3 monitoring priorities",
+    "todayFocus.subtitle": "Observation priorities",
   },
   // pure nested
   engine: {
@@ -95,7 +95,7 @@ test("flat-within-namespace dotted key (v3E legacy shape)", () => {
   );
   assert.equal(
     resolveNestedKey(FIXTURE, "dashboard.todayFocus.subtitle"),
-    "Top 3 monitoring priorities",
+    "Observation priorities",
   );
 });
 
@@ -476,9 +476,23 @@ test("visible UI does not expose hardcoded bilingual chrome or product-internal 
   const forbiddenPatterns = [
     /const\s+labels\s*=\s*\{/,
     /["'`]P[012]\s*·/,
+    /["'`][^"'`]*\bP[012]\b[^"'`]*["'`]/,
     /Top 3 monitoring priorities/,
+    /Executive summary/i,
+    /Contextual intelligence/i,
+    /Engine panel/i,
+    /WHAT TO MONITOR/,
     /single name/i,
     /theme cluster/i,
+    /compact view/i,
+    /workspace memory/i,
+    /BACKEND HEALTH/,
+    /DATABASE READINESS/,
+    /REQUEST STATUS/,
+    /CRYPTO_STRESS/,
+    /["'`][^"'`]*\bVOL\b[^"'`]*["'`]/,
+    /["'`][^"'`]*\bCONF\b[^"'`]*["'`]/,
+    /["'`][^"'`]*\bIMPACT\b[^"'`]*["'`]/,
   ];
   const hardcodedLeftovers = [
     /Default user portfolio/,

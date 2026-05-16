@@ -117,6 +117,7 @@ function mergeFcns(summary: SummaryResponse | null) {
 }
 
 function WindowCard({ item }: { item: TimelineWindowResponse }) {
+  const { t } = useI18n();
   return (
     <div className="border border-zinc-800 bg-black/20 p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -126,10 +127,10 @@ function WindowCard({ item }: { item: TimelineWindowResponse }) {
         <span className="font-mono text-[10px] text-zinc-600">timeline</span>
       </div>
       <div className="space-y-1 font-mono text-[11px] leading-5">
-        <div><span className="text-zinc-600">REGIME</span> <span className="text-zinc-300">{textValue(item.regime_evolution)}</span></div>
-        <div><span className="text-zinc-600">RISK</span> <span className="text-zinc-300">{textValue(item.risk_score_trend)}</span></div>
-        <div><span className="text-zinc-600">CONC</span> <span className="text-zinc-300">{textValue(item.concentration_trend)}</span></div>
-        <div><span className="text-zinc-600">VOL</span> <span className="text-zinc-300">{textValue(item.volatility_trend)}</span></div>
+        <div><span className="text-zinc-600">{t("dashboard.regime")}</span> <span className="text-zinc-300">{textValue(item.regime_evolution)}</span></div>
+        <div><span className="text-zinc-600">{t("dashboard.risk")}</span> <span className="text-zinc-300">{textValue(item.risk_score_trend)}</span></div>
+        <div><span className="text-zinc-600">{t("intelligence.concentration")}</span> <span className="text-zinc-300">{textValue(item.concentration_trend)}</span></div>
+        <div><span className="text-zinc-600">{t("intelligence.volatility")}</span> <span className="text-zinc-300">{textValue(item.volatility_trend)}</span></div>
       </div>
       <div className="mt-3 grid gap-2 text-[11px] text-zinc-500">
         <div>Recurring: {listItems(item.recurring_risks, "none").slice(0, 2).join(" · ")}</div>
@@ -272,26 +273,26 @@ export default function IntelligencePage() {
       <div className="space-y-5">
         {errors.length > 0 && (
           <div className="border border-yellow-500/30 bg-yellow-950/10 px-3 py-2 text-xs text-yellow-200">
-            Some intelligence panels are temporarily unavailable. Core workspace remains active.
+            {t("errors.intelligencePartial")}
           </div>
         )}
 
         <TerminalPanel title={labels.header} meta={loading ? "loading" : isStale ? "stale memory" : "fresh"}>
           <div className="grid gap-3 md:grid-cols-5">
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">Regime</div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">{t("dashboard.regime")}</div>
               <div className="mt-1 text-lg font-semibold text-zinc-100">{textValue(summary?.regime, "Pending")}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">Confidence</div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">{t("dashboard.confidence")}</div>
               <div className="mt-1 text-lg font-semibold text-emerald-300">{percent(confidence)}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">Dominant Risk</div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">{t("dashboard.dominantRisk")}</div>
               <div className="mt-1 text-sm text-zinc-300">{textValue(summary?.dominant_risk, "Pending")}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">Generated</div>
+              <div className="font-mono text-[10px] uppercase text-zinc-600">{t("dashboard.lastGenerated")}</div>
               <div className="mt-1 text-sm text-zinc-300">{timestamp(summary?.generated_at || timeline?.generated_at)}</div>
             </div>
             <div className="flex flex-wrap content-start gap-2">
@@ -337,26 +338,24 @@ export default function IntelligencePage() {
         <SectionDivider label={labels.marketContext} hint={t("intelligence.whyWhatChanged")} />
 
         <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-          <TerminalPanel title={labels.explainability} meta="why / what changed">
-            <DataRow label="WHY NOW" value={explainability?.why_risk_increased || todayFocus[0]?.reason} />
-            <DataRow label="WHAT CHANGED" value={explainability?.what_changed_today} />
+          <TerminalPanel title={labels.explainability} meta={t("intelligence.whyWhatChanged")}>
+            <DataRow label={t("intelligence.whyNow")} value={explainability?.why_risk_increased || todayFocus[0]?.reason} />
+            <DataRow label={t("intelligence.whatChanged")} value={explainability?.what_changed_today} />
             <DataRow label={labels.whatToMonitor} value={todayFocus.map((item) => item.recommended_monitoring_action).join(" · ")} />
-            <DataRow label="DRIVER" value={explainability?.dominant_driver} />
-            <DataRow label="HIDDEN CORR" value={explainability?.hidden_correlation} />
-            <DataRow label="SYSTEMIC" value={explainability?.systemic_risk} />
+            <DataRow label={t("intelligence.primaryDriver")} value={explainability?.dominant_driver} />
+            <DataRow label={t("intelligence.hiddenCorrelation")} value={explainability?.hidden_correlation} />
+            <DataRow label={t("intelligence.systemicRisk")} value={explainability?.systemic_risk} />
           </TerminalPanel>
 
-          <TerminalPanel title={labels.drift} meta="regime / concentration">
-            <DataRow label="DRIFT" value={summary?.drift_summary || reasoning?.timeline?.what_changed_today} />
-            <DataRow label="REGIME" value={summary?.regime} />
-            <DataRow label="DOMINANT DRIVER" value={summary?.explainability?.dominant_driver || reasoning?.reasoning?.why_workspace_mode} />
-            <DataRow label="CONCENTRATION" value={summary?.concentration_score ? percent(summary.concentration_score) : "Pending"} />
-            <DataRow label="VOLATILITY" value={timeline?.volatility_trend || reasoning?.reasoning?.volatility_analysis} />
+          <TerminalPanel title={labels.drift} meta={`${t("dashboard.regime")} / ${t("intelligence.concentration")}`}>
+            <DataRow label={t("intelligence.riskDrift")} value={summary?.drift_summary || reasoning?.timeline?.what_changed_today} />
+            <DataRow label={t("dashboard.regime")} value={summary?.regime} />
+            <DataRow label={t("intelligence.dominantDriver")} value={summary?.explainability?.dominant_driver || reasoning?.reasoning?.why_workspace_mode} />
+            <DataRow label={t("intelligence.concentration")} value={summary?.concentration_score ? percent(summary.concentration_score) : "Pending"} />
+            <DataRow label={t("intelligence.volatility")} value={timeline?.volatility_trend || reasoning?.reasoning?.volatility_analysis} />
           </TerminalPanel>
         </section>
 
-        {/* v4.9A: P1 engines + Copilot stay visible — they are the
-            primary v4 surfaces. */}
         <PortfolioEnginePanel portfolioId={workspaceCtx.context.selectedPortfolioId} />
         <CopilotQuestionPanel portfolioId={workspaceCtx.context.selectedPortfolioId} />
 
@@ -396,7 +395,7 @@ export default function IntelligencePage() {
 
         <ExpandablePanel title={labels.scenarios} meta="risk awareness only">
           <div className="divide-y divide-zinc-900 border border-zinc-800">
-            {scenarioRows.length === 0 && <EmptyLine>Scenario engine unavailable or still building.</EmptyLine>}
+            {scenarioRows.length === 0 && <EmptyLine>{t("intelligence.scenarioUnavailable")}</EmptyLine>}
             {scenarioRows.map((scenario, index) => (
               <div className="grid gap-2 px-3 py-2 text-xs md:grid-cols-[1fr_0.7fr_1.2fr]" key={`${textValue(scenario.scenario_name, "scenario")}-${index}`}>
                 <div>
@@ -447,7 +446,7 @@ export default function IntelligencePage() {
           </section>
         </ExpandablePanel>
 
-        <ExpandablePanel title="Scenario sensitivity" meta="hypothetical">
+        <ExpandablePanel title={t("intelligence.scenarioSensitivity")} meta="hypothetical">
           <ScenarioSensitivityPanel
             summary={portfolioSummary}
             intelligenceSummary={summary}
@@ -455,13 +454,13 @@ export default function IntelligencePage() {
           />
         </ExpandablePanel>
 
-        <ExpandablePanel title="Memory narrative" meta="7d / 30d snapshot history">
+        <ExpandablePanel title={t("intelligence.memoryNarrative")} meta={t("intelligence.snapshotHistory")}>
           <MemoryNarrativePanel timeline={timeline} reasoning={reasoning} />
         </ExpandablePanel>
 
         <ExpandablePanel title={labels.copilot} meta={copilot ? "legacy fallback" : "legacy"}>
           <p className="text-sm leading-6 text-zinc-300">
-            {textValue(copilot?.answer, "Copilot explain is interactive above. This panel shows the legacy non-interactive narrative as a fallback.")}
+            {textValue(copilot?.answer, t("intelligence.copilotFallback"))}
           </p>
         </ExpandablePanel>
 

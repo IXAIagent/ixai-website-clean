@@ -104,6 +104,24 @@ export default function MarketPage() {
       news: t("market.news"),
       interpretation: t("market.interpretation"),
       provider: t("market.provider"),
+      sentiment: t("market.sentiment"),
+      cryptoVolatility: t("market.cryptoVolatility"),
+      fcnNews: t("market.fcnNews"),
+      visible: t("market.visible"),
+      noNews: t("market.noNews"),
+      marketNarrativeBuilding: t("market.marketNarrativeBuilding"),
+      complianceNote: t("market.complianceNote"),
+      yfinanceNews: t("market.yfinanceNews"),
+      scheduler: t("market.scheduler"),
+      feedStatus: t("market.feedStatus"),
+      staleProvider: t("market.staleProvider"),
+      bestEffort: t("market.bestEffort"),
+      canSkipNews: t("market.canSkipNews"),
+      waiting: t("market.waiting"),
+      items: t("market.items"),
+      watch: t("market.watch"),
+      normal: t("market.normal"),
+      quiet: t("market.quiet"),
     }),
     [t],
   );
@@ -202,13 +220,13 @@ export default function MarketPage() {
             ))}
           </div>
           <div className="mt-3 grid gap-2 font-mono text-xs md:grid-cols-3">
-            <div className="border border-zinc-800 bg-black/20 p-2 text-zinc-300">AI SENTIMENT: {textValue(intelligence?.workspace?.market_regime, "MIXED")}</div>
-            <div className="border border-zinc-800 bg-black/20 p-2 text-zinc-300">CRYPTO VOL: {cryptoNews > 0 ? "WATCH" : "NORMAL"}</div>
-            <div className="border border-zinc-800 bg-black/20 p-2 text-zinc-300">FCN NEWS: {fcnNews > 0 ? `${fcnNews} ITEMS` : "QUIET"}</div>
+            <div className="border border-zinc-800 bg-black/20 p-2 text-zinc-300">{labels.sentiment}: {textValue(intelligence?.workspace?.market_regime, "MIXED")}</div>
+            <div className="border border-zinc-800 bg-black/20 p-2 text-zinc-300">{labels.cryptoVolatility}: {cryptoNews > 0 ? labels.watch : labels.normal}</div>
+            <div className="border border-zinc-800 bg-black/20 p-2 text-zinc-300">{labels.fcnNews}: {fcnNews > 0 ? `${fcnNews} ${labels.items}` : labels.quiet}</div>
           </div>
         </TerminalPanel>
 
-        <TerminalPanel title={labels.news} meta={`${filteredArticles.length} visible`}>
+        <TerminalPanel title={labels.news} meta={`${filteredArticles.length} ${labels.visible}`}>
           <div className="mb-3 flex flex-wrap gap-2">
             {filters.map((item) => (
               <button
@@ -225,7 +243,7 @@ export default function MarketPage() {
           </div>
 
           <div className="divide-y divide-zinc-900 border border-zinc-800">
-            {filteredArticles.length === 0 && <EmptyLine>No portfolio-relevant market news found yet.</EmptyLine>}
+            {filteredArticles.length === 0 && <EmptyLine>{labels.noNews}</EmptyLine>}
             {filteredArticles.map((article, index) => (
               <div className="px-3 py-2 text-xs" key={`${article.link || article.title || "article"}-${index}`}>
                 <div className="flex flex-wrap items-center gap-2 font-mono">
@@ -257,25 +275,25 @@ export default function MarketPage() {
         <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
           <TerminalPanel title={labels.interpretation} meta="portfolio lens">
             <div className="space-y-2 text-sm leading-6 text-zinc-300">
-              <p>{textValue(intelligence?.narrative?.market_narrative, "Market narrative is still building from portfolio-relevant signals.")}</p>
-              <p>FCN related news: {fcnNews}. Crypto related news: {cryptoNews}. Macro / rates related news: {macroNews}.</p>
-              <p className="text-zinc-500">This workspace is for market intelligence and risk awareness, not trading instruction.</p>
+              <p>{textValue(intelligence?.narrative?.market_narrative, labels.marketNarrativeBuilding)}</p>
+              <p>{t("market.relatedNewsCounts").replace("{fcn}", String(fcnNews)).replace("{crypto}", String(cryptoNews)).replace("{macro}", String(macroNews))}</p>
+              <p className="text-zinc-500">{labels.complianceNote}</p>
             </div>
           </TerminalPanel>
 
           <TerminalPanel title={labels.provider} meta={news?.is_stale ? "stale" : "best effort"}>
             <div className="space-y-2 font-mono text-xs text-zinc-400">
               <div className="flex justify-between border-b border-zinc-900 pb-2">
-                <span className="text-zinc-600">YFINANCE NEWS</span>
-                <span>{news?.is_stale ? "STALE / RATE LIMITED POSSIBLE" : "BEST EFFORT"}</span>
+                <span className="text-zinc-600">{labels.yfinanceNews}</span>
+                <span>{news?.is_stale ? labels.staleProvider : labels.bestEffort}</span>
               </div>
               <div className="flex justify-between border-b border-zinc-900 pb-2">
-                <span className="text-zinc-600">SCHEDULER</span>
-                <span>CAN SKIP NEWS</span>
+                <span className="text-zinc-600">{labels.scheduler}</span>
+                <span>{labels.canSkipNews}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-600">FEED STATUS</span>
-                <span>{articles.length > 0 ? `${articles.length} ITEMS` : "WAITING"}</span>
+                <span className="text-zinc-600">{labels.feedStatus}</span>
+                <span>{articles.length > 0 ? `${articles.length} ${labels.items}` : labels.waiting}</span>
               </div>
             </div>
           </TerminalPanel>

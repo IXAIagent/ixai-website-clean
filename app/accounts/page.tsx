@@ -148,7 +148,7 @@ export default function AccountsPage() {
           </TerminalPanel>
         )}
 
-        <TerminalPanel title={t("accounts.activeContext")} meta="workspace memory">
+        <TerminalPanel title={t("accounts.activeContext")} meta={t("accounts.contextMemory")}>
           <div className="grid gap-3 font-mono text-xs md:grid-cols-4">
             <div className="border border-zinc-800 bg-black/20 p-3">
               <div className="text-zinc-600">{t("common.account")}</div>
@@ -159,7 +159,7 @@ export default function AccountsPage() {
               <div className="mt-1 text-zinc-100">{context.selectedPortfolioName || selectedPortfolio?.name || t("common.selectPortfolio")}</div>
             </div>
             <div className="border border-zinc-800 bg-black/20 p-3">
-              <div className="text-zinc-600">LAST WORKSPACE</div>
+              <div className="text-zinc-600">{t("common.lastActive")}</div>
               <div className="mt-1 text-zinc-100">{context.lastActiveWorkspace}</div>
             </div>
             <div className="flex flex-wrap gap-2">

@@ -41,6 +41,14 @@ function fmt(n: unknown) {
   return Number.isFinite(parsed) ? parsed.toFixed(0) : "-";
 }
 
+function humanize(value: unknown, fallback = "normal") {
+  const text = String(value || fallback)
+    .replace(/_/g, " ")
+    .trim()
+    .toLowerCase();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 export function MarketEnginePanel({
   portfolioId,
   compact = false,
@@ -60,11 +68,11 @@ export function MarketEnginePanel({
       const response = await getMarketEngineSummary(portfolioId);
       setData(response);
     } catch {
-      setError("Market engine temporarily unavailable.");
+      setError(t("engine.marketUnavailable"));
     } finally {
       setLoading(false);
     }
-  }, [portfolioId]);
+  }, [portfolioId, t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -82,7 +90,7 @@ export function MarketEnginePanel({
   }
   if (error || !data) {
     return (
-      <TerminalPanel title={t("engine.marketTitle")} meta="fallback">
+      <TerminalPanel title={t("engine.marketTitle")} meta={t("engine.fallback")}>
         <div className="flex items-center gap-2">
           <StatusBadge value="unavailable" />
           <span className="font-mono text-xs text-yellow-300">
@@ -110,17 +118,17 @@ export function MarketEnginePanel({
   return (
     <TerminalPanel
       title={t("engine.marketTitle")}
-      meta={`v4B · ${regime.regime || "data_limited"}`}
+      meta={t("engine.meta.marketLens")}
     >
       <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-        <span className={`border px-2 py-1 uppercase ${regimeClass(regime.regime)}`}>
-          {t("engine.labels.regime")}: {regime.regime || "data_limited"}
+        <span className={`border px-2 py-1 ${regimeClass(regime.regime)}`}>
+          {t("engine.labels.regime")}: {humanize(regime.regime, "data limited")}
         </span>
-        <span className={`border px-2 py-1 uppercase ${severityClass(volatility.overall_state)}`}>
-          {t("engine.labels.vol")}: {volatility.overall_state || "normal"}
+        <span className={`border px-2 py-1 ${severityClass(volatility.overall_state)}`}>
+          {t("engine.labels.vol")} {humanize(volatility.overall_state)}
         </span>
-        <span className={`border px-2 py-1 uppercase ${severityClass(impact.overall_impact_level)}`}>
-          {t("engine.labels.impact")}: {impact.overall_impact_level || "clear"}
+        <span className={`border px-2 py-1 ${severityClass(impact.overall_impact_level)}`}>
+          {t("engine.labels.impact")} {humanize(impact.overall_impact_level, "clear")}
         </span>
         {typeof regime.confidence === "number" && (
           <span className="border border-zinc-700 px-2 py-1 uppercase text-zinc-400">
@@ -160,16 +168,16 @@ export function MarketEnginePanel({
       {!compact && (
         <div className="mt-3 grid gap-2 font-mono text-xs md:grid-cols-3">
           <div className="border border-zinc-800 bg-black/20 px-2 py-2">
-            <div className="text-[10px] uppercase tracking-wide text-zinc-500">EQUITY VOL</div>
-            <div className="mt-1 text-zinc-200">{volatility.equity_volatility_state || "normal"}</div>
+            <div className="text-[10px] uppercase tracking-wide text-zinc-500">{t("engine.labels.equityVolatility")}</div>
+            <div className="mt-1 text-zinc-200">{humanize(volatility.equity_volatility_state)}</div>
           </div>
           <div className="border border-zinc-800 bg-black/20 px-2 py-2">
-            <div className="text-[10px] uppercase tracking-wide text-zinc-500">CRYPTO VOL</div>
-            <div className="mt-1 text-zinc-200">{volatility.crypto_volatility_state || "normal"}</div>
+            <div className="text-[10px] uppercase tracking-wide text-zinc-500">{t("engine.labels.cryptoVolatility")}</div>
+            <div className="mt-1 text-zinc-200">{humanize(volatility.crypto_volatility_state)}</div>
           </div>
           <div className="border border-zinc-800 bg-black/20 px-2 py-2">
-            <div className="text-[10px] uppercase tracking-wide text-zinc-500">FCN SENSITIVITY</div>
-            <div className="mt-1 text-zinc-200">{volatility.fcn_sensitivity_state || "normal"}</div>
+            <div className="text-[10px] uppercase tracking-wide text-zinc-500">{t("engine.labels.fcnSensitivity")}</div>
+            <div className="mt-1 text-zinc-200">{humanize(volatility.fcn_sensitivity_state)}</div>
           </div>
         </div>
       )}
@@ -177,15 +185,15 @@ export function MarketEnginePanel({
       {!compact && (
         <div className="mt-3 border border-zinc-800 bg-black/20 p-3">
           <div className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
-            MACRO / NEWS PRESSURE
+            {t("engine.macroHeader")}
           </div>
           <div className="mt-2 grid gap-1 font-mono text-[11px] text-zinc-400 md:grid-cols-6">
-            <div>Rates: {fmt(macro.rates_pressure)}</div>
-            <div>AI: {fmt(macro.ai_pressure)}</div>
-            <div>Crypto: {fmt(macro.crypto_pressure)}</div>
-            <div>Geo: {fmt(macro.geopolitics_pressure)}</div>
-            <div>Earnings: {fmt(macro.earnings_pressure)}</div>
-            <div>Macro: {fmt(macro.macro_stress)}</div>
+            <div>{t("engine.labels.rates")}: {fmt(macro.rates_pressure)}</div>
+            <div>{t("engine.labels.ai")}: {fmt(macro.ai_pressure)}</div>
+            <div>{t("engine.labels.crypto")}: {fmt(macro.crypto_pressure)}</div>
+            <div>{t("engine.labels.geo")}: {fmt(macro.geopolitics_pressure)}</div>
+            <div>{t("engine.labels.earnings")}: {fmt(macro.earnings_pressure)}</div>
+            <div>{t("engine.labels.macro")}: {fmt(macro.macro_stress)}</div>
           </div>
           <div className="mt-2 text-xs text-zinc-300">
             {sanitizeAdviceText(macro.narrative || "")}
@@ -196,7 +204,7 @@ export function MarketEnginePanel({
                 <div className="px-2 py-1 font-mono text-[11px]" key={idx}>
                   <span className="text-zinc-200 uppercase">{theme.theme}</span>
                   <span className="ml-2 text-zinc-500">
-                    pressure {fmt(theme.weight)}
+                    {t("engine.labels.pressure")} {fmt(theme.weight)}
                   </span>
                   {Array.isArray(theme.sample_headlines) && theme.sample_headlines.length > 0 && (
                     <div className="text-zinc-500">
@@ -216,19 +224,19 @@ export function MarketEnginePanel({
       {!compact && (
         <div className="mt-3 grid gap-2 font-mono text-[11px] text-zinc-400 md:grid-cols-2">
           <div>
-            <span className="text-zinc-500">FCN impact: </span>
+            <span className="text-zinc-500">{t("engine.fields.fcnImpact")}: </span>
             <span className="text-zinc-300">{sanitizeAdviceText(impact.fcn_impact || "—")}</span>
           </div>
           <div>
-            <span className="text-zinc-500">Crypto impact: </span>
+            <span className="text-zinc-500">{t("engine.fields.cryptoImpact")}: </span>
             <span className="text-zinc-300">{sanitizeAdviceText(impact.crypto_impact || "—")}</span>
           </div>
           <div>
-            <span className="text-zinc-500">Equity impact: </span>
+            <span className="text-zinc-500">{t("engine.fields.equityImpact")}: </span>
             <span className="text-zinc-300">{sanitizeAdviceText(impact.equity_impact || "—")}</span>
           </div>
           <div>
-            <span className="text-zinc-500">Cash buffer: </span>
+            <span className="text-zinc-500">{t("engine.fields.cashBuffer")}: </span>
             <span className="text-zinc-300">{sanitizeAdviceText(impact.cash_buffer_interpretation || "—")}</span>
           </div>
         </div>
