@@ -10,6 +10,10 @@ import {
   AllocationItem,
   CashPositionResponse,
   CryptoPositionResponse,
+  deleteCash,
+  deleteCrypto,
+  deleteFcn,
+  deleteStock,
   FCNPositionResponse,
   getAccounts,
   getCash,
@@ -36,6 +40,7 @@ type HoldingRow = {
   stale?: boolean | null;
   risk?: string | null;
   detail?: string | null;
+  deleteKind?: "stock" | "crypto" | "cash" | "fcn";
 };
 
 function numberValue(value: unknown) {
@@ -165,6 +170,7 @@ function stockRows(summary: SummaryResponse | null, raw: StockPositionResponse[]
       marketValue: numberValue(stock.current_value) || fallbackValue,
       source: stock.price_source,
       stale: stock.is_stale,
+      deleteKind: "stock",
     };
   });
 }
@@ -187,6 +193,7 @@ function cryptoRows(summary: SummaryResponse | null, raw: CryptoPositionResponse
       source: currentPrice > 0 ? crypto.price_source : "input estimate",
       stale: crypto.is_stale || currentPrice <= 0,
       detail: cryptoDetail(crypto),
+      deleteKind: "crypto",
     };
   });
 }
@@ -199,6 +206,7 @@ function cashRows(summary: SummaryResponse | null, raw: CashPositionResponse[]) 
     assetType: "Cash",
     marketValue: numberValue(cash.amount),
     source: "manual",
+    deleteKind: "cash",
   }));
 }
 
@@ -224,6 +232,7 @@ function fcnRows(summary: SummaryResponse | null, raw: FCNPositionResponse[]) {
       source: analysis?.price_source || position.price_source || "monitor",
       stale: analysis?.is_stale || position.is_stale,
       risk: analysis?.risk_level || position.risk_level,
+      deleteKind: "fcn",
     };
   });
 }
@@ -235,7 +244,7 @@ function plText(row: HoldingRow) {
   return <span className={tone}>{money(value)}</span>;
 }
 
-function HoldingSection({ title, rows }: { title: string; rows: HoldingRow[] }) {
+function HoldingSection({ title, rows, onDelete }: { title: string; rows: HoldingRow[]; onDelete: (row: HoldingRow) => void }) {
   const { t } = useI18n();
   return (
     <div className="border border-zinc-800 bg-zinc-950/70">
@@ -264,11 +273,16 @@ function HoldingSection({ title, rows }: { title: string; rows: HoldingRow[] }) 
             <div className="font-semibold text-zinc-100">{money(row.marketValue)}</div>
             <div className="font-mono text-zinc-400">{plText(row)}</div>
             <div className="flex gap-2 md:justify-end">
-              <button className="border border-zinc-800 px-2 py-1 font-mono text-[10px] text-zinc-500" type="button">
+              <button className="border border-zinc-800 px-2 py-1 font-mono text-[10px] text-zinc-500" disabled type="button">
                 Edit next
               </button>
-              <button className="border border-zinc-800 px-2 py-1 font-mono text-[10px] text-zinc-500" type="button">
-                Delete next
+              <button
+                className="border border-red-500/40 px-2 py-1 font-mono text-[10px] text-red-300 hover:bg-red-500/10 disabled:opacity-40"
+                disabled={!row.id || !row.deleteKind}
+                onClick={() => onDelete(row)}
+                type="button"
+              >
+                Delete
               </button>
             </div>
           </div>
@@ -302,48 +316,62 @@ export default function PortfolioPage() {
   const [error, setError] = useState("");
   const [updatedAt, setUpdatedAt] = useState("");
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setError("");
-      try {
-        const [
-          summaryData,
-          allocationData,
-          stockData,
-          cryptoData,
-          cashData,
-          fcnData,
-          accountData,
-        ] = await Promise.all([
-          getMySummary(),
-          getMyAssetAllocation(),
-          getStocks().catch(() => []),
-          getCrypto().catch(() => []),
-          getCash().catch(() => []),
-          getFcns().catch(() => []),
-          getAccounts().catch(() => ({ items: [] })),
-        ]);
-        setSummary(summaryData);
-        setAllocation(normalizeAllocation(allocationData.items));
-        setStocks(Array.isArray(stockData) ? stockData : []);
-        setCrypto(Array.isArray(cryptoData) ? cryptoData : []);
-        setCash(Array.isArray(cashData) ? cashData : []);
-        setFcns(Array.isArray(fcnData) ? fcnData : []);
-        setAccounts(Array.isArray(accountData.items) ? accountData.items : []);
-        setUpdatedAt(new Date().toLocaleString());
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Portfolio workspace unavailable.");
-      } finally {
-        setLoading(false);
-      }
+  async function loadPortfolio() {
+    setLoading(true);
+    setError("");
+    try {
+      const [
+        summaryData,
+        allocationData,
+        stockData,
+        cryptoData,
+        cashData,
+        fcnData,
+        accountData,
+      ] = await Promise.all([
+        getMySummary(),
+        getMyAssetAllocation(),
+        getStocks().catch(() => []),
+        getCrypto().catch(() => []),
+        getCash().catch(() => []),
+        getFcns().catch(() => []),
+        getAccounts().catch(() => ({ items: [] })),
+      ]);
+      setSummary(summaryData);
+      setAllocation(normalizeAllocation(allocationData.items));
+      setStocks(Array.isArray(stockData) ? stockData : []);
+      setCrypto(Array.isArray(cryptoData) ? cryptoData : []);
+      setCash(Array.isArray(cashData) ? cashData : []);
+      setFcns(Array.isArray(fcnData) ? fcnData : []);
+      setAccounts(Array.isArray(accountData.items) ? accountData.items : []);
+      setUpdatedAt(new Date().toLocaleString());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Portfolio workspace unavailable.");
+    } finally {
+      setLoading(false);
     }
+  }
 
+  useEffect(() => {
     const timer = window.setTimeout(() => {
-      void load();
+      void loadPortfolio();
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  async function handleDelete(row: HoldingRow) {
+    if (!row.id || !row.deleteKind) return;
+    if (!window.confirm(t("portfolio.deleteConfirm"))) return;
+    try {
+      if (row.deleteKind === "stock") await deleteStock(row.id);
+      if (row.deleteKind === "crypto") await deleteCrypto(row.id);
+      if (row.deleteKind === "cash") await deleteCash(row.id);
+      if (row.deleteKind === "fcn") await deleteFcn(row.id);
+      await loadPortfolio();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed.");
+    }
+  }
 
   const rows = useMemo(() => {
     const stock = stockRows(summary, stocks);
@@ -496,10 +524,10 @@ export default function PortfolioPage() {
         ) : (
           <TerminalPanel title={labels.holdings} meta="edit / delete persistence coming next">
             <div className="grid gap-3 xl:grid-cols-2">
-              <HoldingSection rows={rows.stock} title="Stocks" />
-              <HoldingSection rows={rows.crypto} title="Crypto" />
-              <HoldingSection rows={rows.cash} title="Cash" />
-              <HoldingSection rows={rows.fcn} title="FCN Summary" />
+              <HoldingSection rows={rows.stock} title="Stocks" onDelete={handleDelete} />
+              <HoldingSection rows={rows.crypto} title="Crypto" onDelete={handleDelete} />
+              <HoldingSection rows={rows.cash} title="Cash" onDelete={handleDelete} />
+              <HoldingSection rows={rows.fcn} title="FCN Summary" onDelete={handleDelete} />
             </div>
           </TerminalPanel>
         )}

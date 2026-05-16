@@ -6,8 +6,10 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../components/layout/AppShell";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
 import {
+  FCNCouponScheduleResponse,
   FCNPositionResponse,
   FCNUnderlyingResult,
+  getFcnSchedule,
   getFcns,
   getMySummary,
   SummaryResponse,
@@ -267,6 +269,7 @@ export default function FcnPage() {
   );
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [rawFcns, setRawFcns] = useState<FCNPositionResponse[]>([]);
+  const [schedules, setSchedules] = useState<Record<string, FCNCouponScheduleResponse[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -279,8 +282,18 @@ export default function FcnPage() {
           getMySummary(),
           getFcns().catch(() => []),
         ]);
+        const rawItems = Array.isArray(rawData) ? rawData : [];
         setSummary(summaryData);
-        setRawFcns(Array.isArray(rawData) ? rawData : []);
+        setRawFcns(rawItems);
+        const schedulePairs = await Promise.all(
+          rawItems
+            .filter((item) => item.id)
+            .map(async (item) => [
+              String(item.id),
+              await getFcnSchedule(item.id as string | number).catch(() => []),
+            ] as const),
+        );
+        setSchedules(Object.fromEntries(schedulePairs));
       } catch (err) {
         setError(err instanceof Error ? err.message : "FCN workspace unavailable.");
       } finally {
@@ -306,8 +319,15 @@ export default function FcnPage() {
       : fcns.length > 0
         ? "low"
         : "unknown";
-  const nextCoupon = nearestDate(fcns.map((fcn) => fcn.next_coupon_date));
-  const nextObservation = nearestDate(fcns.map((fcn) => fcn.next_observation_date));
+  const scheduleRows = Object.values(schedules).flat();
+  const nextCoupon = nearestDate([
+    ...fcns.map((fcn) => fcn.next_coupon_date),
+    ...scheduleRows.map((row) => row.payment_date),
+  ]);
+  const nextObservation = nearestDate([
+    ...fcns.map((fcn) => fcn.next_observation_date),
+    ...scheduleRows.map((row) => row.observation_date),
+  ]);
   const exposures = exposureMap(fcns);
   const repeatedExposures = exposures.filter((item) => item.count > 1);
   const closestKiFcn = fcns
@@ -471,8 +491,32 @@ export default function FcnPage() {
                 <span className="text-zinc-200">{nextCoupon || "schedule pending"}</span>
               </div>
               <p className="pt-2 text-[11px] leading-5 text-zinc-500">
-                Coupon schedule will be available once observation data is connected.
+                {scheduleRows.length > 0
+                  ? "Generated from trade date, tenor, frequency, and business-day payment lag."
+                  : "Coupon schedule will be available once observation data is connected."}
               </p>
+              <details className="pt-2">
+                <summary className="cursor-pointer text-zinc-300">Full schedule</summary>
+                <div className="mt-2 max-h-72 overflow-auto border border-zinc-800">
+                  {fcns.map((fcn) => {
+                    const rows = schedules[String(fcn.id)] || [];
+                    return (
+                      <div className="border-b border-zinc-900" key={`${fcn.mergedKey}-schedule`}>
+                        <div className="bg-black/30 px-2 py-1 text-zinc-300">{fcn.displayCode}</div>
+                        {rows.length === 0 && <div className="px-2 py-1 text-zinc-600">schedule pending</div>}
+                        {rows.map((row) => (
+                          <div className="grid grid-cols-[0.5fr_1fr_1fr_0.8fr] gap-2 px-2 py-1 text-zinc-400" key={row.id || `${fcn.id}-${row.period_index}`}>
+                            <span>T{row.period_index}</span>
+                            <span>{row.observation_date}</span>
+                            <span>{row.payment_date}</span>
+                            <span>{row.status || "scheduled"}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </details>
             </div>
           </TerminalPanel>
 

@@ -14,6 +14,7 @@ import { SectionDivider } from "../components/primitives/SectionDivider";
 import { useWorkspaceContext } from "../lib/workspace-context";
 import {
   CopilotExplainResponse,
+  CryptoPositionResponse,
   explainCopilot,
   AllocationItem,
   FCNPositionResponse,
@@ -21,6 +22,7 @@ import {
   getIntelligenceReasoning,
   getIntelligenceScenarios,
   getIntelligenceTimeline,
+  getCrypto,
   getMyAssetAllocation,
   getMyRiskOverview,
   getMySummary,
@@ -102,6 +104,38 @@ function severityClass(value?: string | null) {
   return "border-zinc-700 text-zinc-400";
 }
 
+function cryptoInsightRows(items: CryptoPositionResponse[], totalValue: number) {
+  const rows = items.map((item) => {
+    const assetType = (item.asset_type || "spot").toLowerCase();
+    const value = numberValue(item.current_value) || numberValue(item.quantity) * (numberValue(item.current_price) || numberValue(item.avg_price));
+    const leverage = numberValue(item.leverage);
+    const lower = numberValue(item.grid_lower);
+    const upper = numberValue(item.grid_upper);
+    const current = numberValue(item.current_price);
+    let state = "monitor";
+    let driver = "Data limited; monitor exposure and reference price freshness.";
+    if (assetType.startsWith("grid")) {
+      const nearLower = lower > 0 && current > 0 && current <= lower * 1.05;
+      const nearUpper = upper > 0 && current > 0 && current >= upper * 0.95;
+      state = leverage >= 5 ? "leverage watch" : nearLower || nearUpper ? "range watch" : "grid active";
+      driver = `Grid range ${lower || "-"}-${upper || "-"}${leverage ? ` · ${leverage}x` : ""}`;
+    } else if (assetType.startsWith("dual")) {
+      state = "target watch";
+      driver = `Dual Investment target ${current || "-"}; settlement metadata may be limited.`;
+    } else if (assetType.includes("earn") || assetType.includes("stablecoin")) {
+      state = value / Math.max(totalValue, 1) > 0.25 ? "stablecoin concentration" : "earn exposure";
+      driver = "Stablecoin earn exposure; protocol and issuer risk should remain monitored.";
+    }
+    return {
+      symbol: item.symbol || "CRYPTO",
+      state,
+      driver,
+      exposure: totalValue > 0 ? (value / totalValue) * 100 : 0,
+    };
+  });
+  return rows.slice(0, 6);
+}
+
 function mergeFcns(summary: SummaryResponse | null) {
   const items = [
     ...(Array.isArray(summary?.fcn_positions) ? summary.fcn_positions : []),
@@ -176,6 +210,7 @@ export default function IntelligencePage() {
   const [riskOverview, setRiskOverview] = useState<RiskOverviewResponse | null>(null);
   const [allocation, setAllocation] = useState<AllocationItem[]>([]);
   const [priority, setPriority] = useState<PortfolioPriorityResponse | null>(null);
+  const [cryptoPositions, setCryptoPositions] = useState<CryptoPositionResponse[]>([]);
   const [timeline, setTimeline] = useState<TimelineIntelligenceResponse | null>(null);
   const [reasoning, setReasoning] = useState<ReasoningSystemResponse | null>(null);
   const [scenarios, setScenarios] = useState<ScenarioResult[]>([]);
@@ -199,6 +234,7 @@ export default function IntelligencePage() {
         riskOverviewData,
         allocationData,
         priorityData,
+        cryptoData,
       ] = await Promise.all([
         getPortfolioSummaryV2A().catch((err) => {
           nextErrors.push(err instanceof Error ? err.message : "portfolio-summary unavailable");
@@ -213,6 +249,7 @@ export default function IntelligencePage() {
         getMyRiskOverview().catch(() => null),
         getMyAssetAllocation().catch(() => null),
         getPortfolioPriority().catch(() => null),
+        getCrypto().catch(() => []),
       ]);
 
       setSummary(summaryData);
@@ -220,6 +257,7 @@ export default function IntelligencePage() {
       setRiskOverview(riskOverviewData);
       setAllocation(Array.isArray(allocationData?.items) ? allocationData.items : []);
       setPriority(priorityData);
+      setCryptoPositions(Array.isArray(cryptoData) ? cryptoData : []);
       setTimeline(timelineData);
       setReasoning(reasoningData);
       setScenarios(Array.isArray(scenarioData?.scenarios) ? scenarioData.scenarios : []);
@@ -265,6 +303,10 @@ export default function IntelligencePage() {
         timeline,
       }),
     [fcns, portfolioSummary, summary, timeline],
+  );
+  const cryptoInsights = useMemo(
+    () => cryptoInsightRows(cryptoPositions, numberValue(portfolioSummary?.total_value)),
+    [cryptoPositions, portfolioSummary?.total_value],
   );
   const todayStatus = focusStatus(todayFocus);
 
@@ -388,6 +430,22 @@ export default function IntelligencePage() {
                   {risk.relatedSymbols.length > 0 ? risk.relatedSymbols.join(" · ") : "symbols pending"}
                 </div>
                 <div className="mt-2 text-[11px] leading-5 text-zinc-500">{risk.monitoringNote}</div>
+              </div>
+            ))}
+          </div>
+        </ExpandablePanel>
+
+        <ExpandablePanel title="Crypto intelligence" meta="spot / grid / dual / earn">
+          <div className="divide-y divide-zinc-900 border border-zinc-800">
+            {cryptoInsights.length === 0 && <EmptyLine>Data limited. Crypto subtype analysis will activate when positions are available.</EmptyLine>}
+            {cryptoInsights.map((item) => (
+              <div className="grid gap-2 px-3 py-2 text-xs md:grid-cols-[0.8fr_0.8fr_0.6fr_2fr]" key={`${item.symbol}-${item.state}`}>
+                <span className="font-mono font-semibold text-zinc-100">{item.symbol}</span>
+                <span className={`w-fit border px-2 py-0.5 font-mono text-[10px] uppercase ${severityClass(item.state)}`}>
+                  {item.state}
+                </span>
+                <span className="font-mono text-zinc-400">{percent(item.exposure)}</span>
+                <span className="text-zinc-500">{sanitizeAdviceText(item.driver)}</span>
               </div>
             ))}
           </div>

@@ -54,6 +54,27 @@ const observationTypes = ["American", "European"];
 const couponFrequencies = ["monthly", "quarterly"];
 const cryptoModes: CryptoMode[] = ["spot", "grid", "dual", "earn"];
 
+function addMonths(value: string, months: number) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  const day = date.getDate();
+  date.setMonth(date.getMonth() + months);
+  if (date.getDate() !== day) date.setDate(0);
+  return date.toISOString().slice(0, 10);
+}
+
+function addBusinessDays(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  let remaining = Math.max(0, days);
+  while (remaining > 0) {
+    date.setDate(date.getDate() + 1);
+    if (date.getDay() !== 0 && date.getDay() !== 6) remaining -= 1;
+  }
+  while (date.getDay() === 0 || date.getDay() === 6) date.setDate(date.getDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
 export default function InputWorkspacePage() {
   const { t } = useI18n();
   const labels = useMemo(
@@ -96,8 +117,10 @@ export default function InputWorkspacePage() {
     name: "",
     issuer: "",
     currency: "USD",
+    issue_date: "",
     coupon_rate: "",
     tenor_months: "",
+    payment_lag_days: "3",
     notional: "",
     strike: "",
     ki: "",
@@ -115,6 +138,18 @@ export default function InputWorkspacePage() {
   const [cryptoEarn, setCryptoEarn] = useState({ asset: "USDT", apr: "", amount: "", duration: "" });
   const [cash, setCash] = useState({ currency: "USD", amount: "" });
   const stockResolution = useMemo(() => resolveStockSymbol(stock.symbol, stock.market), [stock.market, stock.symbol]);
+  const fcnSchedulePreview = useMemo(() => {
+    const tenor = positiveNumber(fcn.tenor_months);
+    const lag = positiveNumber(fcn.payment_lag_days) || 3;
+    if (!fcn.issue_date || tenor === null) return [];
+    const step = fcn.coupon_frequency === "quarterly" ? 3 : 1;
+    const rows = [];
+    for (let offset = step; offset <= tenor; offset += step) {
+      const observationDate = addMonths(fcn.issue_date, offset);
+      rows.push({ observationDate, paymentDate: addBusinessDays(observationDate, lag) });
+    }
+    return rows;
+  }, [fcn.coupon_frequency, fcn.issue_date, fcn.payment_lag_days, fcn.tenor_months]);
 
   async function loadAccounts() {
     try {
@@ -362,7 +397,9 @@ export default function InputWorkspacePage() {
           settlement_currency: fcn.currency,
           coupon_rate: positiveNumber(fcn.coupon_rate),
           tenor_months: positiveNumber(fcn.tenor_months),
+          issue_date: fcn.issue_date || null,
           coupon_frequency: fcn.coupon_frequency,
+          coupon_payment_lag_days: positiveNumber(fcn.payment_lag_days) || 3,
           observation_dates_json: fcn.observation_dates.trim() || null,
           coupon_dates_json: fcn.coupon_dates.trim() || null,
           worst_of_symbol: worstOfSymbol,
@@ -376,8 +413,10 @@ export default function InputWorkspacePage() {
           name: "",
           issuer: "",
           currency: "USD",
+          issue_date: "",
           coupon_rate: "",
           tenor_months: "",
+          payment_lag_days: "3",
           notional: "",
           strike: "",
           ki: "",
@@ -586,8 +625,10 @@ export default function InputWorkspacePage() {
                       <Field label={t("input.nameCode")} value={fcn.name} onChange={(value) => setFcn({ ...fcn, name: value })} />
                       <Field label={t("input.issuer")} value={fcn.issuer} onChange={(value) => setFcn({ ...fcn, issuer: value })} />
                       <SelectField label={t("input.currency")} value={fcn.currency} options={cashCurrencies} onChange={(value) => setFcn({ ...fcn, currency: value })} />
+                      <Field label={t("input.issueDate")} value={fcn.issue_date} onChange={(value) => setFcn({ ...fcn, issue_date: value })} placeholder="2026-05-16" />
                       <Field label={t("input.couponRate")} value={fcn.coupon_rate} onChange={(value) => setFcn({ ...fcn, coupon_rate: value })} />
                       <Field label={t("input.tenorMonths")} value={fcn.tenor_months} onChange={(value) => setFcn({ ...fcn, tenor_months: value })} />
+                      <Field label={t("input.paymentLagDays")} value={fcn.payment_lag_days} onChange={(value) => setFcn({ ...fcn, payment_lag_days: value })} />
                       <Field label={t("input.notional")} value={fcn.notional} onChange={(value) => setFcn({ ...fcn, notional: value })} />
                     </div>
                   </div>
@@ -603,6 +644,19 @@ export default function InputWorkspacePage() {
                       <SelectField label={t("input.observationFrequency")} value={fcn.coupon_frequency} options={couponFrequencies} onChange={(value) => setFcn({ ...fcn, coupon_frequency: value })} />
                       <Field label={t("input.observationDates")} value={fcn.observation_dates} onChange={(value) => setFcn({ ...fcn, observation_dates: value })} />
                       <Field label={t("input.paymentDates")} value={fcn.coupon_dates} onChange={(value) => setFcn({ ...fcn, coupon_dates: value })} />
+                    </div>
+                  </div>
+                  <div className="lg:col-span-2">
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                      {t("input.schedulePreview")}
+                    </div>
+                    <div className="grid gap-2 border border-zinc-800 bg-black/20 p-2 font-mono text-xs sm:grid-cols-3">
+                      {fcnSchedulePreview.length === 0 && <div className="text-zinc-500">{t("input.schedulePreviewPending")}</div>}
+                      {fcnSchedulePreview.slice(0, 6).map((row, index) => (
+                        <div className="border border-zinc-900 px-2 py-1 text-zinc-400" key={`${row.observationDate}-${index}`}>
+                          <span className="text-zinc-600">T{index + 1}</span> {row.observationDate} → {row.paymentDate}
+                        </div>
+                      ))}
                     </div>
                   </div>
                   <div className="lg:col-span-2">

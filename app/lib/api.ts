@@ -150,6 +150,16 @@ export type FCNPositionResponse = {
   prices?: FCNUnderlyingResult[] | null;
 };
 
+export type FCNCouponScheduleResponse = {
+  id?: string | number | null;
+  fcn_position_id?: string | number | null;
+  period_index?: number | string | null;
+  observation_start_date?: string | null;
+  observation_date?: string | null;
+  payment_date?: string | null;
+  status?: string | null;
+};
+
 export type FCNUnderlyingResult = {
   symbol?: string | null;
   initial_price?: number | string | null;
@@ -265,10 +275,12 @@ export type AddFcnPayload = {
   strike_level?: number | null;
   coupon_rate?: number | null;
   tenor_months?: number | null;
+  issue_date?: string | null;
   settlement_currency?: string | null;
   coupon_frequency?: string | null;
   observation_dates_json?: string | null;
   coupon_dates_json?: string | null;
+  coupon_payment_lag_days?: number | null;
 };
 
 export type AssetCandidate = {
@@ -1069,6 +1081,40 @@ export function addFcn(payload: AddFcnPayload) {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export function deleteStock(id: string | number) {
+  return apiFetch<{ status?: string; message?: string }>(
+    `/api/v1/portfolio/stocks/${encodeURIComponent(String(id))}`,
+    { method: "DELETE" },
+  );
+}
+
+export function deleteCrypto(id: string | number) {
+  return apiFetch<{ status?: string; message?: string }>(
+    `/api/v1/portfolio/crypto/${encodeURIComponent(String(id))}`,
+    { method: "DELETE" },
+  );
+}
+
+export function deleteCash(id: string | number) {
+  return apiFetch<{ status?: string; message?: string }>(
+    `/api/v1/portfolio/cash/${encodeURIComponent(String(id))}`,
+    { method: "DELETE" },
+  );
+}
+
+export function deleteFcn(id: string | number) {
+  return apiFetch<{ status?: string; message?: string }>(
+    `/api/v1/portfolio/fcn/${encodeURIComponent(String(id))}`,
+    { method: "DELETE" },
+  );
+}
+
+export function getFcnSchedule(id: string | number) {
+  return apiFetch<FCNCouponScheduleResponse[]>(
+    `/api/v1/portfolio/fcn/${encodeURIComponent(String(id))}/schedule`,
+  );
 }
 
 export function getPortfolioNews(portfolioId?: string | null) {
