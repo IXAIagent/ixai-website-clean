@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="IXAI Pro">
+  <rect width="256" height="256" rx="48" fill="#061a14"/>
+  <rect x="20" y="20" width="216" height="216" rx="34" fill="none" stroke="#b08d57" stroke-width="4"/>
+  <text x="128" y="122" text-anchor="middle" fill="#f5f0e6" font-family="Georgia, serif" font-size="58" font-weight="700">IXAI</text>
+  <text x="128" y="164" text-anchor="middle" fill="#b08d57" font-family="Arial, sans-serif" font-size="21" font-weight="700" letter-spacing="3">PRO</text>
+</svg>

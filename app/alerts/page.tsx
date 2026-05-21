@@ -188,7 +188,7 @@ export default function AlertsPage() {
       void load();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [t]);
 
   const alerts = useMemo(() => {
     const priorityAlerts = priority.map(fromPriority);

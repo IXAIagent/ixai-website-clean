@@ -16,7 +16,7 @@ export default function HomePage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-black px-5 text-zinc-300">
-      Loading IXAI Agent...
+      Loading IXAI Pro...
     </main>
   );
 }

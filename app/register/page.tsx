@@ -46,12 +46,12 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black px-5 py-10 text-white">
+    <main className="min-h-screen bg-[#061a14] px-5 py-10 text-[#f5f0e6]">
       <section className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
-        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-emerald-500/10 sm:p-8">
+        <div className="w-full max-w-md rounded-2xl border border-[rgba(176,141,87,0.24)] bg-black/35 p-6 shadow-2xl shadow-black/30 sm:p-8">
           <div className="mb-8">
-            <div className="mb-3 text-sm font-semibold uppercase text-emerald-400">
-              IXAI Agent
+            <div className="mb-3 font-mono text-xs font-semibold uppercase tracking-[0.22em] text-[var(--ixai-gold)]">
+              IXAI Pro
             </div>
             <h1 className="text-3xl font-bold">建立測試帳號</h1>
             <p className="mt-3 text-sm leading-6 text-zinc-400">

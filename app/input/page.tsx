@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "../components/layout/AppShell";
 import { EmptyLine, TerminalPanel } from "../components/layout/TerminalPanel";
@@ -151,7 +151,7 @@ export default function InputWorkspacePage() {
     return rows;
   }, [fcn.coupon_frequency, fcn.issue_date, fcn.payment_lag_days, fcn.tenor_months]);
 
-  async function loadAccounts() {
+  const loadAccounts = useCallback(async () => {
     try {
       const response = await getAccounts();
       const items = Array.isArray(response.items) ? response.items : [];
@@ -168,9 +168,9 @@ export default function InputWorkspacePage() {
       setAccounts([]);
       setPortfolios([]);
     }
-  }
+  }, []);
 
-  async function loadRecent() {
+  const loadRecent = useCallback(async () => {
     try {
       const [stocks, fcns, cryptos, cashItems] = await Promise.all([
         getStocks().catch(() => []),
@@ -207,7 +207,7 @@ export default function InputWorkspacePage() {
     } catch {
       setRecent([]);
     }
-  }
+  }, [labels.awaitingReferenceData, labels.cash, labels.crypto, labels.stock, t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -215,7 +215,7 @@ export default function InputWorkspacePage() {
       void loadRecent();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [loadAccounts, loadRecent]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

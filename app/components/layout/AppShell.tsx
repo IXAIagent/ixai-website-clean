@@ -19,17 +19,19 @@ import { useWorkspaceContext } from "../../lib/workspace-context";
 import { EcosystemBridge } from "./EcosystemBridge";
 
 const navItems = [
-  { href: "/dashboard", labelKey: "nav.dashboard", shortKey: "nav.short.dashboard" },
-  { href: "/portfolio", labelKey: "nav.portfolio", shortKey: "nav.short.portfolio" },
-  { href: "/fcn", labelKey: "nav.fcn", shortKey: "nav.short.fcn" },
-  { href: "/intelligence", labelKey: "nav.intelligence", shortKey: "nav.short.intelligence" },
-  { href: "/market", labelKey: "nav.market", shortKey: "nav.short.market" },
-  { href: "/alerts", labelKey: "nav.alerts", shortKey: "nav.short.alerts" },
-  { href: "/input", labelKey: "nav.input", shortKey: "nav.short.input" },
-  { href: "/import", labelKey: "nav.import", shortKey: "nav.short.import" },
-  { href: "/accounts", labelKey: "nav.accounts", shortKey: "nav.short.accounts" },
-  { href: "/settings", labelKey: "nav.settings", shortKey: "nav.short.settings" },
+  { href: "/dashboard", labelKey: "nav.dashboard", shortKey: "nav.short.dashboard", group: "AI Wealth OS" },
+  { href: "/portfolio", labelKey: "nav.portfolio", shortKey: "nav.short.portfolio", group: "AI Wealth OS" },
+  { href: "/intelligence", labelKey: "nav.intelligence", shortKey: "nav.short.intelligence", group: "AI Wealth OS" },
+  { href: "/fcn", labelKey: "nav.fcn", shortKey: "nav.short.fcn", group: "Risk Monitoring" },
+  { href: "/market", labelKey: "nav.market", shortKey: "nav.short.market", group: "Risk Monitoring" },
+  { href: "/alerts", labelKey: "nav.alerts", shortKey: "nav.short.alerts", group: "Risk Monitoring" },
+  { href: "/input", labelKey: "nav.input", shortKey: "nav.short.input", group: "Operations" },
+  { href: "/import", labelKey: "nav.import", shortKey: "nav.short.import", group: "Operations" },
+  { href: "/accounts", labelKey: "nav.accounts", shortKey: "nav.short.accounts", group: "Operations" },
+  { href: "/settings", labelKey: "nav.settings", shortKey: "nav.short.settings", group: "Operations" },
 ];
+
+const navGroups = ["AI Wealth OS", "Risk Monitoring", "Operations"];
 
 export function AppShell({
   children,
@@ -140,20 +142,23 @@ export function AppShell({
 
   return (
     <main
-      className={`min-h-screen bg-black text-white ${terminal ? "font-sans" : ""}`}
+      className={`min-h-screen bg-[#061a14] text-[#f5f0e6] ${terminal ? "font-sans" : ""}`}
       data-compact={compact ? "1" : "0"}
       data-terminal={terminal ? "1" : "0"}
     >
       <div className={`min-h-screen md:grid ${compact ? "md:grid-cols-[224px_1fr]" : "md:grid-cols-[260px_1fr]"}`}>
-        <aside className={`hidden border-r border-zinc-800 bg-zinc-950/70 px-4 md:block ${compact ? "py-4" : "py-5"}`}>
-          <div className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-300">
-            IXAI
+        <aside className={`hidden border-r border-[rgba(176,141,87,0.2)] bg-[#04110d]/90 px-4 md:block ${compact ? "py-4" : "py-5"}`}>
+          <div className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--ixai-gold)]">
+            IXAI Pro
           </div>
-          <Link className="mt-1 block text-sm text-zinc-500 hover:text-zinc-300" href={defaultPath}>
-            {t("common.portfolioOS")}
+          <Link className="mt-1 block text-sm text-[#f5f0e6]/56 hover:text-[#f5f0e6]" href={defaultPath}>
+            AI Wealth Operating System
           </Link>
+          <p className="mt-2 text-xs leading-5 text-[#f5f0e6]/42">
+            Portfolio intelligence, FCN monitoring, and risk-first workflows.
+          </p>
 
-          <div className="mt-4 space-y-2 border border-zinc-800 bg-black/20 p-2">
+          <div className="mt-4 space-y-2 border border-white/10 bg-black/20 p-2">
             <label className="block">
               <span className="mb-1 block font-mono text-[10px] uppercase text-zinc-600">{t("common.account")}</span>
               <select
@@ -194,40 +199,61 @@ export function AppShell({
             )}
           </div>
 
-          <nav className={`${compact ? "mt-6" : "mt-8"} space-y-1`}>
-            {navItems.map((item) => {
-              const active = pathname === item.href;
-              return (
-                <Link
-                  className={`block truncate border-l-2 px-3 text-sm transition ${compact ? "py-1.5" : "py-2"} ${
-                    active
-                      ? "border-emerald-400 bg-emerald-400/10 text-emerald-200"
-                      : "border-transparent text-zinc-400 hover:border-zinc-700 hover:bg-zinc-900 hover:text-zinc-100"
-                  }`}
-                  href={item.href}
-                  key={item.href}
-                >
-                  {t(item.labelKey)}
-                </Link>
-              );
-            })}
+          <nav className={`${compact ? "mt-5" : "mt-7"} space-y-5`}>
+            {navGroups.map((group) => (
+              <div key={group}>
+                <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#f5f0e6]/32">
+                  {group}
+                </p>
+                <div className="space-y-1">
+                  {navItems
+                    .filter((item) => item.group === group)
+                    .map((item) => {
+                      const active = pathname === item.href;
+                      return (
+                        <Link
+                          className={`block truncate border-l-2 px-3 text-sm transition ${compact ? "py-1.5" : "py-2"} ${
+                            active
+                              ? "border-[var(--ixai-gold)] bg-[rgba(176,141,87,0.12)] text-[#f5f0e6]"
+                              : "border-transparent text-zinc-400 hover:border-zinc-700 hover:bg-zinc-900 hover:text-zinc-100"
+                          }`}
+                          href={item.href}
+                          key={item.href}
+                        >
+                          {t(item.labelKey)}
+                        </Link>
+                      );
+                    })}
+                </div>
+              </div>
+            ))}
           </nav>
 
-          <div className="mt-5 border border-emerald-400/20 bg-emerald-400/[0.045] p-3">
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-emerald-300">
-              Public Intelligence
+          <div className="mt-5 border border-[rgba(176,141,87,0.28)] bg-[rgba(176,141,87,0.06)] p-3">
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ixai-gold)]">
+              IXAI Ecosystem
             </div>
             <p className="mt-2 text-xs leading-5 text-zinc-500">
-              Daily Brief 與公開市場研究入口。
+              Public Intelligence 提供每日市場情報；Pro Dashboard 專注個人投資組合與 FCN 風險監控。
             </p>
-            <a
-              className="mt-3 inline-flex border border-emerald-400/40 px-3 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-400/10"
-              href={`${ixaiEcosystem.publicAppUrl}/daily-brief`}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Daily Brief
-            </a>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a
+                className="inline-flex border border-[rgba(176,141,87,0.45)] px-3 py-1.5 text-xs text-[#f5f0e6] transition hover:bg-[rgba(176,141,87,0.12)]"
+                href={`${ixaiEcosystem.publicAppUrl}/daily-brief`}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Daily Brief
+              </a>
+              <a
+                className="inline-flex border border-white/10 px-3 py-1.5 text-xs text-zinc-400 transition hover:text-[#f5f0e6]"
+                href={`${ixaiEcosystem.publicAppUrl}/market`}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Market Intelligence
+              </a>
+            </div>
           </div>
 
           <button
@@ -243,10 +269,10 @@ export function AppShell({
           <div className="sticky top-0 z-20 border-b border-zinc-800 bg-black/90 px-4 py-3 backdrop-blur md:hidden">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="font-mono text-xs uppercase tracking-[0.2em] text-emerald-300">
-                  IXAI
+                <div className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--ixai-gold)]">
+                  IXAI Pro
                 </div>
-                <Link className="text-xs text-zinc-500" href={defaultPath}>{t("common.portfolioOS")}</Link>
+                <Link className="text-xs text-zinc-500" href={defaultPath}>AI Wealth OS</Link>
               </div>
               <button
                 className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300"
@@ -303,9 +329,9 @@ export function AppShell({
           </div>
 
           <div className={`mx-auto max-w-7xl px-4 md:px-6 ${compact ? "py-4 md:py-6" : "py-6 md:py-8"}`}>
-            <header className={`border-b border-zinc-800 ${compact ? "mb-4 pb-4" : "mb-6 pb-5"}`}>
-              <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-emerald-300">
-                {t("common.productName")} · {preferences.locale}
+            <header className={`border-b border-[rgba(176,141,87,0.18)] ${compact ? "mb-4 pb-4" : "mb-6 pb-5"}`}>
+              <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[var(--ixai-gold)]">
+                IXAI Pro · AI Wealth Operating System · {preferences.locale}
               </div>
               <h1 className={`${compact ? "mt-1 text-xl md:text-2xl" : "mt-2 text-2xl md:text-3xl"} font-semibold`}>{title}</h1>
               {subtitle && <p className="mt-2 text-sm text-zinc-500">{subtitle}</p>}

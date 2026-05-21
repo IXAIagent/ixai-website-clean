@@ -8,8 +8,8 @@ import { ApiError, login } from "../lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("demo@ixai.local");
-  const [password, setPassword] = useState("demo");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -42,16 +42,16 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black px-5 py-10 text-white">
+    <main className="min-h-screen bg-[#061a14] px-5 py-10 text-[#f5f0e6]">
       <section className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-6xl items-center justify-center">
-        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-2xl shadow-emerald-500/10 sm:p-8">
+        <div className="w-full max-w-md rounded-2xl border border-[rgba(176,141,87,0.24)] bg-black/35 p-6 shadow-2xl shadow-black/30 sm:p-8">
           <div className="mb-8">
-            <div className="mb-3 text-sm font-semibold uppercase text-emerald-400">
-              IXAI Agent
+            <div className="mb-3 font-mono text-xs font-semibold uppercase tracking-[0.22em] text-[var(--ixai-gold)]">
+              IXAI Pro
             </div>
-            <h1 className="text-3xl font-bold">登入一玄AI Dashboard</h1>
+            <h1 className="text-3xl font-semibold">AI Wealth Operating System</h1>
             <p className="mt-3 text-sm leading-6 text-zinc-400">
-              Demo 帳號：demo@ixai.local / demo
+              受邀用戶可登入 Portfolio Intelligence、FCN Monitoring 與 AI Risk Alerts 工作區。
             </p>
           </div>
 
@@ -63,7 +63,7 @@ export default function LoginPage() {
               <input
                 autoComplete="email"
                 className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none transition focus:border-emerald-400"
-                placeholder="demo@ixai.local"
+                placeholder="you@example.com"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -77,7 +77,7 @@ export default function LoginPage() {
               <input
                 autoComplete="current-password"
                 className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none transition focus:border-emerald-400"
-                placeholder="demo"
+                placeholder="請輸入密碼"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -95,11 +95,11 @@ export default function LoginPage() {
               disabled={loading}
               type="submit"
             >
-              {loading ? "登入中..." : "登入 Dashboard"}
+              {loading ? "登入中..." : "進入 IXAI Pro"}
             </button>
 
             <div className="text-center text-sm text-zinc-400">
-              目前僅限受邀測試用戶使用。
+              目前僅限受邀用戶使用。
               <Link
                 className="ml-2 font-semibold text-emerald-300 transition hover:text-emerald-200"
                 href="/register"

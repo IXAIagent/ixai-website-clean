@@ -164,7 +164,7 @@ export default function MarketPage() {
       void load();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [t]);
 
   const articles = useMemo(() => {
     const feed = Array.isArray(news?.articles) ? news.articles : [];
