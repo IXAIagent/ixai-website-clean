@@ -13,8 +13,10 @@ import {
   logout,
 } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
+import { ixaiEcosystem } from "../../lib/ecosystem";
 import { landingPath, usePreferences } from "../../lib/preferences";
 import { useWorkspaceContext } from "../../lib/workspace-context";
+import { EcosystemBridge } from "./EcosystemBridge";
 
 const navItems = [
   { href: "/dashboard", labelKey: "nav.dashboard", shortKey: "nav.short.dashboard" },
@@ -211,6 +213,23 @@ export function AppShell({
             })}
           </nav>
 
+          <div className="mt-5 border border-emerald-400/20 bg-emerald-400/[0.045] p-3">
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-emerald-300">
+              Public Intelligence
+            </div>
+            <p className="mt-2 text-xs leading-5 text-zinc-500">
+              Daily Brief 與公開市場研究入口。
+            </p>
+            <a
+              className="mt-3 inline-flex border border-emerald-400/40 px-3 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-400/10"
+              href={`${ixaiEcosystem.publicAppUrl}/daily-brief`}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Daily Brief
+            </a>
+          </div>
+
           <button
             className="mt-8 w-full border border-zinc-700 px-3 py-2 text-left text-sm text-zinc-300 transition hover:bg-zinc-900"
             onClick={handleLogout}
@@ -255,6 +274,24 @@ export function AppShell({
                 );
               })}
             </nav>
+            <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+              <a
+                className="shrink-0 border border-emerald-400/30 px-3 py-1.5 text-xs text-emerald-200"
+                href={`${ixaiEcosystem.publicAppUrl}/daily-brief`}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Public Intelligence
+              </a>
+              <a
+                className="shrink-0 border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400"
+                href={`${ixaiEcosystem.publicAppUrl}/market`}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Market Intelligence
+              </a>
+            </div>
             <div className="mt-2 flex gap-2 overflow-x-auto pb-1 font-mono text-[10px] text-zinc-500">
               <Link className="shrink-0 border border-zinc-800 px-2 py-1" href="/accounts">
                 {context.selectedAccountName || t("common.selectAccount")}
@@ -284,6 +321,7 @@ export function AppShell({
                 </span>
               </div>
             </header>
+            <EcosystemBridge />
             {children}
           </div>
         </section>
