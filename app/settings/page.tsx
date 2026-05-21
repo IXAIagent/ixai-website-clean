@@ -15,6 +15,7 @@ import {
   SummaryResponse,
 } from "../lib/api";
 import { useI18n } from "../lib/i18n";
+import { ixaiIdentity } from "../lib/identity";
 import {
   AlertMode,
   DefaultLandingPage,
@@ -212,6 +213,13 @@ export default function SettingsPage() {
             <MetricRow label={t("settings.accountId")} value={currentAccount?.id || t("common.dataPending")} />
             <MetricRow label={t("common.workspace")} value={summary?.portfolio_name || t("portfolio.primaryPortfolio")} />
             <MetricRow label="ROLE" value="owner / admin / viewer ready" />
+            <div className="mt-3 border border-emerald-400/20 bg-emerald-400/[0.045] px-3 py-2 text-xs leading-5 text-zinc-400">
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-emerald-300">
+                {ixaiIdentity.syncPendingBadge}
+              </div>
+              <p className="mt-1">{ixaiIdentity.sharedAccountMessage}</p>
+              <p className="mt-1">{ixaiIdentity.preferencesSyncCopy}</p>
+            </div>
             <Link
               className="mt-3 inline-block border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-emerald-400 hover:text-emerald-200"
               href="/accounts"
@@ -357,6 +365,9 @@ export default function SettingsPage() {
               label="Show advanced intelligence"
               onChange={() => setToggle("advancedIntelligence")}
             />
+            <div className="mt-3 border border-zinc-800 bg-black/20 px-3 py-2 text-xs leading-5 text-zinc-500">
+              {ixaiIdentity.watchlistSyncCopy}
+            </div>
             <button
               className="mt-3 border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-yellow-500/50 hover:text-yellow-200"
               onClick={resetPreferences}

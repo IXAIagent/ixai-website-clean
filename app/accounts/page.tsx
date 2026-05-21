@@ -14,6 +14,7 @@ import {
   getAccounts,
   PortfolioSummaryV2AResponse,
 } from "../lib/api";
+import { ixaiIdentity } from "../lib/identity";
 import { useI18n } from "../lib/i18n";
 import { useWorkspaceContext } from "../lib/workspace-context";
 
@@ -149,6 +150,13 @@ export default function AccountsPage() {
         )}
 
         <TerminalPanel title={t("accounts.activeContext")} meta={t("accounts.contextMemory")}>
+          <div className="mb-3 border border-emerald-400/20 bg-emerald-400/[0.045] px-3 py-2 text-xs leading-5 text-zinc-400">
+            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-emerald-300">
+              {ixaiIdentity.syncPendingBadge}
+            </div>
+            <p className="mt-1">{ixaiIdentity.accountContinuityCopy}</p>
+            <p className="mt-1">{ixaiIdentity.watchlistSyncCopy}</p>
+          </div>
           <div className="grid gap-3 font-mono text-xs md:grid-cols-4">
             <div className="border border-zinc-800 bg-black/20 p-3">
               <div className="text-zinc-600">{t("common.account")}</div>

@@ -1,4 +1,5 @@
 import { ixaiEcosystem } from "../../lib/ecosystem";
+import { ixaiIdentity } from "../../lib/identity";
 
 export function EcosystemBridge() {
   return (
@@ -13,7 +14,7 @@ export function EcosystemBridge() {
           </h2>
           <p className="mt-1 max-w-3xl text-xs leading-6 text-zinc-500">
             返回 Public Intelligence 查看 Daily Brief、Market Intelligence 與公開研究內容。
-            未來將支援 Public App 與 IXAI Pro 共用帳號與 Watchlist 同步。
+            {ixaiIdentity.sharedAccountMessage}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
