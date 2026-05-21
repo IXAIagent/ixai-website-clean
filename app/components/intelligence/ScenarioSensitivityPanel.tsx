@@ -26,10 +26,10 @@ function numberOf(value: unknown, fallback = 0) {
 }
 
 function severityClass(state: ScenarioRow["severity"]) {
-  if (state === "critical") return "border-red-400 text-red-200";
-  if (state === "elevated") return "border-orange-400 text-orange-200";
-  if (state === "watch") return "border-yellow-400 text-yellow-200";
-  return "border-emerald-400 text-emerald-200";
+  if (state === "critical") return "border-[var(--ixai-risk-critical)] text-[var(--ixai-risk-critical)]";
+  if (state === "elevated") return "border-[var(--ixai-risk-elevated)] text-[var(--ixai-risk-elevated)]";
+  if (state === "watch") return "border-[var(--ixai-risk-watch)] text-[var(--ixai-risk-watch)]";
+  return "border-[var(--ixai-accent)] text-[var(--ixai-risk-clear)]";
 }
 
 /** v3F: lightweight scenario sensitivity, frontend-derived.
@@ -129,15 +129,15 @@ export function ScenarioSensitivityPanel({
       title="Scenario sensitivity · risk awareness only"
       meta="hypothetical · not a trading instruction"
     >
-      <div className="divide-y divide-zinc-900 border border-zinc-800">
+      <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
         {rows.map((row) => (
           <div
             className="grid gap-2 px-3 py-2 text-xs md:grid-cols-[0.6fr_0.9fr_2fr_0.7fr]"
             key={row.key}
           >
-            <span className="font-semibold text-zinc-100">{row.label}</span>
-            <span className="font-mono text-[10px] text-zinc-500">{row.exposure}</span>
-            <span className="text-zinc-300">{row.implication}</span>
+            <span className="font-semibold text-[var(--ixai-text-strong)]">{row.label}</span>
+            <span className="font-mono text-[10px] text-[var(--ixai-text-subtle)]">{row.exposure}</span>
+            <span className="text-[var(--ixai-text-strong)]">{row.implication}</span>
             <span
               className={`border px-2 py-0.5 text-center font-mono text-[10px] uppercase ${severityClass(row.severity)}`}
             >

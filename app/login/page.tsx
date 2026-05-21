@@ -50,19 +50,19 @@ export default function LoginPage() {
               IXAI Pro
             </div>
             <h1 className="text-3xl font-semibold">AI Wealth Operating System</h1>
-            <p className="mt-3 text-sm leading-6 text-zinc-400">
+            <p className="mt-3 text-sm leading-6 text-[var(--ixai-text-muted)]">
               受邀用戶可登入 Portfolio Intelligence、FCN Monitoring 與 AI Risk Alerts 工作區。
             </p>
           </div>
 
           <form className="space-y-5" onSubmit={handleLogin}>
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
+              <span className="mb-2 block text-sm font-medium text-[var(--ixai-text-strong)]">
                 Email
               </span>
               <input
                 autoComplete="email"
-                className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+                className="w-full rounded-xl border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-elevated)] px-4 py-3 text-white outline-none transition focus:border-[var(--ixai-accent)]"
                 placeholder="you@example.com"
                 type="email"
                 value={email}
@@ -71,12 +71,12 @@ export default function LoginPage() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
+              <span className="mb-2 block text-sm font-medium text-[var(--ixai-text-strong)]">
                 Password
               </span>
               <input
                 autoComplete="current-password"
-                className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+                className="w-full rounded-xl border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-elevated)] px-4 py-3 text-white outline-none transition focus:border-[var(--ixai-accent)]"
                 placeholder="請輸入密碼"
                 type="password"
                 value={password}
@@ -85,23 +85,23 @@ export default function LoginPage() {
             </label>
 
             {error && (
-              <div className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-200">
+              <div className="rounded-xl border border-[var(--ixai-risk-critical)]/50 bg-[rgba(210,122,122,0.10)] px-4 py-3 text-sm leading-6 text-[var(--ixai-risk-critical)]">
                 {error}
               </div>
             )}
 
             <button
-              className="w-full rounded-xl bg-emerald-400 px-5 py-3 font-semibold text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-xl bg-[var(--ixai-accent)] px-5 py-3 font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loading}
               type="submit"
             >
               {loading ? "登入中..." : "進入 IXAI Pro"}
             </button>
 
-            <div className="text-center text-sm text-zinc-400">
+            <div className="text-center text-sm text-[var(--ixai-text-muted)]">
               目前僅限受邀用戶使用。
               <Link
-                className="ml-2 font-semibold text-emerald-300 transition hover:text-emerald-200"
+                className="ml-2 font-semibold text-[var(--ixai-risk-clear)] transition hover:text-[var(--ixai-risk-clear)]"
                 href="/register"
               >
                 建立測試帳號

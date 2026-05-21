@@ -23,9 +23,9 @@ function take(list: unknown, limit = 3): string[] {
 }
 
 function toneClass(tone: Row["tone"]) {
-  if (tone === "good") return "text-emerald-200";
-  if (tone === "bad") return "text-yellow-200";
-  return "text-zinc-300";
+  if (tone === "good") return "text-[var(--ixai-risk-clear)]";
+  if (tone === "bad") return "text-[var(--ixai-risk-watch)]";
+  return "text-[var(--ixai-text-strong)]";
 }
 
 /** v3F: memory narrative derived from timeline + reasoning snapshots.
@@ -80,7 +80,7 @@ export function MemoryNarrativePanel({
         title="Memory narrative · 7d / 30d"
         meta="history still accumulating"
       >
-        <div className="border border-dashed border-zinc-800 bg-black/30 px-3 py-3 font-mono text-xs leading-6 text-zinc-500">
+        <div className="border border-dashed border-[var(--ixai-border-subtle)] bg-black/30 px-3 py-3 font-mono text-xs leading-6 text-[var(--ixai-text-subtle)]">
           History still accumulating. Snapshots are recorded over time and this
           narrative becomes more confident as memory grows.
         </div>
@@ -125,13 +125,13 @@ export function MemoryNarrativePanel({
       title="Memory narrative · 7d / 30d"
       meta={isStale ? "history accumulating" : "from snapshot memory"}
     >
-      <div className="divide-y divide-zinc-900 border border-zinc-800">
+      <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
         {rows.map((row) => (
           <div
             className="grid gap-2 px-3 py-2 text-xs md:grid-cols-[0.7fr_3fr]"
             key={row.label}
           >
-            <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+            <span className="font-mono text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">
               {row.label}
             </span>
             <span className={toneClass(row.tone)}>{row.value}</span>

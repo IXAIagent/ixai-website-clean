@@ -45,7 +45,7 @@ function money(value: unknown) {
 }
 
 function inputClass() {
-  return "w-full border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none transition focus:border-emerald-400";
+  return "w-full border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-elevated)] px-3 py-2 text-sm text-[var(--ixai-text-strong)] outline-none transition focus:border-[var(--ixai-accent)]";
 }
 
 const stockMarkets: StockMarket[] = ["Auto", "US", "TW", "HK", "JP", "KR"];
@@ -443,18 +443,18 @@ export default function InputWorkspacePage() {
       title={labels.input}
       subtitle={t("input.subtitle")}
     >
-      <div className="mb-4 border border-zinc-800 bg-zinc-950/70 px-4 py-3">
-        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+      <div className="mb-4 border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] px-4 py-3">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ixai-text-subtle)]">
           {t("input.activeWriteHint")}
         </div>
-        <div className="mt-2 text-sm leading-6 text-zinc-300">
+        <div className="mt-2 text-sm leading-6 text-[var(--ixai-text-strong)]">
           {t("input.workspaceGuide")}
         </div>
       </div>
       <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
         <TerminalPanel title={t("input.context")} meta="account">
           <div className="space-y-3 font-mono text-xs">
-            <label className="block text-zinc-500">
+            <label className="block text-[var(--ixai-text-subtle)]">
               {labels.account}
               <select
                 className={`${inputClass()} mt-2`}
@@ -481,7 +481,7 @@ export default function InputWorkspacePage() {
                 ))}
               </select>
             </label>
-            <label className="block text-zinc-500">
+            <label className="block text-[var(--ixai-text-subtle)]">
               {labels.portfolio}
               <select
                 className={`${inputClass()} mt-2`}
@@ -496,7 +496,7 @@ export default function InputWorkspacePage() {
                 ))}
               </select>
             </label>
-            <div className="text-zinc-600">
+            <div className="text-[var(--ixai-text-subtle)]">
               {t("input.selectorHint")}
             </div>
           </div>
@@ -509,16 +509,16 @@ export default function InputWorkspacePage() {
                 className={`border px-3 py-2 text-left text-xs transition ${
                   assetType === item.id
                     ? item.id === "fcn"
-                      ? "border-yellow-400/70 bg-yellow-400/10 text-yellow-100"
-                      : "border-emerald-400 bg-emerald-400/10 text-emerald-200"
-                    : "border-zinc-800 text-zinc-400 hover:border-zinc-600"
+                      ? "border-[var(--ixai-risk-watch)]/70 bg-[rgba(212,181,138,0.10)] text-[var(--ixai-risk-watch)]"
+                      : "border-[var(--ixai-accent)] bg-[rgba(176,141,87,0.10)] text-[var(--ixai-risk-clear)]"
+                    : "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-muted)] hover:border-[var(--ixai-border-subtle)]"
                 } ${item.id === "fcn" ? "sm:scale-[1.02]" : ""}`}
                 key={item.id}
                 onClick={() => setAssetType(item.id)}
                 type="button"
               >
                 <div className="font-semibold">{item.label}</div>
-                <div className="mt-1 text-[11px] text-zinc-500">{item.hint}</div>
+                <div className="mt-1 text-[11px] text-[var(--ixai-text-subtle)]">{item.hint}</div>
               </button>
             ))}
           </div>
@@ -537,15 +537,15 @@ export default function InputWorkspacePage() {
                     onChange={(value) => setStock({ ...stock, market: value as StockMarket })}
                   />
                 </div>
-                <div className="border border-zinc-800 bg-black/30 px-3 py-2 font-mono text-xs text-zinc-500">
-                  <span className="text-zinc-400">{t("input.selectedTicker")}:</span>{" "}
-                  <span className="text-emerald-200">{stockResolution.normalizedSymbol || t("common.dataPending")}</span>
+                <div className="border border-[var(--ixai-border-subtle)] bg-black/30 px-3 py-2 font-mono text-xs text-[var(--ixai-text-subtle)]">
+                  <span className="text-[var(--ixai-text-muted)]">{t("input.selectedTicker")}:</span>{" "}
+                  <span className="text-[var(--ixai-risk-clear)]">{stockResolution.normalizedSymbol || t("common.dataPending")}</span>
                   {stockResolution.candidates.length > 1 && (
-                    <span className="ml-2 text-zinc-600">
+                    <span className="ml-2 text-[var(--ixai-text-subtle)]">
                       {t("input.candidates")}: {stockResolution.candidates.join(" / ")}
                     </span>
                   )}
-                  <div className="mt-1 text-[11px] text-zinc-600">{t("input.stockPriceSystem")}</div>
+                  <div className="mt-1 text-[11px] text-[var(--ixai-text-subtle)]">{t("input.stockPriceSystem")}</div>
                 </div>
               </div>
             )}
@@ -556,8 +556,8 @@ export default function InputWorkspacePage() {
                     <button
                       className={`border px-3 py-2 text-left font-mono text-xs ${
                         cryptoMode === mode
-                          ? "border-emerald-400/70 text-emerald-200"
-                          : "border-zinc-800 text-zinc-500 hover:border-zinc-600"
+                          ? "border-[var(--ixai-accent)]/70 text-[var(--ixai-risk-clear)]"
+                          : "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-subtle)] hover:border-[var(--ixai-border-subtle)]"
                       }`}
                       key={mode}
                       onClick={() => setCryptoMode(mode)}
@@ -612,13 +612,13 @@ export default function InputWorkspacePage() {
               </div>
             )}
             {assetType === "fcn" && (
-              <div className="border border-yellow-400/30 bg-yellow-400/[0.04] p-3">
-                <div className="mb-3 text-sm leading-6 text-zinc-300">
+              <div className="border border-[var(--ixai-risk-watch)]/30 bg-[rgba(212,181,138,0.10)] p-3">
+                <div className="mb-3 text-sm leading-6 text-[var(--ixai-text-strong)]">
                   {t("input.fcnFlagship")}
                 </div>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <div>
-                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ixai-text-subtle)]">
                       {t("input.fcnTerms")}
                     </div>
                     <div className="grid gap-3">
@@ -633,7 +633,7 @@ export default function InputWorkspacePage() {
                     </div>
                   </div>
                   <div>
-                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ixai-text-subtle)]">
                       {t("input.fcnBarriers")}
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -647,37 +647,37 @@ export default function InputWorkspacePage() {
                     </div>
                   </div>
                   <div className="lg:col-span-2">
-                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                    <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ixai-text-subtle)]">
                       {t("input.schedulePreview")}
                     </div>
-                    <div className="grid gap-2 border border-zinc-800 bg-black/20 p-2 font-mono text-xs sm:grid-cols-3">
-                      {fcnSchedulePreview.length === 0 && <div className="text-zinc-500">{t("input.schedulePreviewPending")}</div>}
+                    <div className="grid gap-2 border border-[var(--ixai-border-subtle)] bg-black/20 p-2 font-mono text-xs sm:grid-cols-3">
+                      {fcnSchedulePreview.length === 0 && <div className="text-[var(--ixai-text-subtle)]">{t("input.schedulePreviewPending")}</div>}
                       {fcnSchedulePreview.slice(0, 6).map((row, index) => (
-                        <div className="border border-zinc-900 px-2 py-1 text-zinc-400" key={`${row.observationDate}-${index}`}>
-                          <span className="text-zinc-600">T{index + 1}</span> {row.observationDate} → {row.paymentDate}
+                        <div className="border border-[var(--ixai-border-subtle)] px-2 py-1 text-[var(--ixai-text-muted)]" key={`${row.observationDate}-${index}`}>
+                          <span className="text-[var(--ixai-text-subtle)]">T{index + 1}</span> {row.observationDate} → {row.paymentDate}
                         </div>
                       ))}
                     </div>
                   </div>
                   <div className="lg:col-span-2">
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+                      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ixai-text-subtle)]">
                         {t("input.fcnUnderlyings")}
                       </div>
                       {underlyings.length > 1 && (
-                        <div className="font-mono text-xs text-yellow-200">
+                        <div className="font-mono text-xs text-[var(--ixai-risk-watch)]">
                           {t("input.worstOfActive")}
                         </div>
                       )}
                     </div>
                     <div className="space-y-2">
                       {underlyings.map((item, index) => (
-                        <div className="grid gap-2 border border-zinc-800 bg-black/20 p-2 sm:grid-cols-[1fr_1fr_0.7fr_auto]" key={index}>
+                        <div className="grid gap-2 border border-[var(--ixai-border-subtle)] bg-black/20 p-2 sm:grid-cols-[1fr_1fr_0.7fr_auto]" key={index}>
                           <Field label={t("input.underlyingAsset")} value={item.symbol} onChange={(value) => setUnderlyings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, symbol: value } : row))} placeholder="MDB" />
                           <Field label={t("input.initialPrice")} value={item.initial_price} onChange={(value) => setUnderlyings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, initial_price: value } : row))} />
                           <Field label={t("input.weightOptional")} value={item.weight} onChange={(value) => setUnderlyings((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, weight: value } : row))} />
                           <button
-                            className="self-end border border-zinc-700 px-2 py-2 font-mono text-xs text-zinc-400 disabled:opacity-40"
+                            className="self-end border border-[var(--ixai-border-subtle)] px-2 py-2 font-mono text-xs text-[var(--ixai-text-muted)] disabled:opacity-40"
                             disabled={underlyings.length === 1}
                             onClick={() => setUnderlyings((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}
                             type="button"
@@ -687,7 +687,7 @@ export default function InputWorkspacePage() {
                         </div>
                       ))}
                       <button
-                        className="border border-yellow-400/40 px-3 py-2 font-mono text-xs text-yellow-100"
+                        className="border border-[var(--ixai-risk-watch)]/40 px-3 py-2 font-mono text-xs text-[var(--ixai-risk-watch)]"
                         onClick={() => setUnderlyings((rows) => [...rows, { symbol: "", initial_price: "", weight: "" }])}
                         type="button"
                       >
@@ -699,11 +699,11 @@ export default function InputWorkspacePage() {
               </div>
             )}
 
-            {status && <div className="border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-200">{status}</div>}
-            {error && <div className="border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200">{error}</div>}
+            {status && <div className="border border-[var(--ixai-accent)]/30 bg-[rgba(176,141,87,0.10)] px-3 py-2 text-sm text-[var(--ixai-risk-clear)]">{status}</div>}
+            {error && <div className="border border-[var(--ixai-risk-critical)]/30 bg-[rgba(210,122,122,0.10)] px-3 py-2 text-sm text-[var(--ixai-risk-critical)]">{error}</div>}
 
             <button
-              className="border border-emerald-400/60 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-400/10 disabled:opacity-50"
+              className="border border-[var(--ixai-accent)]/60 px-4 py-2 text-sm font-semibold text-[var(--ixai-risk-clear)] transition hover:bg-[rgba(176,141,87,0.10)] disabled:opacity-50"
               disabled={saving}
               type="submit"
             >
@@ -713,15 +713,15 @@ export default function InputWorkspacePage() {
         </TerminalPanel>
 
         <TerminalPanel title={labels.recent} meta={t("dashboard.meta.overview")}>
-          <div className="divide-y divide-zinc-800 border border-zinc-800">
+          <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
             {recent.length === 0 && <EmptyLine>{t("input.noRecentActivity")}</EmptyLine>}
             {recent.map((item) => (
               <div className="px-3 py-2 font-mono text-xs" key={`${item.type}-${item.label}-${item.detail}`}>
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-zinc-500">{item.type}</span>
-                  <span className="text-zinc-100">{item.label}</span>
+                  <span className="text-[var(--ixai-text-subtle)]">{item.type}</span>
+                  <span className="text-[var(--ixai-text-strong)]">{item.label}</span>
                 </div>
-                <div className="mt-1 truncate text-zinc-500">{item.detail}</div>
+                <div className="mt-1 truncate text-[var(--ixai-text-subtle)]">{item.detail}</div>
               </div>
             ))}
           </div>
@@ -743,7 +743,7 @@ function Field({
   placeholder?: string;
 }) {
   return (
-    <label className="block font-mono text-xs text-zinc-500">
+    <label className="block font-mono text-xs text-[var(--ixai-text-subtle)]">
       {label}
       <input
         className={`${inputClass()} mt-2`}
@@ -767,7 +767,7 @@ function SelectField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block font-mono text-xs text-zinc-500">
+    <label className="block font-mono text-xs text-[var(--ixai-text-subtle)]">
       {label}
       <select
         className={`${inputClass()} mt-2`}

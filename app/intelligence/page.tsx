@@ -70,10 +70,10 @@ function percent(value: unknown) {
 
 function statusClass(value?: string | null) {
   const normalized = (value || "").toLowerCase();
-  if (normalized.includes("critical") || normalized.includes("high") || normalized.includes("risk_off")) return "border-red-500/50 text-red-300";
-  if (normalized.includes("medium") || normalized.includes("watch") || normalized.includes("mixed")) return "border-yellow-500/50 text-yellow-300";
-  if (normalized.includes("low") || normalized.includes("clear") || normalized.includes("risk_on")) return "border-emerald-500/50 text-emerald-300";
-  return "border-zinc-700 text-zinc-400";
+  if (normalized.includes("critical") || normalized.includes("high") || normalized.includes("risk_off")) return "border-[var(--ixai-risk-critical)]/50 text-[var(--ixai-risk-critical)]";
+  if (normalized.includes("medium") || normalized.includes("watch") || normalized.includes("mixed")) return "border-[var(--ixai-risk-watch)]/50 text-[var(--ixai-risk-watch)]";
+  if (normalized.includes("low") || normalized.includes("clear") || normalized.includes("risk_on")) return "border-[var(--ixai-accent)]/50 text-[var(--ixai-risk-clear)]";
+  return "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-muted)]";
 }
 
 function listItems(items: unknown, fallback = "No signal yet") {
@@ -89,19 +89,19 @@ function timestamp(value?: string | null) {
 
 function DataRow({ label, value }: { label: string; value: unknown }) {
   return (
-    <div className="grid gap-2 border-b border-zinc-900 py-2 font-mono text-xs md:grid-cols-[180px_1fr]">
-      <span className="uppercase text-zinc-600">{label}</span>
-      <span className="text-zinc-300">{textValue(value, "Pending")}</span>
+    <div className="grid gap-2 border-b border-[var(--ixai-border-subtle)] py-2 font-mono text-xs md:grid-cols-[180px_1fr]">
+      <span className="uppercase text-[var(--ixai-text-subtle)]">{label}</span>
+      <span className="text-[var(--ixai-text-strong)]">{textValue(value, "Pending")}</span>
     </div>
   );
 }
 
 function severityClass(value?: string | null) {
   const normalized = (value || "").toLowerCase();
-  if (normalized.includes("critical")) return "border-red-500/50 text-red-300";
-  if (normalized.includes("elevated") || normalized.includes("high")) return "border-yellow-500/50 text-yellow-300";
-  if (normalized.includes("clear")) return "border-emerald-500/50 text-emerald-300";
-  return "border-zinc-700 text-zinc-400";
+  if (normalized.includes("critical")) return "border-[var(--ixai-risk-critical)]/50 text-[var(--ixai-risk-critical)]";
+  if (normalized.includes("elevated") || normalized.includes("high")) return "border-[var(--ixai-risk-watch)]/50 text-[var(--ixai-risk-watch)]";
+  if (normalized.includes("clear")) return "border-[var(--ixai-accent)]/50 text-[var(--ixai-risk-clear)]";
+  return "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-muted)]";
 }
 
 function cryptoInsightRows(items: CryptoPositionResponse[], totalValue: number) {
@@ -153,20 +153,20 @@ function mergeFcns(summary: SummaryResponse | null) {
 function WindowCard({ item }: { item: TimelineWindowResponse }) {
   const { t } = useI18n();
   return (
-    <div className="border border-zinc-800 bg-black/20 p-3">
+    <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-300">
+        <div className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--ixai-text-strong)]">
           {textValue(item.window, "window")}
         </div>
-        <span className="font-mono text-[10px] text-zinc-600">timeline</span>
+        <span className="font-mono text-[10px] text-[var(--ixai-text-subtle)]">timeline</span>
       </div>
       <div className="space-y-1 font-mono text-[11px] leading-5">
-        <div><span className="text-zinc-600">{t("dashboard.regime")}</span> <span className="text-zinc-300">{textValue(item.regime_evolution)}</span></div>
-        <div><span className="text-zinc-600">{t("dashboard.risk")}</span> <span className="text-zinc-300">{textValue(item.risk_score_trend)}</span></div>
-        <div><span className="text-zinc-600">{t("intelligence.concentration")}</span> <span className="text-zinc-300">{textValue(item.concentration_trend)}</span></div>
-        <div><span className="text-zinc-600">{t("intelligence.volatility")}</span> <span className="text-zinc-300">{textValue(item.volatility_trend)}</span></div>
+        <div><span className="text-[var(--ixai-text-subtle)]">{t("dashboard.regime")}</span> <span className="text-[var(--ixai-text-strong)]">{textValue(item.regime_evolution)}</span></div>
+        <div><span className="text-[var(--ixai-text-subtle)]">{t("dashboard.risk")}</span> <span className="text-[var(--ixai-text-strong)]">{textValue(item.risk_score_trend)}</span></div>
+        <div><span className="text-[var(--ixai-text-subtle)]">{t("intelligence.concentration")}</span> <span className="text-[var(--ixai-text-strong)]">{textValue(item.concentration_trend)}</span></div>
+        <div><span className="text-[var(--ixai-text-subtle)]">{t("intelligence.volatility")}</span> <span className="text-[var(--ixai-text-strong)]">{textValue(item.volatility_trend)}</span></div>
       </div>
-      <div className="mt-3 grid gap-2 text-[11px] text-zinc-500">
+      <div className="mt-3 grid gap-2 text-[11px] text-[var(--ixai-text-subtle)]">
         <div>Recurring: {listItems(item.recurring_risks, "none").slice(0, 2).join(" · ")}</div>
         <div>Improving: {listItems(item.improving_signals, "none").slice(0, 2).join(" · ")}</div>
         <div>Deteriorating: {listItems(item.deteriorating_signals, "none").slice(0, 2).join(" · ")}</div>
@@ -314,7 +314,7 @@ export default function IntelligencePage() {
     <AppShell title={t("page.intelligence")} subtitle={labels.subtitle}>
       <div className="space-y-5">
         {errors.length > 0 && (
-          <div className="border border-yellow-500/30 bg-yellow-950/10 px-3 py-2 text-xs text-yellow-200">
+          <div className="border border-[var(--ixai-risk-watch)]/30 bg-[var(--ixai-surface-card)] px-3 py-2 text-xs text-[var(--ixai-risk-watch)]">
             {t("errors.intelligencePartial")}
           </div>
         )}
@@ -322,25 +322,25 @@ export default function IntelligencePage() {
         <TerminalPanel title={labels.header} meta={loading ? "loading" : isStale ? "stale memory" : "fresh"}>
           <div className="grid gap-3 md:grid-cols-5">
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">{t("dashboard.regime")}</div>
-              <div className="mt-1 text-lg font-semibold text-zinc-100">{textValue(summary?.regime, "Pending")}</div>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">{t("dashboard.regime")}</div>
+              <div className="mt-1 text-lg font-semibold text-[var(--ixai-text-strong)]">{textValue(summary?.regime, "Pending")}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">{t("dashboard.confidence")}</div>
-              <div className="mt-1 text-lg font-semibold text-emerald-300">{percent(confidence)}</div>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">{t("dashboard.confidence")}</div>
+              <div className="mt-1 text-lg font-semibold text-[var(--ixai-risk-clear)]">{percent(confidence)}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">{t("dashboard.dominantRisk")}</div>
-              <div className="mt-1 text-sm text-zinc-300">{textValue(summary?.dominant_risk, "Pending")}</div>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">{t("dashboard.dominantRisk")}</div>
+              <div className="mt-1 text-sm text-[var(--ixai-text-strong)]">{textValue(summary?.dominant_risk, "Pending")}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">{t("dashboard.lastGenerated")}</div>
-              <div className="mt-1 text-sm text-zinc-300">{timestamp(summary?.generated_at || timeline?.generated_at)}</div>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">{t("dashboard.lastGenerated")}</div>
+              <div className="mt-1 text-sm text-[var(--ixai-text-strong)]">{timestamp(summary?.generated_at || timeline?.generated_at)}</div>
             </div>
             <div className="flex flex-wrap content-start gap-2">
-              <Link className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-emerald-400 hover:text-emerald-200" href="/dashboard">Dashboard</Link>
-              <Link className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-emerald-400 hover:text-emerald-200" href="/portfolio">Portfolio</Link>
-              <Link className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-emerald-400 hover:text-emerald-200" href="/fcn">FCN</Link>
+              <Link className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-xs text-[var(--ixai-text-strong)] hover:border-[var(--ixai-accent)] hover:text-[var(--ixai-risk-clear)]" href="/dashboard">Dashboard</Link>
+              <Link className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-xs text-[var(--ixai-text-strong)] hover:border-[var(--ixai-accent)] hover:text-[var(--ixai-risk-clear)]" href="/portfolio">Portfolio</Link>
+              <Link className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-xs text-[var(--ixai-text-strong)] hover:border-[var(--ixai-accent)] hover:text-[var(--ixai-risk-clear)]" href="/fcn">FCN</Link>
             </div>
           </div>
         </TerminalPanel>
@@ -352,23 +352,23 @@ export default function IntelligencePage() {
             <span className={`border px-2 py-1 uppercase ${severityClass(todayStatus)}`}>
               {t("intelligence.statusLabel")}: {todayStatus}
             </span>
-            <span className="text-zinc-500">{labels.todayFocusSubtitle}</span>
+            <span className="text-[var(--ixai-text-subtle)]">{labels.todayFocusSubtitle}</span>
           </div>
-          <div className="divide-y divide-zinc-900 border border-zinc-800">
+          <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
             {todayFocus.map((item: TodayFocusItem) => (
               <div className="grid gap-2 px-3 py-2 text-xs md:grid-cols-[0.8fr_1fr_1.8fr_1fr]" key={`${item.category}-${item.symbol}-${item.title}`}>
                 <div>
                   <span className={`border px-2 py-0.5 font-mono text-[10px] uppercase ${severityClass(item.severity)}`}>
                     {item.severity}
                   </span>
-                  <div className="mt-1 font-mono text-zinc-500">{item.category}</div>
+                  <div className="mt-1 font-mono text-[var(--ixai-text-subtle)]">{item.category}</div>
                 </div>
                 <div>
-                  <div className="font-semibold text-zinc-100">{item.title}</div>
-                  <div className="font-mono text-[10px] text-zinc-500">{item.symbol}</div>
+                  <div className="font-semibold text-[var(--ixai-text-strong)]">{item.title}</div>
+                  <div className="font-mono text-[10px] text-[var(--ixai-text-subtle)]">{item.symbol}</div>
                 </div>
-                <div className="text-zinc-400">{sanitizeAdviceText(item.reason)}</div>
-                <div className="font-mono text-zinc-300">
+                <div className="text-[var(--ixai-text-muted)]">{sanitizeAdviceText(item.reason)}</div>
+                <div className="font-mono text-[var(--ixai-text-strong)]">
                   {t("intelligence.actionLabel")}:{" "}
                   {t(`intelligence.actions.${item.recommended_monitoring_action}`)}
                 </div>
@@ -404,7 +404,7 @@ export default function IntelligencePage() {
         <SectionDivider label={labels.deepAnalysis} hint={labels.defaultCollapsed} />
 
         <ExpandablePanel title={labels.timeline} meta={timeline?.is_stale ? "history accumulating" : "7d / 30d / 90d"}>
-          <div className="mb-3 text-sm text-zinc-300">
+          <div className="mb-3 text-sm text-[var(--ixai-text-strong)]">
             {textValue(timeline?.timeline_summary || timeline?.message, t("empty.timelineBuilding"))}
           </div>
           <div className="grid gap-3 lg:grid-cols-3">
@@ -418,52 +418,52 @@ export default function IntelligencePage() {
         <ExpandablePanel title={labels.crossAsset} meta="equity / fcn / crypto / macro / cash">
           <div className="grid gap-3 lg:grid-cols-5">
             {crossAssetRisks.map((risk) => (
-              <div className="border border-zinc-800 bg-black/20 p-3" key={risk.label}>
+              <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3" key={risk.label}>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="font-mono text-xs uppercase text-zinc-300">{risk.label}</div>
+                  <div className="font-mono text-xs uppercase text-[var(--ixai-text-strong)]">{risk.label}</div>
                   <span className={`border px-2 py-0.5 font-mono text-[10px] uppercase ${severityClass(risk.state)}`}>
                     {risk.state}
                   </span>
                 </div>
-                <div className="text-xs leading-5 text-zinc-400">{risk.driver}</div>
-                <div className="mt-2 font-mono text-[10px] text-zinc-600">
+                <div className="text-xs leading-5 text-[var(--ixai-text-muted)]">{risk.driver}</div>
+                <div className="mt-2 font-mono text-[10px] text-[var(--ixai-text-subtle)]">
                   {risk.relatedSymbols.length > 0 ? risk.relatedSymbols.join(" · ") : "symbols pending"}
                 </div>
-                <div className="mt-2 text-[11px] leading-5 text-zinc-500">{risk.monitoringNote}</div>
+                <div className="mt-2 text-[11px] leading-5 text-[var(--ixai-text-subtle)]">{risk.monitoringNote}</div>
               </div>
             ))}
           </div>
         </ExpandablePanel>
 
         <ExpandablePanel title="Crypto intelligence" meta="spot / grid / dual / earn">
-          <div className="divide-y divide-zinc-900 border border-zinc-800">
+          <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
             {cryptoInsights.length === 0 && <EmptyLine>Data limited. Crypto subtype analysis will activate when positions are available.</EmptyLine>}
             {cryptoInsights.map((item) => (
               <div className="grid gap-2 px-3 py-2 text-xs md:grid-cols-[0.8fr_0.8fr_0.6fr_2fr]" key={`${item.symbol}-${item.state}`}>
-                <span className="font-mono font-semibold text-zinc-100">{item.symbol}</span>
+                <span className="font-mono font-semibold text-[var(--ixai-text-strong)]">{item.symbol}</span>
                 <span className={`w-fit border px-2 py-0.5 font-mono text-[10px] uppercase ${severityClass(item.state)}`}>
                   {item.state}
                 </span>
-                <span className="font-mono text-zinc-400">{percent(item.exposure)}</span>
-                <span className="text-zinc-500">{sanitizeAdviceText(item.driver)}</span>
+                <span className="font-mono text-[var(--ixai-text-muted)]">{percent(item.exposure)}</span>
+                <span className="text-[var(--ixai-text-subtle)]">{sanitizeAdviceText(item.driver)}</span>
               </div>
             ))}
           </div>
         </ExpandablePanel>
 
         <ExpandablePanel title={labels.scenarios} meta="risk awareness only">
-          <div className="divide-y divide-zinc-900 border border-zinc-800">
+          <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
             {scenarioRows.length === 0 && <EmptyLine>{t("intelligence.scenarioUnavailable")}</EmptyLine>}
             {scenarioRows.map((scenario, index) => (
               <div className="grid gap-2 px-3 py-2 text-xs md:grid-cols-[1fr_0.7fr_1.2fr]" key={`${textValue(scenario.scenario_name, "scenario")}-${index}`}>
                 <div>
-                  <div className="font-mono font-semibold text-zinc-100">{textValue(scenario.scenario_name, "Scenario")}</div>
-                  <div className="font-mono text-[10px] text-zinc-500">{listItems(scenario.affected_assets, "portfolio").slice(0, 4).join(" · ")}</div>
+                  <div className="font-mono font-semibold text-[var(--ixai-text-strong)]">{textValue(scenario.scenario_name, "Scenario")}</div>
+                  <div className="font-mono text-[10px] text-[var(--ixai-text-subtle)]">{listItems(scenario.affected_assets, "portfolio").slice(0, 4).join(" · ")}</div>
                 </div>
                 <span className={`w-fit border px-2 py-1 font-mono text-[10px] uppercase ${statusClass(scenario.impact_level)}`}>
                   {textValue(scenario.impact_level, "watch")}
                 </span>
-                <div className="text-zinc-400">{textValue(scenario.narrative || scenario.portfolio_sensitivity, "Interpretation pending")}</div>
+                <div className="text-[var(--ixai-text-muted)]">{textValue(scenario.narrative || scenario.portfolio_sensitivity, "Interpretation pending")}</div>
               </div>
             ))}
           </div>
@@ -472,32 +472,32 @@ export default function IntelligencePage() {
         <ExpandablePanel title={labels.graph} meta="themes · connections · risks">
           <section className="grid gap-5 lg:grid-cols-3">
             <div>
-              <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">
                 {labels.graph}
               </div>
               <div className="space-y-2">
                 {dominantThemes.map((theme) => (
-                  <div className="border-b border-zinc-900 pb-2 font-mono text-xs text-zinc-300" key={theme}>{theme}</div>
+                  <div className="border-b border-[var(--ixai-border-subtle)] pb-2 font-mono text-xs text-[var(--ixai-text-strong)]" key={theme}>{theme}</div>
                 ))}
               </div>
             </div>
             <div>
-              <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">
                 {labels.connections}
               </div>
               <div className="space-y-2">
                 {graphConnections.map((connection) => (
-                  <div className="border-b border-zinc-900 pb-2 font-mono text-xs text-zinc-300" key={connection}>{connection}</div>
+                  <div className="border-b border-[var(--ixai-border-subtle)] pb-2 font-mono text-xs text-[var(--ixai-text-strong)]" key={connection}>{connection}</div>
                 ))}
               </div>
             </div>
             <div>
-              <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+              <div className="mb-2 font-mono text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">
                 {labels.correlatedRisks}
               </div>
               <div className="space-y-2">
                 {graphRisks.map((risk) => (
-                  <div className="border-b border-zinc-900 pb-2 font-mono text-xs text-zinc-300" key={risk}>{risk}</div>
+                  <div className="border-b border-[var(--ixai-border-subtle)] pb-2 font-mono text-xs text-[var(--ixai-text-strong)]" key={risk}>{risk}</div>
                 ))}
               </div>
             </div>
@@ -517,12 +517,12 @@ export default function IntelligencePage() {
         </ExpandablePanel>
 
         <ExpandablePanel title={labels.copilot} meta={copilot ? "legacy fallback" : "legacy"}>
-          <p className="text-sm leading-6 text-zinc-300">
+          <p className="text-sm leading-6 text-[var(--ixai-text-strong)]">
             {textValue(copilot?.answer, t("intelligence.copilotFallback"))}
           </p>
         </ExpandablePanel>
 
-        <div className="border border-zinc-800 bg-zinc-950/60 px-3 py-2 font-mono text-[11px] text-zinc-500">
+        <div className="border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] px-3 py-2 font-mono text-[11px] text-[var(--ixai-text-subtle)]">
           {labels.noTrading}
         </div>
       </div>

@@ -13,6 +13,10 @@ export type EmptyStateAction = {
  *  Distinct from `EmptyLine` (inline, single-line): this is for the
  *  whole-panel case ("no portfolio yet", "no FCN", "timeline accumulating").
  *  Stays in terminal style: monospace meta, square dashed border, no chrome.
+ *
+ *  v1.18.5: tokenised — uses --ixai-border-subtle and --ixai-text-* so the
+ *  card sits on the dark forest surface coherently. Action hover uses gold
+ *  tint instead of off-brand emerald.
  */
 export function EmptyState({
   title,
@@ -28,23 +32,23 @@ export function EmptyState({
   children?: ReactNode;
 }) {
   return (
-    <div className="min-w-0 overflow-hidden border border-dashed border-zinc-700 bg-black/20 p-4">
+    <div className="min-w-0 overflow-hidden border border-dashed border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h3 className="text-sm font-semibold text-zinc-200">{title}</h3>
+        <h3 className="ds-heading-sm text-[var(--ixai-text-strong)]">{title}</h3>
         {meta && (
-          <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+          <span className="ds-label-sm text-[var(--ixai-text-subtle)]">
             {meta}
           </span>
         )}
       </div>
       {hint && (
-        <p className="mt-2 font-mono text-xs leading-5 text-zinc-500">{hint}</p>
+        <p className="ds-mono-sm mt-2 text-[var(--ixai-text-muted)]">{hint}</p>
       )}
       {actions && actions.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2 font-mono text-xs">
+        <div className="ds-mono-sm mt-3 flex flex-wrap gap-2">
           {actions.map((action) => (
             <Link
-              className="border border-zinc-700 px-3 py-1.5 text-zinc-300 transition hover:border-emerald-400/60 hover:text-emerald-200"
+              className="border border-[var(--ixai-border-subtle)] px-3 py-1.5 text-[var(--ixai-text-muted)] transition hover:border-[var(--ixai-accent)] hover:text-[var(--ixai-cream)]"
               href={action.href}
               key={`${action.href}-${action.label}`}
             >

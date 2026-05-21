@@ -71,10 +71,10 @@ function percent(value: unknown) {
 
 function riskClass(risk?: string | null) {
   const key = (risk || "").toLowerCase();
-  if (key.includes("high") || key.includes("critical")) return "text-red-300 border-red-500/40";
-  if (key.includes("medium") || key.includes("watch")) return "text-yellow-300 border-yellow-500/40";
-  if (key.includes("low") || key.includes("safe")) return "text-emerald-300 border-emerald-500/40";
-  return "text-zinc-400 border-zinc-700";
+  if (key.includes("high") || key.includes("critical")) return "text-[var(--ixai-risk-critical)] border-[var(--ixai-risk-critical)]/40";
+  if (key.includes("medium") || key.includes("watch")) return "text-[var(--ixai-risk-watch)] border-[var(--ixai-risk-watch)]/40";
+  if (key.includes("low") || key.includes("safe")) return "text-[var(--ixai-risk-clear)] border-[var(--ixai-accent)]/40";
+  return "text-[var(--ixai-text-muted)] border-[var(--ixai-border-subtle)]";
 }
 
 function sourceLabel(source?: string | null, stale?: boolean | null) {
@@ -88,9 +88,9 @@ function sourceLabel(source?: string | null, stale?: boolean | null) {
 
 function sourceClass(source?: string | null, stale?: boolean | null) {
   const label = sourceLabel(source, stale);
-  if (label === "LIVE") return "text-emerald-300";
-  if (label === "STALE") return "text-yellow-300";
-  return "text-zinc-500";
+  if (label === "LIVE") return "text-[var(--ixai-risk-clear)]";
+  if (label === "STALE") return "text-[var(--ixai-risk-watch)]";
+  return "text-[var(--ixai-text-subtle)]";
 }
 
 function displayStock(stock: StockPositionResponse) {
@@ -240,44 +240,44 @@ function fcnRows(summary: SummaryResponse | null, raw: FCNPositionResponse[]) {
 function plText(row: HoldingRow) {
   if (!row.quantity || !row.avgPrice || !row.currentPrice) return "-";
   const value = (row.currentPrice - row.avgPrice) * row.quantity;
-  const tone = value >= 0 ? "text-emerald-300" : "text-red-300";
+  const tone = value >= 0 ? "text-[var(--ixai-risk-clear)]" : "text-[var(--ixai-risk-critical)]";
   return <span className={tone}>{money(value)}</span>;
 }
 
 function HoldingSection({ title, rows, onDelete }: { title: string; rows: HoldingRow[]; onDelete: (row: HoldingRow) => void }) {
   const { t } = useI18n();
   return (
-    <div className="border border-zinc-800 bg-zinc-950/70">
-      <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2">
-        <h3 className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-300">{title}</h3>
-        <span className="font-mono text-[10px] text-zinc-500">{rows.length} {t("portfolio.positions")}</span>
+    <div className="border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)]">
+      <div className="flex items-center justify-between border-b border-[var(--ixai-border-subtle)] px-3 py-2">
+        <h3 className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--ixai-text-strong)]">{title}</h3>
+        <span className="font-mono text-[10px] text-[var(--ixai-text-subtle)]">{rows.length} {t("portfolio.positions")}</span>
       </div>
-      <div className="divide-y divide-zinc-900">
+      <div className="divide-y divide-[var(--ixai-border-subtle)]">
         {rows.length === 0 && <EmptyLine>{t("common.dataPending")}</EmptyLine>}
         {rows.map((row, index) => (
           <div className="grid gap-2 px-3 py-2 text-xs md:grid-cols-[1.5fr_0.7fr_0.9fr_0.9fr_0.8fr_0.7fr]" key={`${row.assetType}-${row.id ?? row.label}-${index}`}>
             <div>
-              <div className="font-semibold text-zinc-100">{row.label}</div>
-              <div className="font-mono text-[10px] text-zinc-500">{row.assetType}</div>
-              {row.detail && <div className="mt-1 font-mono text-[10px] text-zinc-600">{row.detail}</div>}
+              <div className="font-semibold text-[var(--ixai-text-strong)]">{row.label}</div>
+              <div className="font-mono text-[10px] text-[var(--ixai-text-subtle)]">{row.assetType}</div>
+              {row.detail && <div className="mt-1 font-mono text-[10px] text-[var(--ixai-text-subtle)]">{row.detail}</div>}
             </div>
-            <div className="font-mono text-zinc-400">
+            <div className="font-mono text-[var(--ixai-text-muted)]">
               {row.notional ? money(row.notional) : row.quantity ? row.quantity.toLocaleString() : "-"}
             </div>
             <div>
-              <div className="text-zinc-400">{price(row.currentPrice)}</div>
+              <div className="text-[var(--ixai-text-muted)]">{price(row.currentPrice)}</div>
               <div className={`font-mono text-[10px] ${sourceClass(row.source, row.stale)}`}>
                 {sourceLabel(row.source, row.stale)}
               </div>
             </div>
-            <div className="font-semibold text-zinc-100">{money(row.marketValue)}</div>
-            <div className="font-mono text-zinc-400">{plText(row)}</div>
+            <div className="font-semibold text-[var(--ixai-text-strong)]">{money(row.marketValue)}</div>
+            <div className="font-mono text-[var(--ixai-text-muted)]">{plText(row)}</div>
             <div className="flex gap-2 md:justify-end">
-              <button className="border border-zinc-800 px-2 py-1 font-mono text-[10px] text-zinc-500" disabled type="button">
+              <button className="border border-[var(--ixai-border-subtle)] px-2 py-1 font-mono text-[10px] text-[var(--ixai-text-subtle)]" disabled type="button">
                 Edit next
               </button>
               <button
-                className="border border-red-500/40 px-2 py-1 font-mono text-[10px] text-red-300 hover:bg-red-500/10 disabled:opacity-40"
+                className="border border-[var(--ixai-risk-critical)]/40 px-2 py-1 font-mono text-[10px] text-[var(--ixai-risk-critical)] hover:bg-[rgba(210,122,122,0.10)] disabled:opacity-40"
                 disabled={!row.id || !row.deleteKind}
                 onClick={() => onDelete(row)}
                 type="button"
@@ -406,7 +406,7 @@ export default function PortfolioPage() {
     <AppShell title={t("page.portfolio")} subtitle={labels.subtitle}>
       <div className="space-y-5">
         {error && (
-          <div className="border border-red-500/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
+          <div className="border border-[var(--ixai-risk-critical)]/40 bg-[var(--ixai-surface-card)] px-3 py-2 text-sm text-[var(--ixai-risk-critical)]">
             {error}
           </div>
         )}
@@ -415,28 +415,28 @@ export default function PortfolioPage() {
           <TerminalPanel title={labels.header} meta={loading ? "loading" : "live workspace"}>
             <div className="grid gap-3 md:grid-cols-4">
               <div>
-                <div className="font-mono text-[10px] uppercase text-zinc-500">{t("common.portfolio")}</div>
-                <div className="mt-1 text-lg font-semibold text-zinc-100">
+                <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">{t("common.portfolio")}</div>
+                <div className="mt-1 text-lg font-semibold text-[var(--ixai-text-strong)]">
                   {summary?.portfolio_name || t("portfolio.primaryPortfolio")}
                 </div>
-                <div className="mt-1 text-xs text-zinc-500">{accountName}</div>
+                <div className="mt-1 text-xs text-[var(--ixai-text-subtle)]">{accountName}</div>
               </div>
               <div>
-                <div className="font-mono text-[10px] uppercase text-zinc-500">Total Value</div>
-                <div className="mt-1 text-2xl font-semibold text-zinc-100">{money(totalValue)}</div>
+                <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Total Value</div>
+                <div className="mt-1 text-2xl font-semibold text-[var(--ixai-text-strong)]">{money(totalValue)}</div>
               </div>
               <div>
-                <div className="font-mono text-[10px] uppercase text-zinc-500">Last Updated</div>
-                <div className="mt-1 text-sm text-zinc-300">{updatedAt || "waiting for data"}</div>
+                <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Last Updated</div>
+                <div className="mt-1 text-sm text-[var(--ixai-text-strong)]">{updatedAt || "waiting for data"}</div>
               </div>
               <div className="flex flex-wrap content-start gap-2">
-                <Link className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-emerald-400 hover:text-emerald-200" href="/input">
+                <Link className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-xs text-[var(--ixai-text-strong)] hover:border-[var(--ixai-accent)] hover:text-[var(--ixai-risk-clear)]" href="/input">
                   Input
                 </Link>
-                <Link className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-emerald-400 hover:text-emerald-200" href="/import">
+                <Link className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-xs text-[var(--ixai-text-strong)] hover:border-[var(--ixai-accent)] hover:text-[var(--ixai-risk-clear)]" href="/import">
                   Import
                 </Link>
-                <Link className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-emerald-400 hover:text-emerald-200" href="/dashboard">
+                <Link className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-xs text-[var(--ixai-text-strong)] hover:border-[var(--ixai-accent)] hover:text-[var(--ixai-risk-clear)]" href="/dashboard">
                   Dashboard
                 </Link>
               </div>
@@ -445,27 +445,27 @@ export default function PortfolioPage() {
 
           <TerminalPanel title={labels.exposure} meta="management lens">
             <div className="space-y-2 font-mono text-xs">
-              <div className="flex justify-between gap-3 border-b border-zinc-900 pb-1">
-                <span className="text-zinc-500">TOP SINGLE</span>
-                <span className="text-zinc-200">{topHolding ? `${topHolding.label} ${percent((topHolding.marketValue / Math.max(totalValue, 1)) * 100)}` : "-"}</span>
+              <div className="flex justify-between gap-3 border-b border-[var(--ixai-border-subtle)] pb-1">
+                <span className="text-[var(--ixai-text-subtle)]">TOP SINGLE</span>
+                <span className="text-[var(--ixai-text-strong)]">{topHolding ? `${topHolding.label} ${percent((topHolding.marketValue / Math.max(totalValue, 1)) * 100)}` : "-"}</span>
               </div>
-              <div className="flex justify-between gap-3 border-b border-zinc-900 pb-1">
-                <span className="text-zinc-500">STOCK CONCENTRATION</span>
-                <span className={stockRatio > 60 ? "text-yellow-300" : "text-zinc-200"}>{percent(stockRatio)}</span>
+              <div className="flex justify-between gap-3 border-b border-[var(--ixai-border-subtle)] pb-1">
+                <span className="text-[var(--ixai-text-subtle)]">STOCK CONCENTRATION</span>
+                <span className={stockRatio > 60 ? "text-[var(--ixai-risk-watch)]" : "text-[var(--ixai-text-strong)]"}>{percent(stockRatio)}</span>
               </div>
-              <div className="flex justify-between gap-3 border-b border-zinc-900 pb-1">
-                <span className="text-zinc-500">FCN-LINKED EXPOSURE</span>
-                <span className={fcnRatio > 35 ? "text-yellow-300" : "text-zinc-200"}>{percent(fcnRatio)}</span>
+              <div className="flex justify-between gap-3 border-b border-[var(--ixai-border-subtle)] pb-1">
+                <span className="text-[var(--ixai-text-subtle)]">FCN-LINKED EXPOSURE</span>
+                <span className={fcnRatio > 35 ? "text-[var(--ixai-risk-watch)]" : "text-[var(--ixai-text-strong)]"}>{percent(fcnRatio)}</span>
               </div>
-              <div className="flex justify-between gap-3 border-b border-zinc-900 pb-1">
-                <span className="text-zinc-500">CRYPTO EXPOSURE</span>
-                <span className={cryptoRatio > 20 ? "text-yellow-300" : "text-zinc-200"}>{percent(cryptoRatio)}</span>
+              <div className="flex justify-between gap-3 border-b border-[var(--ixai-border-subtle)] pb-1">
+                <span className="text-[var(--ixai-text-subtle)]">CRYPTO EXPOSURE</span>
+                <span className={cryptoRatio > 20 ? "text-[var(--ixai-risk-watch)]" : "text-[var(--ixai-text-strong)]"}>{percent(cryptoRatio)}</span>
               </div>
               <div className="flex justify-between gap-3">
-                <span className="text-zinc-500">CASH RATIO</span>
-                <span className={cashRatio < 5 && totalValue > 0 ? "text-red-300" : "text-zinc-200"}>{percent(cashRatio)}</span>
+                <span className="text-[var(--ixai-text-subtle)]">CASH RATIO</span>
+                <span className={cashRatio < 5 && totalValue > 0 ? "text-[var(--ixai-risk-critical)]" : "text-[var(--ixai-text-strong)]"}>{percent(cashRatio)}</span>
               </div>
-              <p className="pt-2 text-[11px] leading-5 text-zinc-500">
+              <p className="pt-2 text-[11px] leading-5 text-[var(--ixai-text-subtle)]">
                 {stockRatio > 60
                   ? "單一或股票曝險偏高，建議提高監控頻率。"
                   : fcnRatio > 35
@@ -491,11 +491,11 @@ export default function PortfolioPage() {
               const percentage = numberValue(item.percentage);
               const risk = percentage > 50 ? "high concentration" : percentage > 25 ? "watch" : "balanced";
               return (
-                <div className="border border-zinc-800 bg-black/20 p-3" key={item.asset_class}>
-                  <div className="font-mono text-xs uppercase text-zinc-500">{item.asset_class}</div>
-                  <div className="mt-1 text-lg font-semibold text-zinc-100">{money(item.value)}</div>
+                <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3" key={item.asset_class}>
+                  <div className="font-mono text-xs uppercase text-[var(--ixai-text-subtle)]">{item.asset_class}</div>
+                  <div className="mt-1 text-lg font-semibold text-[var(--ixai-text-strong)]">{money(item.value)}</div>
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-zinc-500">{percent(percentage)}</span>
+                    <span className="font-mono text-xs text-[var(--ixai-text-subtle)]">{percent(percentage)}</span>
                     <span className={`border px-2 py-0.5 font-mono text-[10px] uppercase ${riskClass(risk)}`}>
                       {risk}
                     </span>
@@ -509,13 +509,13 @@ export default function PortfolioPage() {
         {isEmpty ? (
           <TerminalPanel title={labels.holdings} meta="empty portfolio">
             <div className="py-8 text-center">
-              <div className="font-mono text-sm text-zinc-300">No portfolio positions yet</div>
-              <p className="mt-2 text-sm text-zinc-500">新增資產或匯入 CSV 後，這裡會成為完整持倉管理工作區。</p>
+              <div className="font-mono text-sm text-[var(--ixai-text-strong)]">No portfolio positions yet</div>
+              <p className="mt-2 text-sm text-[var(--ixai-text-subtle)]">新增資產或匯入 CSV 後，這裡會成為完整持倉管理工作區。</p>
               <div className="mt-4 flex justify-center gap-2">
-                <Link className="border border-emerald-500/50 px-3 py-2 text-xs text-emerald-200" href="/input">
+                <Link className="border border-[var(--ixai-accent)]/50 px-3 py-2 text-xs text-[var(--ixai-risk-clear)]" href="/input">
                   Go to Input
                 </Link>
-                <Link className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300" href="/import">
+                <Link className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-xs text-[var(--ixai-text-strong)]" href="/import">
                   Go to Import
                 </Link>
               </div>

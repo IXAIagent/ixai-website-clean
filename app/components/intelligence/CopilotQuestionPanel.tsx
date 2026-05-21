@@ -72,8 +72,8 @@ export function CopilotQuestionPanel({ portfolioId }: { portfolioId?: string }) 
             <button
               className={`border px-3 py-1.5 transition ${
                 isActive
-                  ? "border-emerald-400 bg-emerald-400/10 text-emerald-200"
-                  : "border-zinc-700 text-zinc-300 hover:border-emerald-400/60 hover:text-emerald-200"
+                  ? "border-[var(--ixai-accent)] bg-[rgba(176,141,87,0.10)] text-[var(--ixai-risk-clear)]"
+                  : "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-strong)] hover:border-[var(--ixai-accent)]/60 hover:text-[var(--ixai-risk-clear)]"
               }`}
               disabled={loading}
               key={prompt.key}
@@ -85,16 +85,16 @@ export function CopilotQuestionPanel({ portfolioId }: { portfolioId?: string }) 
           );
         })}
       </div>
-      <div className="border border-dashed border-zinc-800 bg-black/30 px-3 py-3 font-mono text-xs leading-6">
-        {loading && <span className="text-zinc-500">… analysing</span>}
-        {!loading && error && <span className="text-yellow-300">{error}</span>}
+      <div className="border border-dashed border-[var(--ixai-border-subtle)] bg-black/30 px-3 py-3 font-mono text-xs leading-6">
+        {loading && <span className="text-[var(--ixai-text-subtle)]">… analysing</span>}
+        {!loading && error && <span className="text-[var(--ixai-risk-watch)]">{error}</span>}
         {!loading && !error && !answer && (
-          <span className="text-zinc-500">
+          <span className="text-[var(--ixai-text-subtle)]">
             Pick a question above. Answers are read-only observations — no buy/sell instructions.
           </span>
         )}
         {!loading && !error && answer && (
-          <span className="text-zinc-200">{answer}</span>
+          <span className="text-[var(--ixai-text-strong)]">{answer}</span>
         )}
       </div>
     </TerminalPanel>

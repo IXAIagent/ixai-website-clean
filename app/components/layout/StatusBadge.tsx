@@ -3,6 +3,9 @@
 // v4E: standardized status badge. Consumers pass an engine status
 // (healthy / partial / degraded / unavailable / loading / stale) and the
 // badge renders a translated label + consistent colour.
+//
+// v1.18.5: tokenised tone palette — uses --ixai-risk-* variables so badges
+// match the calm institutional palette instead of neon emerald/yellow/red.
 
 import { useI18n } from "../../lib/i18n";
 
@@ -19,16 +22,16 @@ export type StatusVariant =
   | "critical";
 
 const COLOR_BY_VARIANT: Record<StatusVariant, string> = {
-  healthy: "border-emerald-400 text-emerald-200",
-  clear: "border-emerald-400 text-emerald-200",
-  partial: "border-yellow-400 text-yellow-200",
-  stale: "border-yellow-400 text-yellow-200",
-  loading: "border-zinc-700 text-zinc-300",
-  watch: "border-yellow-400 text-yellow-200",
-  degraded: "border-orange-400 text-orange-200",
-  elevated: "border-orange-400 text-orange-200",
-  unavailable: "border-red-400 text-red-200",
-  critical: "border-red-400 text-red-200",
+  healthy: "border-[var(--ixai-risk-clear)]/60 text-[var(--ixai-risk-clear)]",
+  clear: "border-[var(--ixai-risk-clear)]/60 text-[var(--ixai-risk-clear)]",
+  partial: "border-[var(--ixai-risk-watch)]/60 text-[var(--ixai-risk-watch)]",
+  stale: "border-[var(--ixai-risk-watch)]/60 text-[var(--ixai-risk-watch)]",
+  loading: "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-muted)]",
+  watch: "border-[var(--ixai-risk-watch)]/60 text-[var(--ixai-risk-watch)]",
+  degraded: "border-[var(--ixai-risk-elevated)]/60 text-[var(--ixai-risk-elevated)]",
+  elevated: "border-[var(--ixai-risk-elevated)]/60 text-[var(--ixai-risk-elevated)]",
+  unavailable: "border-[var(--ixai-risk-critical)]/60 text-[var(--ixai-risk-critical)]",
+  critical: "border-[var(--ixai-risk-critical)]/60 text-[var(--ixai-risk-critical)]",
 };
 
 function normalise(value: string | null | undefined): StatusVariant {
@@ -60,7 +63,7 @@ export function StatusBadge({
   const label = t(`status.${variant}`) || variant;
   return (
     <span
-      className={`inline-block border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${COLOR_BY_VARIANT[variant]} ${className}`}
+      className={`ds-label-sm inline-block border px-2 py-0.5 ${COLOR_BY_VARIANT[variant]} ${className}`}
     >
       {prefix ? `${prefix}: ${label}` : label}
     </span>

@@ -6,6 +6,9 @@
 //   - Browser-native keyboard accessibility (Enter/Space).
 //   - No JS state — SSR-safe and zero hydration cost.
 //   - Works inside TerminalPanel or standalone.
+//
+// v1.18.5: tokenised chrome — --ixai-border-subtle / --ixai-surface-card;
+// header text uses --ixai-text-strong, meta uses --ixai-text-subtle.
 
 import type { ReactNode } from "react";
 
@@ -24,27 +27,31 @@ export function ExpandablePanel({
 }) {
   return (
     <details
-      className={`group min-w-0 overflow-hidden border border-zinc-800 bg-zinc-950/60 ${className}`}
+      className={`group min-w-0 overflow-hidden border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] ${className}`}
       open={defaultExpanded}
     >
       <summary
-        className="flex cursor-pointer select-none items-baseline justify-between gap-2 px-3 py-2 marker:hidden hover:bg-zinc-900/60"
+        className="flex cursor-pointer select-none items-baseline justify-between gap-2 px-3 py-2 marker:hidden transition hover:bg-[rgba(176,141,87,0.06)]"
         // browsers show a default marker; hide it for our chevron
         style={{ listStyle: "none" }}
       >
         <span className="flex items-baseline gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-500 transition group-open:rotate-90">
+          <span className="ds-mono-sm text-[var(--ixai-text-subtle)] transition group-open:rotate-90">
             ›
           </span>
-          <span className="text-sm font-semibold text-zinc-200">{title}</span>
+          <span className="ds-heading-sm text-[var(--ixai-text-strong)]">
+            {title}
+          </span>
         </span>
         {meta && (
-          <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+          <span className="ds-label-sm text-[var(--ixai-text-subtle)]">
             {meta}
           </span>
         )}
       </summary>
-      <div className="border-t border-zinc-800 px-3 py-3">{children}</div>
+      <div className="border-t border-[var(--ixai-border-subtle)] px-3 py-3">
+        {children}
+      </div>
     </details>
   );
 }

@@ -84,10 +84,10 @@ function compactTime(value: unknown) {
 
 function riskClass(value: unknown) {
   const normalized = textValue(value, "").toLowerCase();
-  if (normalized.includes("high") || normalized.includes("critical")) return "text-red-300";
-  if (normalized.includes("medium") || normalized.includes("rising")) return "text-yellow-300";
-  if (normalized.includes("low") || normalized.includes("fresh")) return "text-emerald-300";
-  return "text-zinc-300";
+  if (normalized.includes("high") || normalized.includes("critical")) return "text-[var(--ixai-risk-critical)]";
+  if (normalized.includes("medium") || normalized.includes("rising")) return "text-[var(--ixai-risk-watch)]";
+  if (normalized.includes("low") || normalized.includes("fresh")) return "text-[var(--ixai-risk-clear)]";
+  return "text-[var(--ixai-text-strong)]";
 }
 
 function fcnKey(item: FCNPositionResponse, index: number) {
@@ -252,14 +252,14 @@ export default function DashboardPage() {
       {loading && !data ? (
         <div className="grid gap-3">
           {[0, 1, 2, 3].map((item) => (
-            <div className="h-24 animate-pulse border border-zinc-800 bg-zinc-900" key={item} />
+            <div className="h-24 animate-pulse border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)]" key={item} />
           ))}
         </div>
       ) : error && !data ? (
         <TerminalPanel title={t("page.dashboard")} meta="degraded">
-          <div className="text-sm text-yellow-200">{error || t("dashboard.degradedMessage")}</div>
+          <div className="text-sm text-[var(--ixai-risk-watch)]">{error || t("dashboard.degradedMessage")}</div>
           <button
-            className="mt-3 border border-red-400/50 px-3 py-2 text-xs text-red-100"
+            className="mt-3 border border-[var(--ixai-risk-critical)]/50 px-3 py-2 text-xs text-[var(--ixai-risk-critical)]"
             onClick={() => void loadDashboard()}
             type="button"
           >
@@ -269,7 +269,7 @@ export default function DashboardPage() {
       ) : (
         <div className={preferences.compactMode ? "space-y-3" : "space-y-4"}>
           {error && (
-            <div className="border border-yellow-500/30 bg-yellow-950/10 px-3 py-2 text-xs text-yellow-200">
+            <div className="border border-[var(--ixai-risk-watch)]/30 bg-[var(--ixai-surface-card)] px-3 py-2 text-xs text-[var(--ixai-risk-watch)]">
               {error}
             </div>
           )}
@@ -307,18 +307,18 @@ export default function DashboardPage() {
             </>
           )}
           <TerminalPanel title={t("dashboard.aiOverview")} meta={preferences.compactMode ? t("dashboard.meta.compact") : t("dashboard.meta.overview")}>
-            <div className="border-l border-emerald-400/40 bg-black/30 px-3 py-2 font-mono text-sm leading-6 text-zinc-300">
+            <div className="border-l border-[var(--ixai-accent)]/40 bg-black/30 px-3 py-2 font-mono text-sm leading-6 text-[var(--ixai-text-strong)]">
               {overviewLine}
             </div>
             <div className="mt-3 flex flex-wrap gap-2 font-mono text-xs">
               <Link
-                className="border border-zinc-700 px-3 py-2 text-zinc-300 transition hover:border-emerald-400/60 hover:text-emerald-200"
+                className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-[var(--ixai-text-strong)] transition hover:border-[var(--ixai-accent)]/60 hover:text-[var(--ixai-risk-clear)]"
                 href="/input"
               >
                 {t("dashboard.openInputWorkspace")}
               </Link>
               <Link
-                className="border border-zinc-700 px-3 py-2 text-zinc-300 transition hover:border-emerald-400/60 hover:text-emerald-200"
+                className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-[var(--ixai-text-strong)] transition hover:border-[var(--ixai-accent)]/60 hover:text-[var(--ixai-risk-clear)]"
                 href="/import"
               >
                 {t("dashboard.openImportWorkspace")}
@@ -326,20 +326,20 @@ export default function DashboardPage() {
             </div>
             <div className="mt-3 grid gap-2 font-mono text-xs md:grid-cols-3">
               <div>
-                <span className="text-zinc-600">{t("dashboard.dominantRisk")}</span>
+                <span className="text-[var(--ixai-text-subtle)]">{t("dashboard.dominantRisk")}</span>
                 <div className={riskClass(data?.intelligenceSummary?.dominant_risk)}>
                   {textValue(data?.intelligenceSummary?.dominant_risk || data?.risk?.top_risk || summary?.top_risk, "No dominant risk")}
                 </div>
               </div>
               <div>
-                <span className="text-zinc-600">{t("dashboard.whatChanged")}</span>
-                <div className="text-zinc-300">
+                <span className="text-[var(--ixai-text-subtle)]">{t("dashboard.whatChanged")}</span>
+                <div className="text-[var(--ixai-text-strong)]">
                   {textValue(data?.intelligenceSummary?.explainability?.what_changed_today, "Waiting for scheduler history")}
                 </div>
               </div>
               <div>
-                <span className="text-zinc-600">{t("dashboard.systemicRisk")}</span>
-                <div className="text-zinc-300">
+                <span className="text-[var(--ixai-text-subtle)]">{t("dashboard.systemicRisk")}</span>
+                <div className="text-[var(--ixai-text-strong)]">
                   {textValue(data?.intelligenceSummary?.explainability?.systemic_risk, "No systemic cluster detected")}
                 </div>
               </div>
@@ -347,27 +347,27 @@ export default function DashboardPage() {
           </TerminalPanel>
 
           <section className={`grid gap-3 lg:grid-cols-4 ${preferences.compactMode ? "text-sm" : ""}`}>
-            <div className="border border-zinc-800 bg-zinc-950 p-3">
-              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">{t("dashboard.regime")}</div>
-              <div className="mt-2 text-xl font-semibold text-zinc-100">
+            <div className="border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] p-3">
+              <div className="font-mono text-[11px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">{t("dashboard.regime")}</div>
+              <div className="mt-2 text-xl font-semibold text-[var(--ixai-text-strong)]">
                 {textValue(data?.intelligenceSummary?.regime, "BUILDING")}
               </div>
             </div>
-            <div className="border border-zinc-800 bg-zinc-950 p-3">
-              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">{t("dashboard.risk")}</div>
+            <div className="border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] p-3">
+              <div className="font-mono text-[11px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">{t("dashboard.risk")}</div>
               <div className={`mt-2 text-xl font-semibold ${riskClass(riskLevel)}`}>
                 {textValue(riskLevel)} · {textValue(riskScore)}
               </div>
             </div>
-            <div className="border border-zinc-800 bg-zinc-950 p-3">
-              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">{t("dashboard.confidence")}</div>
-              <div className={Number.isFinite(confidence) && confidence >= 45 ? "mt-2 text-xl font-semibold text-emerald-300" : "mt-2 text-xl font-semibold text-yellow-300"}>
+            <div className="border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] p-3">
+              <div className="font-mono text-[11px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">{t("dashboard.confidence")}</div>
+              <div className={Number.isFinite(confidence) && confidence >= 45 ? "mt-2 text-xl font-semibold text-[var(--ixai-risk-clear)]" : "mt-2 text-xl font-semibold text-[var(--ixai-risk-watch)]"}>
                 {Number.isFinite(confidence) ? `${confidence.toFixed(0)}%` : "pending"}
               </div>
             </div>
-            <div className="border border-zinc-800 bg-zinc-950 p-3">
-              <div className="font-mono text-[11px] uppercase tracking-wide text-zinc-500">{t("dashboard.memory")}</div>
-              <div className={isStale ? "mt-2 text-xl font-semibold text-yellow-300" : "mt-2 text-xl font-semibold text-emerald-300"}>
+            <div className="border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] p-3">
+              <div className="font-mono text-[11px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">{t("dashboard.memory")}</div>
+              <div className={isStale ? "mt-2 text-xl font-semibold text-[var(--ixai-risk-watch)]" : "mt-2 text-xl font-semibold text-[var(--ixai-risk-clear)]"}>
                 {isStale ? t("dashboard.status.staleBuilding") : t("common.fresh")}
               </div>
             </div>
@@ -376,12 +376,12 @@ export default function DashboardPage() {
           <TerminalPanel title={t("dashboard.assetAllocation")} meta={money(summary?.total_value)}>
             <div className="grid gap-2 md:grid-cols-4">
               {data?.allocation.map((item) => (
-                <div className="border border-zinc-800 bg-black/20 p-3" key={item.asset_class}>
-                  <div className="font-mono text-[11px] uppercase text-zinc-500">
+                <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3" key={item.asset_class}>
+                  <div className="font-mono text-[11px] uppercase text-[var(--ixai-text-subtle)]">
                     {item.asset_class}
                   </div>
-                  <div className="mt-1 text-lg font-semibold text-zinc-100">{money(item.value)}</div>
-                  <div className="mt-1 font-mono text-xs text-zinc-500">
+                  <div className="mt-1 text-lg font-semibold text-[var(--ixai-text-strong)]">{money(item.value)}</div>
+                  <div className="mt-1 font-mono text-xs text-[var(--ixai-text-subtle)]">
                     {pct(item.percentage)}
                   </div>
                 </div>
@@ -394,7 +394,7 @@ export default function DashboardPage() {
 
           <section className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
             <TerminalPanel title={t("dashboard.criticalFCN")} meta="top 5">
-              <div className="divide-y divide-zinc-800 border border-zinc-800">
+              <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
                 {criticalFcns.length === 0 && (
                   <EmptyLine>{t("empty.noFcn")}</EmptyLine>
                 )}
@@ -405,11 +405,11 @@ export default function DashboardPage() {
                       className="grid gap-2 px-3 py-2 font-mono text-xs md:grid-cols-[1fr_0.8fr_0.8fr_0.8fr]"
                       key={fcnKey(fcn, index)}
                     >
-                      <span className="font-semibold text-zinc-100">
+                      <span className="font-semibold text-[var(--ixai-text-strong)]">
                         {textValue(fcn.fcn_code || fcn.name || fcn.code, "FCN")}
                       </span>
                       <span className={riskClass(fcn.risk_level)}>{textValue(fcn.risk_level, "unknown")}</span>
-                      <span className="text-zinc-400">
+                      <span className="text-[var(--ixai-text-muted)]">
                         {textValue(fcn.worst_underlying || fcn.worst_symbol || fcn.worst_of, "worst-of")}
                       </span>
                       <span className={riskClass(ki)}>KI {pct(ki)}</span>
@@ -417,13 +417,13 @@ export default function DashboardPage() {
                   );
                 })}
               </div>
-              <Link className="mt-3 inline-block font-mono text-xs text-emerald-300" href="/fcn">
+              <Link className="mt-3 inline-block font-mono text-xs text-[var(--ixai-risk-clear)]" href="/fcn">
                 {t("dashboard.openFcnWorkspace")}
               </Link>
             </TerminalPanel>
 
             <TerminalPanel title={t("dashboard.topAlerts")} meta="compact">
-              <div className="divide-y divide-zinc-800 border border-zinc-800">
+              <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
                 {topAlerts.length === 0 && (
                   <EmptyLine>{t("empty.noAlerts")}</EmptyLine>
                 )}
@@ -432,13 +432,13 @@ export default function DashboardPage() {
                     <div className={riskClass(alert.priority_level)}>
                       {topAlertLine(alert, index)}
                     </div>
-                    <div className="mt-1 truncate text-zinc-500">
+                    <div className="mt-1 truncate text-[var(--ixai-text-subtle)]">
                       {textValue(alert.alert_summary || alert.portfolio_impact_summary, "Observation only.")}
                     </div>
                   </div>
                 ))}
               </div>
-              <Link className="mt-3 inline-block font-mono text-xs text-emerald-300" href="/alerts">
+              <Link className="mt-3 inline-block font-mono text-xs text-[var(--ixai-risk-clear)]" href="/alerts">
                 {t("dashboard.openAlertsCenter")}
               </Link>
             </TerminalPanel>
@@ -462,23 +462,23 @@ export default function DashboardPage() {
           <TerminalPanel title={t("dashboard.scheduler")} meta="history">
             <div className="grid gap-2 font-mono text-xs md:grid-cols-4">
               <div>
-                <span className="text-zinc-600">{t("dashboard.lastGenerated")}</span>
-                <div className="text-zinc-300">{compactTime(generatedAt)}</div>
+                <span className="text-[var(--ixai-text-subtle)]">{t("dashboard.lastGenerated")}</span>
+                <div className="text-[var(--ixai-text-strong)]">{compactTime(generatedAt)}</div>
               </div>
               <div>
-                <span className="text-zinc-600">{t("dashboard.timelineLabel")}</span>
-                <div className={isStale ? "text-yellow-300" : "text-emerald-300"}>
+                <span className="text-[var(--ixai-text-subtle)]">{t("dashboard.timelineLabel")}</span>
+                <div className={isStale ? "text-[var(--ixai-risk-watch)]" : "text-[var(--ixai-risk-clear)]"}>
                   {textValue(data?.timeline?.message, "Waiting for scheduler history")}
                 </div>
               </div>
               <div>
-                <span className="text-zinc-600">{t("dashboard.riskTrend30d")}</span>
+                <span className="text-[var(--ixai-text-subtle)]">{t("dashboard.riskTrend30d")}</span>
                 <div className={riskClass(data?.timeline?.risk_score_trend)}>
                   {textValue(data?.timeline?.risk_score_trend, "pending")}
                 </div>
               </div>
               <div>
-                <span className="text-zinc-600">{t("dashboard.concentration")}</span>
+                <span className="text-[var(--ixai-text-subtle)]">{t("dashboard.concentration")}</span>
                 <div className={riskClass(data?.timeline?.concentration_trend)}>
                   {textValue(data?.timeline?.concentration_trend, "pending")}
                 </div>

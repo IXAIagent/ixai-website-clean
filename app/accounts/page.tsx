@@ -138,42 +138,42 @@ export default function AccountsPage() {
         {accounts.length === 0 && (
           <TerminalPanel title={t("accounts.onboarding")} meta="multi-portfolio">
             <div className="grid gap-2 font-mono text-xs md:grid-cols-4">
-              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">{t("onboarding.step1")}</div>
-              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">{t("onboarding.step2")}</div>
-              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">{t("onboarding.step3")}</div>
-              <div className="border border-zinc-800 bg-black/20 p-3 text-zinc-300">{t("onboarding.step4")}</div>
+              <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3 text-[var(--ixai-text-strong)]">{t("onboarding.step1")}</div>
+              <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3 text-[var(--ixai-text-strong)]">{t("onboarding.step2")}</div>
+              <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3 text-[var(--ixai-text-strong)]">{t("onboarding.step3")}</div>
+              <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3 text-[var(--ixai-text-strong)]">{t("onboarding.step4")}</div>
             </div>
-            <div className="mt-3 text-sm text-zinc-500">
+            <div className="mt-3 text-sm text-[var(--ixai-text-subtle)]">
               {t("accounts.emptyOnboardingHint")}
             </div>
           </TerminalPanel>
         )}
 
         <TerminalPanel title={t("accounts.activeContext")} meta={t("accounts.contextMemory")}>
-          <div className="mb-3 border border-emerald-400/20 bg-emerald-400/[0.045] px-3 py-2 text-xs leading-5 text-zinc-400">
-            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-emerald-300">
+          <div className="mb-3 border border-[var(--ixai-accent)]/20 bg-[var(--ixai-accent)]/[0.045] px-3 py-2 text-xs leading-5 text-[var(--ixai-text-muted)]">
+            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--ixai-risk-clear)]">
               {ixaiIdentity.syncPendingBadge}
             </div>
             <p className="mt-1">{ixaiIdentity.accountContinuityCopy}</p>
             <p className="mt-1">{ixaiIdentity.watchlistSyncCopy}</p>
           </div>
           <div className="grid gap-3 font-mono text-xs md:grid-cols-4">
-            <div className="border border-zinc-800 bg-black/20 p-3">
-              <div className="text-zinc-600">{t("common.account")}</div>
-              <div className="mt-1 text-zinc-100">{context.selectedAccountName || selected?.name || t("common.selectAccount")}</div>
+            <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+              <div className="text-[var(--ixai-text-subtle)]">{t("common.account")}</div>
+              <div className="mt-1 text-[var(--ixai-text-strong)]">{context.selectedAccountName || selected?.name || t("common.selectAccount")}</div>
             </div>
-            <div className="border border-zinc-800 bg-black/20 p-3">
-              <div className="text-zinc-600">{t("common.portfolio")}</div>
-              <div className="mt-1 text-zinc-100">{context.selectedPortfolioName || selectedPortfolio?.name || t("common.selectPortfolio")}</div>
+            <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+              <div className="text-[var(--ixai-text-subtle)]">{t("common.portfolio")}</div>
+              <div className="mt-1 text-[var(--ixai-text-strong)]">{context.selectedPortfolioName || selectedPortfolio?.name || t("common.selectPortfolio")}</div>
             </div>
-            <div className="border border-zinc-800 bg-black/20 p-3">
-              <div className="text-zinc-600">{t("common.lastActive")}</div>
-              <div className="mt-1 text-zinc-100">{context.lastActiveWorkspace}</div>
+            <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+              <div className="text-[var(--ixai-text-subtle)]">{t("common.lastActive")}</div>
+              <div className="mt-1 text-[var(--ixai-text-strong)]">{context.lastActiveWorkspace}</div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <a className="border border-zinc-700 px-3 py-2 text-zinc-300 hover:text-emerald-200" href="/input">Input</a>
-              <a className="border border-zinc-700 px-3 py-2 text-zinc-300 hover:text-emerald-200" href="/import">Import</a>
-              <a className="border border-zinc-700 px-3 py-2 text-zinc-300 hover:text-emerald-200" href="/dashboard">Dashboard</a>
+              <a className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-[var(--ixai-text-strong)] hover:text-[var(--ixai-risk-clear)]" href="/input">Input</a>
+              <a className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-[var(--ixai-text-strong)] hover:text-[var(--ixai-risk-clear)]" href="/import">Import</a>
+              <a className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-[var(--ixai-text-strong)] hover:text-[var(--ixai-risk-clear)]" href="/dashboard">Dashboard</a>
             </div>
           </div>
         </TerminalPanel>
@@ -183,13 +183,13 @@ export default function AccountsPage() {
           <TerminalPanel title={t("accounts.createAccount")} meta="v3">
             <form className="space-y-3" onSubmit={handleCreateAccount}>
               <input
-                className="w-full border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-400"
+                className="w-full border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-elevated)] px-3 py-2 text-sm text-[var(--ixai-text-strong)] outline-none focus:border-[var(--ixai-accent)]"
                 placeholder={t("accounts.accountName")}
                 value={accountName}
                 onChange={(event) => setAccountName(event.target.value)}
               />
               <select
-                className="w-full border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-400"
+                className="w-full border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-elevated)] px-3 py-2 text-sm text-[var(--ixai-text-strong)] outline-none focus:border-[var(--ixai-accent)]"
                 value={accountType}
                 onChange={(event) => setAccountType(event.target.value)}
               >
@@ -198,7 +198,7 @@ export default function AccountsPage() {
                 <option value="business">business</option>
               </select>
               <button
-                className="border border-emerald-400/60 px-4 py-2 text-sm text-emerald-100 disabled:opacity-50"
+                className="border border-[var(--ixai-accent)]/60 px-4 py-2 text-sm text-[var(--ixai-risk-clear)] disabled:opacity-50"
                 disabled={loading}
                 type="submit"
               >
@@ -208,12 +208,12 @@ export default function AccountsPage() {
           </TerminalPanel>
 
           <TerminalPanel title={t("accounts.accountList")} meta={`${accounts.length} ${t("accounts.accountsCount")}`}>
-            <div className="divide-y divide-zinc-800 border border-zinc-800">
+            <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
               {accounts.length === 0 && <EmptyLine>{t("accounts.noAccounts")}</EmptyLine>}
               {accounts.map((account) => (
                 <button
                   className={`block w-full px-3 py-2 text-left font-mono text-xs ${
-                    selectedAccount === account.id ? "bg-emerald-400/10 text-emerald-200" : "text-zinc-300"
+                    selectedAccount === account.id ? "bg-[rgba(176,141,87,0.10)] text-[var(--ixai-risk-clear)]" : "text-[var(--ixai-text-strong)]"
                   }`}
                   key={account.id || account.name}
                   onClick={() => {
@@ -230,7 +230,7 @@ export default function AccountsPage() {
                   type="button"
                 >
                   <div>{textValue(account.name, t("common.account"))}</div>
-                  <div className="mt-1 text-zinc-500">{textValue(account.account_type, "individual")}</div>
+                  <div className="mt-1 text-[var(--ixai-text-subtle)]">{textValue(account.account_type, "individual")}</div>
                 </button>
               ))}
             </div>
@@ -239,27 +239,27 @@ export default function AccountsPage() {
 
         <div className="space-y-4">
           <TerminalPanel title={t("accounts.accountSummary")} meta={textValue(selected?.account_type, t("accounts.type"))}>
-            {error && <div className="mb-3 border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200">{error}</div>}
-            {status && <div className="mb-3 border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-200">{status}</div>}
+            {error && <div className="mb-3 border border-[var(--ixai-risk-critical)]/30 bg-[rgba(210,122,122,0.10)] px-3 py-2 text-sm text-[var(--ixai-risk-critical)]">{error}</div>}
+            {status && <div className="mb-3 border border-[var(--ixai-accent)]/30 bg-[rgba(176,141,87,0.10)] px-3 py-2 text-sm text-[var(--ixai-risk-clear)]">{status}</div>}
             {!selected ? (
               <EmptyLine>{t("accounts.selectOrCreate")}</EmptyLine>
             ) : (
               <div className="grid gap-3 font-mono text-xs md:grid-cols-3">
-                <div className="border border-zinc-800 bg-black/20 p-3">
-                  <div className="text-zinc-600">{t("common.account")}</div>
-                  <div className="mt-1 text-zinc-100">{textValue(selected.name, t("common.account"))}</div>
+                <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+                  <div className="text-[var(--ixai-text-subtle)]">{t("common.account")}</div>
+                  <div className="mt-1 text-[var(--ixai-text-strong)]">{textValue(selected.name, t("common.account"))}</div>
                 </div>
-                <div className="border border-zinc-800 bg-black/20 p-3">
-                  <div className="text-zinc-600">ROLE</div>
-                  <div className="mt-1 text-emerald-300">owner / admin / viewer ready</div>
+                <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+                  <div className="text-[var(--ixai-text-subtle)]">ROLE</div>
+                  <div className="mt-1 text-[var(--ixai-risk-clear)]">owner / admin / viewer ready</div>
                 </div>
-                <div className="border border-zinc-800 bg-black/20 p-3">
-                  <div className="text-zinc-600">PORTFOLIOS</div>
-                  <div className="mt-1 text-zinc-100">{portfolios.length}</div>
+                <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+                  <div className="text-[var(--ixai-text-subtle)]">PORTFOLIOS</div>
+                  <div className="mt-1 text-[var(--ixai-text-strong)]">{portfolios.length}</div>
                 </div>
-                <div className="border border-zinc-800 bg-black/20 p-3">
-                  <div className="text-zinc-600">INTEL</div>
-                  <div className="mt-1 text-zinc-100">{textValue(accountIntel?.regime || accountIntel?.dominant_risk, "fail-soft ready")}</div>
+                <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+                  <div className="text-[var(--ixai-text-subtle)]">INTEL</div>
+                  <div className="mt-1 text-[var(--ixai-text-strong)]">{textValue(accountIntel?.regime || accountIntel?.dominant_risk, "fail-soft ready")}</div>
                 </div>
               </div>
             )}
@@ -268,32 +268,32 @@ export default function AccountsPage() {
           <TerminalPanel title={t("accounts.portfolios")} meta={t("accounts.accountScope")}>
             <form className="mb-3 flex flex-col gap-2 sm:flex-row" onSubmit={handleCreatePortfolio}>
               <input
-                className="min-w-0 flex-1 border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-400"
+                className="min-w-0 flex-1 border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-elevated)] px-3 py-2 text-sm text-[var(--ixai-text-strong)] outline-none focus:border-[var(--ixai-accent)]"
                 placeholder={t("accounts.newPortfolioName")}
                 value={portfolioName}
                 onChange={(event) => setPortfolioName(event.target.value)}
               />
               <button
-                className="border border-emerald-400/60 px-4 py-2 text-sm text-emerald-100 disabled:opacity-50"
+                className="border border-[var(--ixai-accent)]/60 px-4 py-2 text-sm text-[var(--ixai-risk-clear)] disabled:opacity-50"
                 disabled={!selectedAccount || loading}
                 type="submit"
               >
                 {t("accounts.createPortfolio")}
               </button>
             </form>
-            <div className="divide-y divide-zinc-800 border border-zinc-800">
+            <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
               {portfolios.length === 0 && <EmptyLine>{t("accounts.noPortfolios")}</EmptyLine>}
               {portfolios.map((portfolio) => (
                 <div
                   className={`px-3 py-2 font-mono text-xs ${
-                    context.selectedPortfolioId === portfolio.id ? "bg-emerald-400/10" : ""
+                    context.selectedPortfolioId === portfolio.id ? "bg-[rgba(176,141,87,0.10)]" : ""
                   }`}
                   key={portfolio.id || portfolio.name}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-zinc-100">{textValue(portfolio.name, t("common.portfolio"))}</div>
+                    <div className="text-[var(--ixai-text-strong)]">{textValue(portfolio.name, t("common.portfolio"))}</div>
                     <button
-                      className="border border-zinc-700 px-2 py-1 text-[10px] text-zinc-300 hover:border-emerald-400/60 hover:text-emerald-200"
+                      className="border border-[var(--ixai-border-subtle)] px-2 py-1 text-[10px] text-[var(--ixai-text-strong)] hover:border-[var(--ixai-accent)]/60 hover:text-[var(--ixai-risk-clear)]"
                       onClick={() => setWorkspaceContext({
                         selectedAccountId: selectedAccount,
                         selectedAccountName: selected?.name || "",
@@ -305,7 +305,7 @@ export default function AccountsPage() {
                       {context.selectedPortfolioId === portfolio.id ? t("status.active") : t("accounts.setActive")}
                     </button>
                   </div>
-                  <div className="mt-1 text-zinc-500">
+                  <div className="mt-1 text-[var(--ixai-text-subtle)]">
                     {textValue(portfolio.base_currency, "USD")} · {textValue(portfolio.id, "id pending")}
                   </div>
                 </div>

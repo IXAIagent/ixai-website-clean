@@ -15,8 +15,8 @@ export default function HomePage() {
   }, [router]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-black px-5 text-zinc-300">
-      Loading IXAI Pro...
+    <main className="flex min-h-screen items-center justify-center bg-[var(--ixai-forest)] px-5 ds-mono-sm text-[var(--ixai-text-muted)]">
+      Loading IXAI Pro…
     </main>
   );
 }

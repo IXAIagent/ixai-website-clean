@@ -44,10 +44,10 @@ export default function ImportWorkspacePage() {
   const canConfirm = Boolean(file && preview && !loading && (previewErrorCount === 0 || allowErrorImport));
   function actionTone(actionValue: unknown) {
     const action = textValue(actionValue).toLowerCase();
-    if (action.includes("update")) return "border-yellow-400/40 text-yellow-200";
-    if (action.includes("skip")) return "border-zinc-700 text-zinc-400";
-    if (action.includes("import") || action.includes("write")) return "border-emerald-400/40 text-emerald-200";
-    return "border-zinc-700 text-zinc-300";
+    if (action.includes("update")) return "border-[var(--ixai-risk-watch)]/40 text-[var(--ixai-risk-watch)]";
+    if (action.includes("skip")) return "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-muted)]";
+    if (action.includes("import") || action.includes("write")) return "border-[var(--ixai-accent)]/40 text-[var(--ixai-risk-clear)]";
+    return "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-strong)]";
   }
 
   async function loadHistory() {
@@ -130,11 +130,11 @@ export default function ImportWorkspacePage() {
       title={t("page.import")}
       subtitle={t("import.subtitle")}
     >
-      <div className="mb-4 border border-zinc-800 bg-zinc-950/70 px-4 py-3">
-        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
+      <div className="mb-4 border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] px-4 py-3">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ixai-text-subtle)]">
           {t("import.normalized")}
         </div>
-        <div className="mt-2 text-sm leading-6 text-zinc-300">
+        <div className="mt-2 text-sm leading-6 text-[var(--ixai-text-strong)]">
           {t("import.workflowGuide")}
         </div>
       </div>
@@ -143,7 +143,7 @@ export default function ImportWorkspacePage() {
           <TerminalPanel title={t("import.panel")} meta={t("import.previewConfirmMeta")}>
             <label
               className={`block border border-dashed px-4 py-10 text-center transition ${
-                dragActive ? "border-emerald-400 bg-emerald-400/10" : "border-zinc-700 bg-black/20"
+                dragActive ? "border-[var(--ixai-accent)] bg-[rgba(176,141,87,0.10)]" : "border-[var(--ixai-border-subtle)] bg-black/20"
               }`}
               onDragLeave={(event: DragEvent<HTMLLabelElement>) => {
                 event.preventDefault();
@@ -160,17 +160,17 @@ export default function ImportWorkspacePage() {
               }}
             >
               <input accept=".csv,text/csv" className="hidden" type="file" onChange={handleInput} />
-              <div className="font-mono text-sm text-zinc-200">
+              <div className="font-mono text-sm text-[var(--ixai-text-strong)]">
                 {file ? file.name : t("import.dropCsv")}
               </div>
-              <div className="mt-2 text-xs text-zinc-500">
+              <div className="mt-2 text-xs text-[var(--ixai-text-subtle)]">
                 {file ? fileSize(file.size) : t("import.templateColumns")}
               </div>
             </label>
 
             <div className="mt-4 flex flex-wrap gap-2">
               <button
-                className="border border-zinc-700 px-4 py-2 text-sm text-zinc-200 disabled:opacity-50"
+                className="border border-[var(--ixai-border-subtle)] px-4 py-2 text-sm text-[var(--ixai-text-strong)] disabled:opacity-50"
                 disabled={!file || loading}
                 onClick={() => void handlePreview()}
                 type="button"
@@ -178,7 +178,7 @@ export default function ImportWorkspacePage() {
                 {t("import.previewAction")}
               </button>
               <button
-                className="border border-emerald-400/60 px-4 py-2 text-sm text-emerald-100 disabled:opacity-50"
+                className="border border-[var(--ixai-accent)]/60 px-4 py-2 text-sm text-[var(--ixai-risk-clear)] disabled:opacity-50"
                 disabled={!canConfirm}
                 onClick={() => void handleConfirm()}
                 type="button"
@@ -187,7 +187,7 @@ export default function ImportWorkspacePage() {
               </button>
             </div>
             {previewErrorCount > 0 && preview && (
-              <label className="mt-3 flex items-start gap-2 border border-yellow-400/30 bg-yellow-400/10 px-3 py-2 font-mono text-xs text-yellow-100">
+              <label className="mt-3 flex items-start gap-2 border border-[var(--ixai-risk-watch)]/30 bg-[rgba(212,181,138,0.10)] px-3 py-2 font-mono text-xs text-[var(--ixai-risk-watch)]">
                 <input
                   checked={allowErrorImport}
                   className="mt-0.5"
@@ -198,12 +198,12 @@ export default function ImportWorkspacePage() {
               </label>
             )}
 
-            {status && <div className="mt-3 border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-200">{status}</div>}
-            {error && <div className="mt-3 border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200">{error}</div>}
+            {status && <div className="mt-3 border border-[var(--ixai-accent)]/30 bg-[rgba(176,141,87,0.10)] px-3 py-2 text-sm text-[var(--ixai-risk-clear)]">{status}</div>}
+            {error && <div className="mt-3 border border-[var(--ixai-risk-critical)]/30 bg-[rgba(210,122,122,0.10)] px-3 py-2 text-sm text-[var(--ixai-risk-critical)]">{error}</div>}
           </TerminalPanel>
 
           <TerminalPanel title={t("import.statusPanel")} meta={t("import.resultMeta")}>
-            <div className="mb-3 text-sm leading-6 text-zinc-400">
+            <div className="mb-3 text-sm leading-6 text-[var(--ixai-text-muted)]">
               {t("import.previewGuide")}
             </div>
             {!preview && !result && <EmptyLine>{t("import.noPreview")}</EmptyLine>}
@@ -217,15 +217,15 @@ export default function ImportWorkspacePage() {
             )}
             {preview && (
               <div className="mt-4">
-                <div className="mb-2 font-mono text-xs uppercase tracking-[0.18em] text-zinc-500">
+                <div className="mb-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--ixai-text-subtle)]">
                   {t("import.preview")}
                 </div>
                 {previewRows.length === 0 ? (
                   <EmptyLine>{t("import.noPreviewRows")}</EmptyLine>
                 ) : (
-                  <div className="overflow-x-auto border border-zinc-800">
+                  <div className="overflow-x-auto border border-[var(--ixai-border-subtle)]">
                     <table className="min-w-[900px] w-full border-collapse font-mono text-xs">
-                      <thead className="bg-zinc-950 text-left uppercase text-zinc-500">
+                      <thead className="bg-[var(--ixai-surface-card)] text-left uppercase text-[var(--ixai-text-subtle)]">
                         <tr>
                           <PreviewHead>{t("import.row")}</PreviewHead>
                           <PreviewHead>{t("import.assetType")}</PreviewHead>
@@ -248,12 +248,12 @@ export default function ImportWorkspacePage() {
                           const isSkipped = action === "skip" || action === "skipped";
                           return (
                             <tr
-                              className={`border-t border-zinc-800 ${
+                              className={`border-t border-[var(--ixai-border-subtle)] ${
                                 hasError
-                                  ? "bg-red-950/30 text-red-100"
+                                  ? "bg-[var(--ixai-surface-card)] text-[var(--ixai-risk-critical)]"
                                   : isSkipped
-                                    ? "bg-yellow-950/20 text-yellow-100"
-                                    : "text-zinc-200"
+                                    ? "bg-[var(--ixai-surface-card)] text-[var(--ixai-risk-watch)]"
+                                    : "text-[var(--ixai-text-strong)]"
                               }`}
                               key={`${row.row}-${row.asset_type}-${row.input_symbol}-${row.action}`}
                             >
@@ -296,24 +296,24 @@ export default function ImportWorkspacePage() {
           <TerminalPanel title={t("import.futureIntegrations")} meta="connectors">
             <div className="grid gap-2">
               {integrations.map((item) => (
-                <div className="border border-zinc-800 bg-black/20 px-3 py-2 font-mono text-xs" key={item}>
-                  <div className="text-zinc-200">{item}</div>
-                  <div className="mt-1 text-zinc-500">{item === "Manual CSV" ? t("status.active") : t("import.plannedConnector")}</div>
+                <div className="border border-[var(--ixai-border-subtle)] bg-black/20 px-3 py-2 font-mono text-xs" key={item}>
+                  <div className="text-[var(--ixai-text-strong)]">{item}</div>
+                  <div className="mt-1 text-[var(--ixai-text-subtle)]">{item === "Manual CSV" ? t("status.active") : t("import.plannedConnector")}</div>
                 </div>
               ))}
             </div>
           </TerminalPanel>
 
           <TerminalPanel title={t("import.recentImports")} meta="audit">
-            <div className="divide-y divide-zinc-800 border border-zinc-800">
+            <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
               {history.length === 0 && <EmptyLine>{t("import.noRecentImports")}</EmptyLine>}
               {history.map((item) => (
                 <div className="px-3 py-2 font-mono text-xs" key={String(item.id || item.created_at)}>
                   <div className="flex justify-between gap-3">
-                    <span className="truncate text-zinc-200">{textValue(item.file_name, "portfolio.csv")}</span>
-                    <span className="text-zinc-500">{textValue(item.status, "-")}</span>
+                    <span className="truncate text-[var(--ixai-text-strong)]">{textValue(item.file_name, "portfolio.csv")}</span>
+                    <span className="text-[var(--ixai-text-subtle)]">{textValue(item.status, "-")}</span>
                   </div>
-                  <div className="mt-1 text-zinc-500">
+                  <div className="mt-1 text-[var(--ixai-text-subtle)]">
                     {t("import.imported")} {textValue(item.imported, "0")} · {t("import.updated")} {textValue(item.updated, "0")} · {t("import.skipped")} {textValue(item.skipped, "0")}
                   </div>
                 </div>
@@ -328,9 +328,9 @@ export default function ImportWorkspacePage() {
 
 function Metric({ label, value }: { label: string; value: unknown }) {
   return (
-    <div className="border border-zinc-800 bg-black/20 p-2">
-      <div className="uppercase text-zinc-600">{label}</div>
-      <div className="mt-1 text-zinc-200">{textValue(value, "0")}</div>
+    <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-2">
+      <div className="uppercase text-[var(--ixai-text-subtle)]">{label}</div>
+      <div className="mt-1 text-[var(--ixai-text-strong)]">{textValue(value, "0")}</div>
     </div>
   );
 }

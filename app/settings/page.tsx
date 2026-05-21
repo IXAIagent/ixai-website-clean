@@ -76,11 +76,11 @@ function decodeTokenEmail(token: string | null) {
 function statusClass(status: string) {
   const normalized = status.toLowerCase();
   if (normalized.includes("active") || normalized.includes("healthy") || normalized.includes("ready")) {
-    return "border-emerald-500/50 text-emerald-300";
+    return "border-[var(--ixai-accent)]/50 text-[var(--ixai-risk-clear)]";
   }
-  if (normalized.includes("limited")) return "border-yellow-500/50 text-yellow-300";
-  if (normalized.includes("not configured")) return "border-zinc-700 text-zinc-400";
-  return "border-zinc-700 text-zinc-500";
+  if (normalized.includes("limited")) return "border-[var(--ixai-risk-watch)]/50 text-[var(--ixai-risk-watch)]";
+  if (normalized.includes("not configured")) return "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-muted)]";
+  return "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-subtle)]";
 }
 
 function Toggle({
@@ -96,17 +96,17 @@ function Toggle({
 }) {
   return (
     <button
-      className="flex w-full items-center justify-between gap-3 border-b border-zinc-900 py-2 text-left"
+      className="flex w-full items-center justify-between gap-3 border-b border-[var(--ixai-border-subtle)] py-2 text-left"
       onClick={onChange}
       type="button"
     >
       <span>
-        <span className="block text-sm text-zinc-200">{label}</span>
-        <span className="block text-xs text-zinc-500">{description}</span>
+        <span className="block text-sm text-[var(--ixai-text-strong)]">{label}</span>
+        <span className="block text-xs text-[var(--ixai-text-subtle)]">{description}</span>
       </span>
       <span
         className={`shrink-0 border px-2 py-1 font-mono text-[10px] ${
-          checked ? "border-emerald-500/50 text-emerald-300" : "border-zinc-700 text-zinc-500"
+          checked ? "border-[var(--ixai-accent)]/50 text-[var(--ixai-risk-clear)]" : "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-subtle)]"
         }`}
       >
         {checked ? "ON" : "OFF"}
@@ -117,10 +117,10 @@ function Toggle({
 
 function SourceRow({ name, status, detail }: { name: string; status: string; detail: string }) {
   return (
-    <div className="grid gap-2 border-b border-zinc-900 py-2 font-mono text-xs md:grid-cols-[1fr_auto]">
+    <div className="grid gap-2 border-b border-[var(--ixai-border-subtle)] py-2 font-mono text-xs md:grid-cols-[1fr_auto]">
       <div>
-        <div className="text-zinc-200">{name}</div>
-        <div className="mt-1 text-[10px] text-zinc-600">{detail}</div>
+        <div className="text-[var(--ixai-text-strong)]">{name}</div>
+        <div className="mt-1 text-[10px] text-[var(--ixai-text-subtle)]">{detail}</div>
       </div>
       <span className={`h-fit border px-2 py-1 text-[10px] uppercase ${statusClass(status)}`}>
         {status}
@@ -131,9 +131,9 @@ function SourceRow({ name, status, detail }: { name: string; status: string; det
 
 function MetricRow({ label, value }: { label: string; value: unknown }) {
   return (
-    <div className="flex justify-between gap-3 border-b border-zinc-900 py-2 font-mono text-xs">
-      <span className="uppercase text-zinc-600">{label}</span>
-      <span className="text-right text-zinc-300">{textValue(value)}</span>
+    <div className="flex justify-between gap-3 border-b border-[var(--ixai-border-subtle)] py-2 font-mono text-xs">
+      <span className="uppercase text-[var(--ixai-text-subtle)]">{label}</span>
+      <span className="text-right text-[var(--ixai-text-strong)]">{textValue(value)}</span>
     </div>
   );
 }
@@ -213,15 +213,15 @@ export default function SettingsPage() {
             <MetricRow label={t("settings.accountId")} value={currentAccount?.id || t("common.dataPending")} />
             <MetricRow label={t("common.workspace")} value={summary?.portfolio_name || t("portfolio.primaryPortfolio")} />
             <MetricRow label="ROLE" value="owner / admin / viewer ready" />
-            <div className="mt-3 border border-emerald-400/20 bg-emerald-400/[0.045] px-3 py-2 text-xs leading-5 text-zinc-400">
-              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-emerald-300">
+            <div className="mt-3 border border-[var(--ixai-accent)]/20 bg-[var(--ixai-accent)]/[0.045] px-3 py-2 text-xs leading-5 text-[var(--ixai-text-muted)]">
+              <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--ixai-risk-clear)]">
                 {ixaiIdentity.syncPendingBadge}
               </div>
               <p className="mt-1">{ixaiIdentity.sharedAccountMessage}</p>
               <p className="mt-1">{ixaiIdentity.preferencesSyncCopy}</p>
             </div>
             <Link
-              className="mt-3 inline-block border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-emerald-400 hover:text-emerald-200"
+              className="mt-3 inline-block border border-[var(--ixai-border-subtle)] px-3 py-2 text-xs text-[var(--ixai-text-strong)] hover:border-[var(--ixai-accent)] hover:text-[var(--ixai-risk-clear)]"
               href="/accounts"
             >
               Manage accounts
@@ -234,8 +234,8 @@ export default function SettingsPage() {
                 <button
                   className={`flex items-center justify-between border px-3 py-2 text-left text-sm ${
                     preferences.locale === option.code
-                      ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-200"
-                      : "border-zinc-800 text-zinc-400"
+                      ? "border-[var(--ixai-accent)]/50 bg-[rgba(176,141,87,0.08)] text-[var(--ixai-risk-clear)]"
+                      : "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-muted)]"
                   }`}
                   key={option.code}
                   onClick={() => updatePreferences({ locale: option.code as SupportedLocale })}
@@ -246,7 +246,7 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
-            <div className="mt-3 border border-zinc-800 bg-black/20 px-3 py-2 text-xs text-zinc-500">
+            <div className="mt-3 border border-[var(--ixai-border-subtle)] bg-black/20 px-3 py-2 text-xs text-[var(--ixai-text-subtle)]">
               完整多語系支援即將加入。This setting is local UI state for now.
             </div>
           </TerminalPanel>
@@ -266,10 +266,10 @@ export default function SettingsPage() {
               label="Email alerts"
               onChange={() => setToggle("email")}
             />
-            <label className="block border-b border-zinc-900 py-2">
-              <span className="block text-sm text-zinc-200">{t("settings.alertMode")}</span>
+            <label className="block border-b border-[var(--ixai-border-subtle)] py-2">
+              <span className="block text-sm text-[var(--ixai-text-strong)]">{t("settings.alertMode")}</span>
               <select
-                className="mt-2 w-full border border-zinc-700 bg-black px-2 py-2 text-sm text-zinc-200"
+                className="mt-2 w-full border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-elevated)] px-2 py-2 text-sm text-[var(--ixai-text-strong)]"
                 onChange={(event) => updatePreferences({ alertMode: event.target.value as AlertMode })}
                 value={preferences.alertMode}
               >
@@ -294,7 +294,7 @@ export default function SettingsPage() {
             <MetricRow label={t("settings.requestStatus")} value={healthError ? t("status.partial") : health ? t("status.healthy") : t("common.unknown")} />
             <MetricRow label={t("settings.lastChecked")} value={lastChecked || t("common.dataPending")} />
             {healthError && (
-              <div className="mt-3 border border-yellow-500/30 bg-yellow-950/10 px-3 py-2 text-xs text-yellow-200">
+              <div className="mt-3 border border-[var(--ixai-risk-watch)]/30 bg-[var(--ixai-surface-card)] px-3 py-2 text-xs text-[var(--ixai-risk-watch)]">
                 {t("settings.healthUnavailable")}: {healthError}
               </div>
             )}
@@ -302,22 +302,22 @@ export default function SettingsPage() {
 
           <TerminalPanel title={t("settings.intelligence")} meta={t("settings.riskInterpretationOnly")}>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="border border-zinc-800 bg-black/20 p-3">
-                <div className="font-mono text-[10px] uppercase text-zinc-600">{t("settings.schedulerSnapshotInterval")}</div>
-                <div className="mt-1 text-sm text-zinc-300">{t("settings.snapshotIntervalPlaceholder")}</div>
+              <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+                <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">{t("settings.schedulerSnapshotInterval")}</div>
+                <div className="mt-1 text-sm text-[var(--ixai-text-strong)]">{t("settings.snapshotIntervalPlaceholder")}</div>
               </div>
-              <div className="border border-zinc-800 bg-black/20 p-3">
-                <div className="font-mono text-[10px] uppercase text-zinc-600">Skip News In Scheduler</div>
-                <div className="mt-1 text-sm text-zinc-300">Default safe mode: enabled</div>
+              <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+                <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Skip News In Scheduler</div>
+                <div className="mt-1 text-sm text-[var(--ixai-text-strong)]">Default safe mode: enabled</div>
               </div>
-              <div className="border border-zinc-800 bg-black/20 p-3">
-                <div className="font-mono text-[10px] uppercase text-zinc-600">Memory Window</div>
-                <div className="mt-1 text-sm text-zinc-300">7d / 30d / 90d</div>
+              <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+                <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Memory Window</div>
+                <div className="mt-1 text-sm text-[var(--ixai-text-strong)]">7d / 30d / 90d</div>
               </div>
-              <label className="border border-zinc-800 bg-black/20 p-3">
-                <span className="block font-mono text-[10px] uppercase text-zinc-600">Risk Mode Preference</span>
+              <label className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+                <span className="block font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Risk Mode Preference</span>
                 <select
-                  className="mt-2 w-full border border-zinc-700 bg-black px-2 py-2 text-sm text-zinc-200"
+                  className="mt-2 w-full border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-elevated)] px-2 py-2 text-sm text-[var(--ixai-text-strong)]"
                   onChange={(event) => updatePreferences({ riskInterpretationMode: event.target.value as RiskInterpretationMode })}
                   value={preferences.riskInterpretationMode}
                 >
@@ -327,7 +327,7 @@ export default function SettingsPage() {
                 </select>
               </label>
             </div>
-            <div className="mt-3 text-xs text-zinc-500">
+            <div className="mt-3 text-xs text-[var(--ixai-text-subtle)]">
               Interpretation mode changes future UX tone only and does not generate trading instruction.
             </div>
           </TerminalPanel>
@@ -335,10 +335,10 @@ export default function SettingsPage() {
 
         <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
           <TerminalPanel title={t("settings.workspace")} meta="persisted local state">
-            <label className="block border-b border-zinc-900 py-2">
-              <span className="block text-sm text-zinc-200">Default landing page</span>
+            <label className="block border-b border-[var(--ixai-border-subtle)] py-2">
+              <span className="block text-sm text-[var(--ixai-text-strong)]">Default landing page</span>
               <select
-                className="mt-2 w-full border border-zinc-700 bg-black px-2 py-2 text-sm text-zinc-200"
+                className="mt-2 w-full border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-elevated)] px-2 py-2 text-sm text-[var(--ixai-text-strong)]"
                 onChange={(event) => updatePreferences({ defaultLandingPage: event.target.value as DefaultLandingPage })}
                 value={preferences.defaultLandingPage}
               >
@@ -365,11 +365,11 @@ export default function SettingsPage() {
               label="Show advanced intelligence"
               onChange={() => setToggle("advancedIntelligence")}
             />
-            <div className="mt-3 border border-zinc-800 bg-black/20 px-3 py-2 text-xs leading-5 text-zinc-500">
+            <div className="mt-3 border border-[var(--ixai-border-subtle)] bg-black/20 px-3 py-2 text-xs leading-5 text-[var(--ixai-text-subtle)]">
               {ixaiIdentity.watchlistSyncCopy}
             </div>
             <button
-              className="mt-3 border border-zinc-700 px-3 py-2 text-xs text-zinc-300 hover:border-yellow-500/50 hover:text-yellow-200"
+              className="mt-3 border border-[var(--ixai-border-subtle)] px-3 py-2 text-xs text-[var(--ixai-text-strong)] hover:border-[var(--ixai-risk-watch)]/50 hover:text-[var(--ixai-risk-watch)]"
               onClick={resetPreferences}
               type="button"
             >
@@ -378,11 +378,11 @@ export default function SettingsPage() {
           </TerminalPanel>
 
           <TerminalPanel title={t("settings.compliance")} meta="always visible">
-            <div className="space-y-3 text-sm leading-6 text-zinc-300">
+            <div className="space-y-3 text-sm leading-6 text-[var(--ixai-text-strong)]">
               <p>IXAI 提供風險情報與投資組合分析。</p>
               <p>IXAI 不提供個別買賣建議，不提供保證收益，也不提供自動交易指令。</p>
               <p>投資有風險，市場價格、匯率、FCN KI/KO 條件與加密資產波動都可能造成損失。</p>
-              <p className="font-mono text-xs text-zinc-500">
+              <p className="font-mono text-xs text-[var(--ixai-text-subtle)]">
                 Risk intelligence only · 非交易指令 · No guaranteed return
               </p>
             </div>

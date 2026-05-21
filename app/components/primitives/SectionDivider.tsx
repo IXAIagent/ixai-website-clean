@@ -2,6 +2,9 @@
 
 // Priority-band divider. Quietly separates major dashboard sections
 // without adding visual weight.
+//
+// v1.18.5: tokenised — ds-label-sm + --ixai-text-subtle for the label,
+// --ixai-border-subtle for the rule.
 
 export function SectionDivider({
   label,
@@ -12,14 +15,10 @@ export function SectionDivider({
 }) {
   return (
     <div className="flex items-baseline gap-3 pt-2">
-      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-zinc-500">
-        {label}
-      </span>
-      <span className="h-px flex-1 bg-zinc-800" aria-hidden />
+      <span className="ds-label-sm text-[var(--ixai-text-subtle)]">{label}</span>
+      <span className="h-px flex-1 bg-[var(--ixai-border-subtle)]" aria-hidden />
       {hint && (
-        <span className="font-mono text-[10px] uppercase tracking-wide text-zinc-600">
-          {hint}
-        </span>
+        <span className="ds-label-sm text-[var(--ixai-text-subtle)]">{hint}</span>
       )}
     </div>
   );

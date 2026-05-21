@@ -54,19 +54,19 @@ export default function RegisterPage() {
               IXAI Pro
             </div>
             <h1 className="text-3xl font-bold">建立測試帳號</h1>
-            <p className="mt-3 text-sm leading-6 text-zinc-400">
+            <p className="mt-3 text-sm leading-6 text-[var(--ixai-text-muted)]">
               目前僅限受邀測試用戶使用。註冊後將自動建立你的 Portfolio。
             </p>
           </div>
 
           <form className="space-y-5" onSubmit={handleRegister}>
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
+              <span className="mb-2 block text-sm font-medium text-[var(--ixai-text-strong)]">
                 Email
               </span>
               <input
                 autoComplete="email"
-                className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+                className="w-full rounded-xl border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-elevated)] px-4 py-3 text-white outline-none transition focus:border-[var(--ixai-accent)]"
                 placeholder="you@example.com"
                 type="email"
                 value={email}
@@ -75,12 +75,12 @@ export default function RegisterPage() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
+              <span className="mb-2 block text-sm font-medium text-[var(--ixai-text-strong)]">
                 Password
               </span>
               <input
                 autoComplete="new-password"
-                className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+                className="w-full rounded-xl border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-elevated)] px-4 py-3 text-white outline-none transition focus:border-[var(--ixai-accent)]"
                 placeholder="請輸入密碼"
                 type="password"
                 value={password}
@@ -89,12 +89,12 @@ export default function RegisterPage() {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-zinc-300">
+              <span className="mb-2 block text-sm font-medium text-[var(--ixai-text-strong)]">
                 Confirm Password
               </span>
               <input
                 autoComplete="new-password"
-                className="w-full rounded-xl border border-zinc-700 bg-black px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+                className="w-full rounded-xl border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-elevated)] px-4 py-3 text-white outline-none transition focus:border-[var(--ixai-accent)]"
                 placeholder="再次輸入密碼"
                 type="password"
                 value={confirmPassword}
@@ -103,13 +103,13 @@ export default function RegisterPage() {
             </label>
 
             {error && (
-              <div className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm leading-6 text-red-200">
+              <div className="rounded-xl border border-[var(--ixai-risk-critical)]/50 bg-[rgba(210,122,122,0.10)] px-4 py-3 text-sm leading-6 text-[var(--ixai-risk-critical)]">
                 {error}
               </div>
             )}
 
             <button
-              className="w-full rounded-xl bg-emerald-400 px-5 py-3 font-semibold text-black transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-xl bg-[var(--ixai-accent)] px-5 py-3 font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={loading}
               type="submit"
             >
@@ -117,7 +117,7 @@ export default function RegisterPage() {
             </button>
 
             <Link
-              className="block w-full rounded-xl border border-zinc-700 px-5 py-3 text-center font-semibold text-zinc-200 transition hover:bg-zinc-900"
+              className="block w-full rounded-xl border border-[var(--ixai-border-subtle)] px-5 py-3 text-center font-semibold text-[var(--ixai-text-strong)] transition hover:bg-[var(--ixai-surface-card)]"
               href="/login"
             >
               返回登入

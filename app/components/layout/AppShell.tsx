@@ -158,11 +158,15 @@ export function AppShell({
             Portfolio intelligence, FCN monitoring, and risk-first workflows.
           </p>
 
-          <div className="mt-4 space-y-2 border border-white/10 bg-black/20 p-2">
+          {/* v1.18.5: account/portfolio context box tokenised — was a black /
+              zinc-800 block that read as raw admin chrome; now sits in
+              --ixai-surface-card with --ixai-border-subtle so it blends with
+              the brand surface. */}
+          <div className="mt-4 space-y-2 border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] p-2">
             <label className="block">
-              <span className="mb-1 block font-mono text-[10px] uppercase text-zinc-600">{t("common.account")}</span>
+              <span className="ds-label-sm mb-1 block text-[var(--ixai-text-subtle)]">{t("common.account")}</span>
               <select
-                className="w-full border border-zinc-800 bg-black px-2 py-1.5 text-xs text-zinc-300 outline-none"
+                className="w-full border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface)]/60 px-2 py-1.5 text-xs text-[var(--ixai-text-muted)] outline-none"
                 onChange={(event) => handleAccountChange(event.target.value)}
                 value={context.selectedAccountId}
               >
@@ -175,9 +179,9 @@ export function AppShell({
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block font-mono text-[10px] uppercase text-zinc-600">{t("common.portfolio")}</span>
+              <span className="ds-label-sm mb-1 block text-[var(--ixai-text-subtle)]">{t("common.portfolio")}</span>
               <select
-                className="w-full border border-zinc-800 bg-black px-2 py-1.5 text-xs text-zinc-300 outline-none"
+                className="w-full border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface)]/60 px-2 py-1.5 text-xs text-[var(--ixai-text-muted)] outline-none"
                 onChange={(event) => handlePortfolioChange(event.target.value)}
                 value={context.selectedPortfolioId}
               >
@@ -189,20 +193,25 @@ export function AppShell({
                 ))}
               </select>
             </label>
-            <div className="truncate font-mono text-[10px] text-zinc-600">
+            <div className="ds-mono-sm truncate text-[var(--ixai-text-subtle)]">
               {t("common.workspace")}: {context.lastActiveWorkspace || "dashboard"}
             </div>
             {contextError && (
-              <Link className="font-mono text-[10px] text-yellow-300" href="/accounts">
+              <Link className="ds-mono-sm text-[var(--ixai-risk-watch)]" href="/accounts">
                 {t("common.selectPortfolio")}
               </Link>
             )}
           </div>
 
+          {/* v1.18: institutional intelligence navigation.
+              Group headers adopt the shared ds-label-sm token in muted gold,
+              giving each tier a calm, premium hairline instead of the prior
+              dim cream. Inactive items use --ixai-text-muted; hover/active
+              states are gold-tinted instead of generic zinc. */}
           <nav className={`${compact ? "mt-5" : "mt-7"} space-y-5`}>
             {navGroups.map((group) => (
               <div key={group}>
-                <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#f5f0e6]/32">
+                <p className="ds-label-sm mb-2 text-[var(--ixai-gold)]/70">
                   {group}
                 </p>
                 <div className="space-y-1">
@@ -214,8 +223,8 @@ export function AppShell({
                         <Link
                           className={`block truncate border-l-2 px-3 text-sm transition ${compact ? "py-1.5" : "py-2"} ${
                             active
-                              ? "border-[var(--ixai-gold)] bg-[rgba(176,141,87,0.12)] text-[#f5f0e6]"
-                              : "border-transparent text-zinc-400 hover:border-zinc-700 hover:bg-zinc-900 hover:text-zinc-100"
+                              ? "border-[var(--ixai-gold)] bg-[rgba(176,141,87,0.12)] font-medium text-[var(--ixai-cream)]"
+                              : "border-transparent text-[var(--ixai-text-muted)] hover:border-[rgba(176,141,87,0.35)] hover:bg-[rgba(176,141,87,0.06)] hover:text-[var(--ixai-cream)]"
                           }`}
                           href={item.href}
                           key={item.href}
@@ -229,16 +238,19 @@ export function AppShell({
             ))}
           </nav>
 
+          {/* v1.18.5: ecosystem promo — gold ds-label-sm header, body in
+              --ixai-text-muted, secondary link border switched from white/10
+              (low-contrast generic) to brand border-subtle. */}
           <div className="mt-5 border border-[rgba(176,141,87,0.28)] bg-[rgba(176,141,87,0.06)] p-3">
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ixai-gold)]">
+            <div className="ds-label-sm text-[var(--ixai-gold)]">
               IXAI Ecosystem
             </div>
-            <p className="mt-2 text-xs leading-5 text-zinc-500">
+            <p className="ds-body-sm mt-2 text-[var(--ixai-text-muted)]">
               Public Intelligence 提供每日市場情報；Pro Dashboard 專注個人投資組合與 FCN 風險監控。
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <a
-                className="inline-flex border border-[rgba(176,141,87,0.45)] px-3 py-1.5 text-xs text-[#f5f0e6] transition hover:bg-[rgba(176,141,87,0.12)]"
+                className="inline-flex border border-[rgba(176,141,87,0.45)] px-3 py-1.5 text-xs text-[var(--ixai-cream)] transition hover:bg-[rgba(176,141,87,0.12)]"
                 href={`${ixaiEcosystem.publicAppUrl}/daily-brief`}
                 rel="noopener noreferrer"
                 target="_blank"
@@ -246,7 +258,7 @@ export function AppShell({
                 Daily Brief
               </a>
               <a
-                className="inline-flex border border-white/10 px-3 py-1.5 text-xs text-zinc-400 transition hover:text-[#f5f0e6]"
+                className="inline-flex border border-[var(--ixai-border-subtle)] px-3 py-1.5 text-xs text-[var(--ixai-text-muted)] transition hover:text-[var(--ixai-cream)]"
                 href={`${ixaiEcosystem.publicAppUrl}/market`}
                 rel="noopener noreferrer"
                 target="_blank"
@@ -257,7 +269,7 @@ export function AppShell({
           </div>
 
           <button
-            className="mt-8 w-full border border-zinc-700 px-3 py-2 text-left text-sm text-zinc-300 transition hover:bg-zinc-900"
+            className="mt-8 w-full border border-[var(--ixai-border-subtle)] px-3 py-2 text-left text-sm text-[var(--ixai-text-muted)] transition hover:border-[var(--ixai-accent)] hover:text-[var(--ixai-cream)]"
             onClick={handleLogout}
             type="button"
           >
@@ -266,31 +278,36 @@ export function AppShell({
         </aside>
 
         <section className="min-w-0 overflow-x-hidden">
-          <div className="sticky top-0 z-20 border-b border-zinc-800 bg-black/90 px-4 py-3 backdrop-blur md:hidden">
+          {/* v1.18.5: mobile top bar uses --ixai-forest tint instead of pure
+              black + zinc, matching the desktop sidebar surface. */}
+          <div className="sticky top-0 z-20 border-b border-[var(--ixai-border-subtle)] bg-[#04110d]/90 px-4 py-3 backdrop-blur md:hidden">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--ixai-gold)]">
                   IXAI Pro
                 </div>
-                <Link className="text-xs text-zinc-500" href={defaultPath}>AI Wealth OS</Link>
+                <Link className="ds-body-sm text-[var(--ixai-text-subtle)]" href={defaultPath}>AI Wealth OS</Link>
               </div>
               <button
-                className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300"
+                className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-xs text-[var(--ixai-text-muted)] transition hover:border-[var(--ixai-accent)] hover:text-[var(--ixai-cream)]"
                 onClick={handleLogout}
                 type="button"
               >
                 {t("common.logout")}
               </button>
             </div>
+            {/* v1.18: mobile nav uses brand-gold active state — replaces the
+                emerald active treatment which was off-brand for the dark
+                forest workspace. Inactive items use --ixai-text-muted. */}
             <nav className="mt-3 flex gap-2 overflow-x-auto pb-1">
               {navItems.map((item) => {
                 const active = pathname === item.href;
                 return (
                   <Link
-                    className={`shrink-0 border px-3 py-1.5 text-xs ${
+                    className={`shrink-0 border px-3 py-1.5 text-xs transition ${
                       active
-                        ? "border-emerald-400/60 bg-emerald-400/10 text-emerald-200"
-                        : "border-zinc-800 text-zinc-400"
+                        ? "border-[var(--ixai-gold)] bg-[rgba(176,141,87,0.12)] text-[var(--ixai-cream)]"
+                        : "border-[rgba(176,141,87,0.22)] text-[var(--ixai-text-muted)] hover:text-[var(--ixai-cream)]"
                     }`}
                     href={item.href}
                     key={item.href}
@@ -302,7 +319,7 @@ export function AppShell({
             </nav>
             <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
               <a
-                className="shrink-0 border border-emerald-400/30 px-3 py-1.5 text-xs text-emerald-200"
+                className="shrink-0 border border-[rgba(176,141,87,0.45)] px-3 py-1.5 text-xs text-[var(--ixai-cream)]"
                 href={`${ixaiEcosystem.publicAppUrl}/daily-brief`}
                 rel="noopener noreferrer"
                 target="_blank"
@@ -310,7 +327,7 @@ export function AppShell({
                 Public Intelligence
               </a>
               <a
-                className="shrink-0 border border-zinc-800 px-3 py-1.5 text-xs text-zinc-400"
+                className="shrink-0 border border-[var(--ixai-border-subtle)] px-3 py-1.5 text-xs text-[var(--ixai-text-muted)]"
                 href={`${ixaiEcosystem.publicAppUrl}/market`}
                 rel="noopener noreferrer"
                 target="_blank"
@@ -318,31 +335,34 @@ export function AppShell({
                 Market Intelligence
               </a>
             </div>
-            <div className="mt-2 flex gap-2 overflow-x-auto pb-1 font-mono text-[10px] text-zinc-500">
-              <Link className="shrink-0 border border-zinc-800 px-2 py-1" href="/accounts">
+            <div className="ds-mono-sm mt-2 flex gap-2 overflow-x-auto pb-1 text-[var(--ixai-text-subtle)]">
+              <Link className="shrink-0 border border-[var(--ixai-border-subtle)] px-2 py-1" href="/accounts">
                 {context.selectedAccountName || t("common.selectAccount")}
               </Link>
-              <Link className="shrink-0 border border-zinc-800 px-2 py-1" href="/accounts">
+              <Link className="shrink-0 border border-[var(--ixai-border-subtle)] px-2 py-1" href="/accounts">
                 {context.selectedPortfolioName || t("common.selectPortfolio")}
               </Link>
             </div>
           </div>
 
           <div className={`mx-auto max-w-7xl px-4 md:px-6 ${compact ? "py-4 md:py-6" : "py-6 md:py-8"}`}>
+            {/* v1.18.5: page header subtitle uses ds-body-md +
+                --ixai-text-muted; workspace pills use border-subtle and gold
+                hover instead of emerald. */}
             <header className={`border-b border-[rgba(176,141,87,0.18)] ${compact ? "mb-4 pb-4" : "mb-6 pb-5"}`}>
               <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[var(--ixai-gold)]">
                 IXAI Pro · AI Wealth Operating System · {preferences.locale}
               </div>
-              <h1 className={`${compact ? "mt-1 text-xl md:text-2xl" : "mt-2 text-2xl md:text-3xl"} font-semibold`}>{title}</h1>
-              {subtitle && <p className="mt-2 text-sm text-zinc-500">{subtitle}</p>}
-              <div className="mt-3 flex flex-wrap gap-2 font-mono text-[10px] text-zinc-500">
-                <Link className="border border-zinc-800 px-2 py-1 hover:text-emerald-300" href="/accounts">
+              <h1 className={`${compact ? "mt-1 text-xl md:text-2xl" : "mt-2 text-2xl md:text-3xl"} font-semibold text-[var(--ixai-text-strong)]`}>{title}</h1>
+              {subtitle && <p className="ds-body-md mt-2 text-[var(--ixai-text-muted)]">{subtitle}</p>}
+              <div className="ds-mono-sm mt-3 flex flex-wrap gap-2 text-[var(--ixai-text-subtle)]">
+                <Link className="border border-[var(--ixai-border-subtle)] px-2 py-1 transition hover:border-[var(--ixai-accent)] hover:text-[var(--ixai-cream)]" href="/accounts">
                   {context.selectedAccountName || t("common.selectAccount")}
                 </Link>
-                <Link className="border border-zinc-800 px-2 py-1 hover:text-emerald-300" href="/accounts">
+                <Link className="border border-[var(--ixai-border-subtle)] px-2 py-1 transition hover:border-[var(--ixai-accent)] hover:text-[var(--ixai-cream)]" href="/accounts">
                   {context.selectedPortfolioName || t("common.selectPortfolio")}
                 </Link>
-                <span className="border border-zinc-800 px-2 py-1">
+                <span className="border border-[var(--ixai-border-subtle)] px-2 py-1">
                   {t("common.lastActive")}: {context.lastActiveWorkspace || "dashboard"}
                 </span>
               </div>

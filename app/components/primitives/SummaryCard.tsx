@@ -1,17 +1,20 @@
 "use client";
 
 // Compact metric card. Scan-friendly, single value per card.
+//
+// v1.18.5: tokenised. Tone now maps to --ixai-risk-* / --ixai-text-strong;
+// chrome uses --ixai-border-subtle + --ixai-surface-card.
 
 import type { ReactNode } from "react";
 
 type Tone = "neutral" | "good" | "watch" | "elevated" | "critical";
 
 const TONE_COLOR: Record<Tone, string> = {
-  neutral: "text-zinc-100",
-  good: "text-emerald-200",
-  watch: "text-yellow-200",
-  elevated: "text-orange-200",
-  critical: "text-red-200",
+  neutral: "text-[var(--ixai-text-strong)]",
+  good: "text-[var(--ixai-risk-clear)]",
+  watch: "text-[var(--ixai-risk-watch)]",
+  elevated: "text-[var(--ixai-risk-elevated)]",
+  critical: "text-[var(--ixai-risk-critical)]",
 };
 
 export function SummaryCard({
@@ -29,16 +32,14 @@ export function SummaryCard({
 }) {
   return (
     <div
-      className={`min-w-0 border border-zinc-800 bg-black/30 px-3 py-2 ${className}`}
+      className={`min-w-0 border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] px-3 py-2 ${className}`}
     >
-      <div className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
-        {label}
-      </div>
+      <div className="ds-label-sm text-[var(--ixai-text-subtle)]">{label}</div>
       <div className={`mt-1 truncate text-lg font-semibold ${TONE_COLOR[tone]}`}>
         {value}
       </div>
       {hint && (
-        <div className="mt-1 truncate font-mono text-[10px] text-zinc-500">
+        <div className="ds-mono-sm mt-1 truncate text-[var(--ixai-text-subtle)]">
           {hint}
         </div>
       )}

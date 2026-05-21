@@ -24,12 +24,12 @@ export default function OnboardingPage() {
           <div className="grid gap-3 md:grid-cols-2">
             {steps.map((step) => (
               <Link
-                className="border border-zinc-800 bg-black/20 p-4 transition hover:border-emerald-400/60"
+                className="border border-[var(--ixai-border-subtle)] bg-black/20 p-4 transition hover:border-[var(--ixai-accent)]/60"
                 href={step.href}
                 key={step.title}
               >
-                <div className="font-mono text-sm text-zinc-100">{step.title}</div>
-                <div className="mt-2 text-sm leading-6 text-zinc-500">{step.detail}</div>
+                <div className="font-mono text-sm text-[var(--ixai-text-strong)]">{step.title}</div>
+                <div className="mt-2 text-sm leading-6 text-[var(--ixai-text-subtle)]">{step.detail}</div>
               </Link>
             ))}
           </div>

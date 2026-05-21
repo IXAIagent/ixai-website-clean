@@ -17,18 +17,18 @@ import { TerminalPanel } from "../layout/TerminalPanel";
 function regimeClass(value?: string | null) {
   const v = String(value || "").toLowerCase();
   if (v.includes("crypto_stress") || v.includes("risk_off") || v.includes("high_volatility"))
-    return "border-red-400 text-red-200";
-  if (v.includes("defensive")) return "border-yellow-400 text-yellow-200";
-  if (v.includes("ai_momentum") || v.includes("risk_on")) return "border-emerald-400 text-emerald-200";
-  return "border-zinc-700 text-zinc-300";
+    return "border-[var(--ixai-risk-critical)] text-[var(--ixai-risk-critical)]";
+  if (v.includes("defensive")) return "border-[var(--ixai-risk-watch)] text-[var(--ixai-risk-watch)]";
+  if (v.includes("ai_momentum") || v.includes("risk_on")) return "border-[var(--ixai-accent)] text-[var(--ixai-risk-clear)]";
+  return "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-strong)]";
 }
 
 function severityClass(value?: string | null) {
   const v = String(value || "").toLowerCase();
-  if (v === "critical" || v === "high") return "border-red-400 text-red-200";
-  if (v === "elevated") return "border-orange-400 text-orange-200";
-  if (v === "watch") return "border-yellow-400 text-yellow-200";
-  return "border-emerald-400 text-emerald-200";
+  if (v === "critical" || v === "high") return "border-[var(--ixai-risk-critical)] text-[var(--ixai-risk-critical)]";
+  if (v === "elevated") return "border-[var(--ixai-risk-elevated)] text-[var(--ixai-risk-elevated)]";
+  if (v === "watch") return "border-[var(--ixai-risk-watch)] text-[var(--ixai-risk-watch)]";
+  return "border-[var(--ixai-accent)] text-[var(--ixai-risk-clear)]";
 }
 
 function fmt(n: unknown) {
@@ -84,7 +84,7 @@ export function MarketEnginePanel({
   if (loading && !data) {
     return (
       <TerminalPanel title={t("engine.marketTitle")} meta={t("status.loading")}>
-        <div className="h-16 animate-pulse border border-zinc-800 bg-zinc-900" />
+        <div className="h-16 animate-pulse border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)]" />
       </TerminalPanel>
     );
   }
@@ -93,11 +93,11 @@ export function MarketEnginePanel({
       <TerminalPanel title={t("engine.marketTitle")} meta={t("engine.fallback")}>
         <div className="flex items-center gap-2">
           <StatusBadge value="unavailable" />
-          <span className="font-mono text-xs text-yellow-300">
+          <span className="font-mono text-xs text-[var(--ixai-risk-watch)]">
             {error || t("errors.market")}
           </span>
           <button
-            className="ml-auto border border-zinc-700 px-2 py-1 font-mono text-[10px] text-zinc-300 hover:border-emerald-400/60 hover:text-emerald-200"
+            className="ml-auto border border-[var(--ixai-border-subtle)] px-2 py-1 font-mono text-[10px] text-[var(--ixai-text-strong)] hover:border-[var(--ixai-accent)]/60 hover:text-[var(--ixai-risk-clear)]"
             onClick={() => void load()}
             type="button"
           >
@@ -131,13 +131,13 @@ export function MarketEnginePanel({
           {t("engine.labels.impact")} {humanize(impact.overall_impact_level, "clear")}
         </span>
         {typeof regime.confidence === "number" && (
-          <span className="border border-zinc-700 px-2 py-1 uppercase text-zinc-400">
+          <span className="border border-[var(--ixai-border-subtle)] px-2 py-1 uppercase text-[var(--ixai-text-muted)]">
             {t("engine.labels.confidence")} {regime.confidence.toFixed(0)}%
           </span>
         )}
         <StatusBadge value={overallStatus} />
         {data.locale && (
-          <span className="border border-zinc-800 px-2 py-0.5 font-mono text-[10px] uppercase text-zinc-500">
+          <span className="border border-[var(--ixai-border-subtle)] px-2 py-0.5 font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">
             {data.locale}
           </span>
         )}
@@ -161,33 +161,33 @@ export function MarketEnginePanel({
         </InlineInsight>
       </div>
 
-      <div className="mt-2 text-xs text-zinc-300">
+      <div className="mt-2 text-xs text-[var(--ixai-text-strong)]">
         {localizeFinancialNarrative(regime.narrative || "", locale, { maxLength: 180 })}
       </div>
 
       {!compact && (
         <div className="mt-3 grid gap-2 font-mono text-xs md:grid-cols-3">
-          <div className="border border-zinc-800 bg-black/20 px-2 py-2">
-            <div className="text-[10px] uppercase tracking-wide text-zinc-500">{t("engine.labels.equityVolatility")}</div>
-            <div className="mt-1 text-zinc-200">{humanize(volatility.equity_volatility_state)}</div>
+          <div className="border border-[var(--ixai-border-subtle)] bg-black/20 px-2 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">{t("engine.labels.equityVolatility")}</div>
+            <div className="mt-1 text-[var(--ixai-text-strong)]">{humanize(volatility.equity_volatility_state)}</div>
           </div>
-          <div className="border border-zinc-800 bg-black/20 px-2 py-2">
-            <div className="text-[10px] uppercase tracking-wide text-zinc-500">{t("engine.labels.cryptoVolatility")}</div>
-            <div className="mt-1 text-zinc-200">{humanize(volatility.crypto_volatility_state)}</div>
+          <div className="border border-[var(--ixai-border-subtle)] bg-black/20 px-2 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">{t("engine.labels.cryptoVolatility")}</div>
+            <div className="mt-1 text-[var(--ixai-text-strong)]">{humanize(volatility.crypto_volatility_state)}</div>
           </div>
-          <div className="border border-zinc-800 bg-black/20 px-2 py-2">
-            <div className="text-[10px] uppercase tracking-wide text-zinc-500">{t("engine.labels.fcnSensitivity")}</div>
-            <div className="mt-1 text-zinc-200">{humanize(volatility.fcn_sensitivity_state)}</div>
+          <div className="border border-[var(--ixai-border-subtle)] bg-black/20 px-2 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">{t("engine.labels.fcnSensitivity")}</div>
+            <div className="mt-1 text-[var(--ixai-text-strong)]">{humanize(volatility.fcn_sensitivity_state)}</div>
           </div>
         </div>
       )}
 
       {!compact && (
-        <div className="mt-3 border border-zinc-800 bg-black/20 p-3">
-          <div className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+        <div className="mt-3 border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+          <div className="font-mono text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">
             {t("engine.macroHeader")}
           </div>
-          <div className="mt-2 grid gap-1 font-mono text-[11px] text-zinc-400 md:grid-cols-6">
+          <div className="mt-2 grid gap-1 font-mono text-[11px] text-[var(--ixai-text-muted)] md:grid-cols-6">
             <div>{t("engine.labels.rates")}: {fmt(macro.rates_pressure)}</div>
             <div>{t("engine.labels.ai")}: {fmt(macro.ai_pressure)}</div>
             <div>{t("engine.labels.crypto")}: {fmt(macro.crypto_pressure)}</div>
@@ -195,19 +195,19 @@ export function MarketEnginePanel({
             <div>{t("engine.labels.earnings")}: {fmt(macro.earnings_pressure)}</div>
             <div>{t("engine.labels.macro")}: {fmt(macro.macro_stress)}</div>
           </div>
-          <div className="mt-2 text-xs text-zinc-300">
+          <div className="mt-2 text-xs text-[var(--ixai-text-strong)]">
             {sanitizeAdviceText(macro.narrative || "")}
           </div>
           {topThemes.length > 0 && (
-            <div className="mt-2 divide-y divide-zinc-900 border border-zinc-900">
+            <div className="mt-2 divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
               {topThemes.slice(0, 4).map((theme, idx) => (
                 <div className="px-2 py-1 font-mono text-[11px]" key={idx}>
-                  <span className="text-zinc-200 uppercase">{theme.theme}</span>
-                  <span className="ml-2 text-zinc-500">
+                  <span className="text-[var(--ixai-text-strong)] uppercase">{theme.theme}</span>
+                  <span className="ml-2 text-[var(--ixai-text-subtle)]">
                     {t("engine.labels.pressure")} {fmt(theme.weight)}
                   </span>
                   {Array.isArray(theme.sample_headlines) && theme.sample_headlines.length > 0 && (
-                    <div className="text-zinc-500">
+                    <div className="text-[var(--ixai-text-subtle)]">
                       {theme.sample_headlines
                         .slice(0, 2)
                         .map((h) => sanitizeAdviceText(h))
@@ -222,22 +222,22 @@ export function MarketEnginePanel({
       )}
 
       {!compact && (
-        <div className="mt-3 grid gap-2 font-mono text-[11px] text-zinc-400 md:grid-cols-2">
+        <div className="mt-3 grid gap-2 font-mono text-[11px] text-[var(--ixai-text-muted)] md:grid-cols-2">
           <div>
-            <span className="text-zinc-500">{t("engine.fields.fcnImpact")}: </span>
-            <span className="text-zinc-300">{sanitizeAdviceText(impact.fcn_impact || "—")}</span>
+            <span className="text-[var(--ixai-text-subtle)]">{t("engine.fields.fcnImpact")}: </span>
+            <span className="text-[var(--ixai-text-strong)]">{sanitizeAdviceText(impact.fcn_impact || "—")}</span>
           </div>
           <div>
-            <span className="text-zinc-500">{t("engine.fields.cryptoImpact")}: </span>
-            <span className="text-zinc-300">{sanitizeAdviceText(impact.crypto_impact || "—")}</span>
+            <span className="text-[var(--ixai-text-subtle)]">{t("engine.fields.cryptoImpact")}: </span>
+            <span className="text-[var(--ixai-text-strong)]">{sanitizeAdviceText(impact.crypto_impact || "—")}</span>
           </div>
           <div>
-            <span className="text-zinc-500">{t("engine.fields.equityImpact")}: </span>
-            <span className="text-zinc-300">{sanitizeAdviceText(impact.equity_impact || "—")}</span>
+            <span className="text-[var(--ixai-text-subtle)]">{t("engine.fields.equityImpact")}: </span>
+            <span className="text-[var(--ixai-text-strong)]">{sanitizeAdviceText(impact.equity_impact || "—")}</span>
           </div>
           <div>
-            <span className="text-zinc-500">{t("engine.fields.cashBuffer")}: </span>
-            <span className="text-zinc-300">{sanitizeAdviceText(impact.cash_buffer_interpretation || "—")}</span>
+            <span className="text-[var(--ixai-text-subtle)]">{t("engine.fields.cashBuffer")}: </span>
+            <span className="text-[var(--ixai-text-strong)]">{sanitizeAdviceText(impact.cash_buffer_interpretation || "—")}</span>
           </div>
         </div>
       )}

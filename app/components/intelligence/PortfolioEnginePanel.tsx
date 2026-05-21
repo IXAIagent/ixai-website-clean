@@ -61,7 +61,7 @@ export function PortfolioEnginePanel({
   if (loading && !data) {
     return (
       <TerminalPanel title={t("engine.portfolioTitle")} meta={t("status.loading")}>
-        <div className="h-16 animate-pulse border border-zinc-800 bg-zinc-900" />
+        <div className="h-16 animate-pulse border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)]" />
       </TerminalPanel>
     );
   }
@@ -70,11 +70,11 @@ export function PortfolioEnginePanel({
       <TerminalPanel title={t("engine.portfolioTitle")} meta={t("engine.fallback")}>
         <div className="flex items-center gap-2">
           <StatusBadge value="unavailable" />
-          <span className="font-mono text-xs text-yellow-300">
+          <span className="font-mono text-xs text-[var(--ixai-risk-watch)]">
             {error || t("errors.engine")}
           </span>
           <button
-            className="ml-auto border border-zinc-700 px-2 py-1 font-mono text-[10px] text-zinc-300 hover:border-emerald-400/60 hover:text-emerald-200"
+            className="ml-auto border border-[var(--ixai-border-subtle)] px-2 py-1 font-mono text-[10px] text-[var(--ixai-text-strong)] hover:border-[var(--ixai-accent)]/60 hover:text-[var(--ixai-risk-clear)]"
             onClick={() => void load()}
             type="button"
           >
@@ -111,12 +111,12 @@ export function PortfolioEnginePanel({
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <StatusBadge value={overallStatus} />
         {data.locale && (
-          <span className="border border-zinc-800 px-2 py-0.5 font-mono text-[10px] uppercase text-zinc-500">
+          <span className="border border-[var(--ixai-border-subtle)] px-2 py-0.5 font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">
             {data.locale}
           </span>
         )}
         {data.degraded_reason && (
-          <span className="font-mono text-[10px] text-yellow-300">
+          <span className="font-mono text-[10px] text-[var(--ixai-risk-watch)]">
             {t("engine.dataCoverageLimited")}
           </span>
         )}
@@ -141,23 +141,23 @@ export function PortfolioEnginePanel({
             [t("engine.score.drift"), unified.drift_score],
           ] as const
         ).map(([label, value]) => (
-          <div className="border border-zinc-800 bg-black/30 px-2 py-2" key={label}>
-            <div className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</div>
-            <div className="mt-1 text-base font-semibold text-zinc-100">{score(value)}</div>
+          <div className="border border-[var(--ixai-border-subtle)] bg-black/30 px-2 py-2" key={label}>
+            <div className="text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">{label}</div>
+            <div className="mt-1 text-base font-semibold text-[var(--ixai-text-strong)]">{score(value)}</div>
           </div>
         ))}
       </div>
 
       {!compact && (
         <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr]">
-          <div className="border border-zinc-800 bg-black/20 p-3">
-            <div className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+          <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+            <div className="font-mono text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">
               {t("engine.concentrationHeader")}
             </div>
             <div className="mt-1">
               <StatusBadge value={concentration.risk_level || "clear"} />
             </div>
-            <div className="mt-2 grid gap-1 font-mono text-[11px] text-zinc-400">
+            <div className="mt-2 grid gap-1 font-mono text-[11px] text-[var(--ixai-text-muted)]">
               <div>{t("engine.fields.singleName")}: {pct(concentration.single_name_pct)}</div>
               <div>{t("engine.fields.themeConcentration")}: {pct(concentration.theme_pct)}</div>
               <div>{t("engine.fields.fcnUnderlying")}: {pct(concentration.fcn_underlying_pct)}</div>
@@ -166,14 +166,14 @@ export function PortfolioEnginePanel({
             </div>
           </div>
 
-          <div className="border border-zinc-800 bg-black/20 p-3">
-            <div className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+          <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+            <div className="font-mono text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">
               {t("engine.fcnSystemicHeader")}
             </div>
             <div className="mt-1">
               <StatusBadge value={fcnRisk.risk_level || "clear"} />
             </div>
-            <div className="mt-2 grid gap-1 font-mono text-[11px] text-zinc-400">
+            <div className="mt-2 grid gap-1 font-mono text-[11px] text-[var(--ixai-text-muted)]">
               <div>{t("engine.fields.worstOfPressure")}: {pct(fcnRisk.worst_of_pressure_pct)}</div>
               <div>
                 {t("engine.fields.nearestKi")}:{" "}
@@ -196,44 +196,44 @@ export function PortfolioEnginePanel({
       )}
 
       {!compact && (
-        <div className="mt-3 border border-zinc-800 bg-black/20 p-3">
-          <div className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+        <div className="mt-3 border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+          <div className="font-mono text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">
             {t("engine.driftHeader")} · {t("engine.labels.historyWindow")} {drift.history_window ?? 0}
           </div>
-          <div className="mt-2 grid gap-2 font-mono text-[11px] text-zinc-400 md:grid-cols-5">
+          <div className="mt-2 grid gap-2 font-mono text-[11px] text-[var(--ixai-text-muted)] md:grid-cols-5">
             <div>{t("engine.labels.allocation")}: {drift.allocation_drift || "UNCHANGED"}</div>
             <div>{t("engine.score.concentration")}: {drift.concentration_drift || "UNCHANGED"}</div>
             <div>{t("engine.score.volatility")}: {drift.volatility_drift || "UNCHANGED"}</div>
             <div>{t("engine.labels.fcnPressure")}: {drift.fcn_pressure_drift || "UNCHANGED"}</div>
             <div>{t("engine.labels.regime")}: {drift.regime_drift || "UNCHANGED"}</div>
           </div>
-          <div className="mt-2 text-xs text-zinc-300">
+          <div className="mt-2 text-xs text-[var(--ixai-text-strong)]">
             {sanitizeAdviceText(drift.drift_summary || "")}
           </div>
         </div>
       )}
 
       {!compact && (
-        <div className="mt-3 border border-zinc-800 bg-black/20 p-3">
-          <div className="font-mono text-[10px] uppercase tracking-wide text-zinc-500">
+        <div className="mt-3 border border-[var(--ixai-border-subtle)] bg-black/20 p-3">
+          <div className="font-mono text-[10px] uppercase tracking-wide text-[var(--ixai-text-subtle)]">
             {t("engine.riskPropagationHeader")}
           </div>
-          <div className="mt-1 text-xs text-zinc-300">
+          <div className="mt-1 text-xs text-[var(--ixai-text-strong)]">
             {sanitizeAdviceText(propagation.summary || "")}
           </div>
           <div className="mt-2 space-y-2">
             {propagationChains.slice(0, 4).map((chain, idx) => (
-              <div className="border border-zinc-800 bg-black/30 px-2 py-1.5 font-mono text-[11px]" key={idx}>
-                <div className="text-zinc-200">
+              <div className="border border-[var(--ixai-border-subtle)] bg-black/30 px-2 py-1.5 font-mono text-[11px]" key={idx}>
+                <div className="text-[var(--ixai-text-strong)]">
                   {(chain.chain || []).join(" → ")}
                 </div>
-                <div className="mt-1 text-zinc-500">
+                <div className="mt-1 text-[var(--ixai-text-subtle)]">
                   {sanitizeAdviceText(chain.explanation || "")}
                 </div>
               </div>
             ))}
             {propagationChains.length === 0 && (
-              <div className="font-mono text-[11px] text-zinc-500">
+              <div className="font-mono text-[11px] text-[var(--ixai-text-subtle)]">
                 {t("engine.labels.noDominantChain")}
               </div>
             )}
@@ -242,21 +242,21 @@ export function PortfolioEnginePanel({
       )}
 
       {!compact && (
-        <div className="mt-3 grid gap-2 font-mono text-[11px] text-zinc-400 md:grid-cols-2">
+        <div className="mt-3 grid gap-2 font-mono text-[11px] text-[var(--ixai-text-muted)] md:grid-cols-2">
           <div>
-            <span className="text-zinc-500">{t("engine.fields.dominantThemes")}: </span>
+            <span className="text-[var(--ixai-text-subtle)]">{t("engine.fields.dominantThemes")}: </span>
             {(exposure.dominant_themes || []).join(", ") || "—"}
           </div>
           <div>
-            <span className="text-zinc-500">{t("engine.fields.highBeta")}: </span>
+            <span className="text-[var(--ixai-text-subtle)]">{t("engine.fields.highBeta")}: </span>
             {(exposure.high_beta_symbols || []).join(", ") || "—"}
           </div>
           <div>
-            <span className="text-zinc-500">{t("engine.fields.fcnLinked")}: </span>
+            <span className="text-[var(--ixai-text-subtle)]">{t("engine.fields.fcnLinked")}: </span>
             {(exposure.fcn_linked_symbols || []).join(", ") || "—"}
           </div>
           <div>
-            <span className="text-zinc-500">{t("engine.fields.repeatedUnderlyings")}: </span>
+            <span className="text-[var(--ixai-text-subtle)]">{t("engine.fields.repeatedUnderlyings")}: </span>
             {(exposure.repeated_underlyings || []).join(", ") || "—"}
           </div>
         </div>

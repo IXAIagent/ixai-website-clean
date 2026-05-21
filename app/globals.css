@@ -7,6 +7,26 @@
   --ixai-forest-soft: #0a211a;
   --ixai-gold: #b08d57;
   --ixai-cream: #f5f0e6;
+
+  /* v1.18 design system — shared token layer.
+     Same token names as the Public App; concrete values invert because
+     this is the dark workspace surface (Pro Dashboard role). */
+  --ixai-paper: #0a211a;
+  --ixai-ink-muted: rgba(245, 240, 230, 0.70);
+  --ixai-border: rgba(176, 141, 87, 0.22);
+  --ixai-surface: var(--ixai-forest);
+  --ixai-surface-card: rgba(15, 39, 30, 0.60);
+  --ixai-surface-elevated: var(--ixai-forest-soft);
+  --ixai-text-strong: var(--ixai-cream);
+  --ixai-text-muted: var(--ixai-ink-muted);
+  --ixai-text-subtle: rgba(245, 240, 230, 0.48);
+  --ixai-border-subtle: var(--ixai-border);
+  --ixai-border-strong: rgba(176, 141, 87, 0.45);
+  --ixai-accent: var(--ixai-gold);
+  --ixai-risk-clear: #7a9d8a;
+  --ixai-risk-watch: #d4b58a;
+  --ixai-risk-elevated: #d4946a;
+  --ixai-risk-critical: #d27a7a;
 }
 
 @theme inline {
@@ -16,17 +36,21 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* v1.18: the dark forest IS the canonical dark surface.
+   Previous `prefers-color-scheme: dark` block overrode the brand background
+   to #0a0a0a / cream text — undoing the IXAI palette reskin. Removed. */
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* v1.18: was Arial — restored to Geist so both repos share typography.
+     Geist is loaded via the Next.js layout fonts; fall back through
+     system sans for SSR / font-loading window. */
+  font-family: var(--font-geist-sans), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "kern";
+  line-height: 1.6;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
@@ -54,4 +78,66 @@ main[data-compact="1"] table {
   main code {
     max-width: 100%;
   }
+}
+
+/* v1.18 typography tokens — shared scale between Public + Pro repos.
+   Adoption is opt-in per component. Existing inline Tailwind classes
+   continue to work; new components and refactors should prefer these. */
+.ds-display-xl {
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.ds-display-lg {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.ds-heading-md {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.ds-heading-sm {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.ds-body-md {
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 400;
+}
+.ds-body-sm {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 400;
+}
+.ds-label-md {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.ds-label-sm {
+  font-size: 10px;
+  line-height: 12px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.ds-mono-md {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+.ds-mono-sm {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 500;
+  font-family: var(--font-mono);
 }

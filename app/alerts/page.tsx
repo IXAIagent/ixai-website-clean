@@ -37,10 +37,10 @@ function textValue(value: unknown, fallback = "-") {
 
 function severityClass(value?: string | null) {
   const normalized = (value || "").toLowerCase();
-  if (normalized.includes("critical") || normalized.includes("high")) return "border-red-500/50 text-red-300";
-  if (normalized.includes("medium") || normalized.includes("warning")) return "border-yellow-500/50 text-yellow-300";
-  if (normalized.includes("low") || normalized.includes("clear")) return "border-emerald-500/50 text-emerald-300";
-  return "border-zinc-700 text-zinc-400";
+  if (normalized.includes("critical") || normalized.includes("high")) return "border-[var(--ixai-risk-critical)]/50 text-[var(--ixai-risk-critical)]";
+  if (normalized.includes("medium") || normalized.includes("warning")) return "border-[var(--ixai-risk-watch)]/50 text-[var(--ixai-risk-watch)]";
+  if (normalized.includes("low") || normalized.includes("clear")) return "border-[var(--ixai-accent)]/50 text-[var(--ixai-cream)]";
+  return "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-muted)]";
 }
 
 function timestamp(value?: string | null) {
@@ -110,16 +110,16 @@ function AlertRow({ alert }: { alert: UnifiedAlert }) {
           {alert.severity}
         </span>
       </div>
-      <div className="font-mono text-zinc-400">
+      <div className="font-mono text-[var(--ixai-text-muted)]">
         {alert.category}
-        <div className="text-[10px] text-zinc-600">{alert.symbol}</div>
+        <div className="text-[10px] text-[var(--ixai-text-subtle)]">{alert.symbol}</div>
       </div>
-      <div className="font-semibold text-zinc-100">{alert.title}</div>
-      <div className="text-zinc-400">{alert.description}</div>
-      <div className="font-mono text-[10px] text-zinc-600">
+      <div className="font-semibold text-[var(--ixai-text-strong)]">{alert.title}</div>
+      <div className="text-[var(--ixai-text-muted)]">{alert.description}</div>
+      <div className="font-mono text-[10px] text-[var(--ixai-text-subtle)]">
         <div>{timestamp(alert.timestamp)}</div>
         <div>{alert.source}</div>
-        <Link className="mt-1 inline-block text-zinc-400 hover:text-emerald-300" href={alert.link}>
+        <Link className="mt-1 inline-block text-[var(--ixai-text-muted)] hover:text-[var(--ixai-cream)]" href={alert.link}>
           {alert.category === "FCN" ? "View FCN" : alert.category === "System" || alert.category === "Macro" ? "View Intelligence" : "View Portfolio"}
         </Link>
       </div>
@@ -213,7 +213,7 @@ export default function AlertsPage() {
     <AppShell title={t("page.alerts")} subtitle={labels.subtitle}>
       <div className="space-y-5">
         {error && (
-          <div className="border border-yellow-500/30 bg-yellow-950/10 px-3 py-2 text-xs text-yellow-200">
+          <div className="border border-[var(--ixai-risk-watch)]/30 bg-[var(--ixai-surface-card)] px-3 py-2 text-xs text-[var(--ixai-risk-watch)]">
             {error}
           </div>
         )}
@@ -221,24 +221,24 @@ export default function AlertsPage() {
         <TerminalPanel title={labels.header} meta={loading ? t("status.loading") : error ? "degraded" : alerts.length > 0 ? t("common.active") : t("status.clear")}>
           <div className="grid gap-3 md:grid-cols-5">
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">{labels.total}</div>
-              <div className="mt-1 text-2xl font-semibold text-zinc-100">{alerts.length}</div>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">{labels.total}</div>
+              <div className="mt-1 text-2xl font-semibold text-[var(--ixai-text-strong)]">{alerts.length}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">{labels.critical}</div>
-              <div className="mt-1 text-2xl font-semibold text-red-300">{criticalCount}</div>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">{labels.critical}</div>
+              <div className="mt-1 text-2xl font-semibold text-[var(--ixai-risk-critical)]">{criticalCount}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">{labels.highMedium}</div>
-              <div className="mt-1 text-2xl font-semibold text-yellow-300">{highCount + mediumCount}</div>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">{labels.highMedium}</div>
+              <div className="mt-1 text-2xl font-semibold text-[var(--ixai-risk-watch)]">{highCount + mediumCount}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">{labels.low}</div>
-              <div className="mt-1 text-2xl font-semibold text-emerald-300">{lowCount}</div>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">{labels.low}</div>
+              <div className="mt-1 text-2xl font-semibold text-[var(--ixai-cream)]">{lowCount}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">{labels.lastUpdated}</div>
-              <div className="mt-1 text-sm text-zinc-300">{loadedAt || "pending"}</div>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">{labels.lastUpdated}</div>
+              <div className="mt-1 text-sm text-[var(--ixai-text-strong)]">{loadedAt || "pending"}</div>
             </div>
           </div>
         </TerminalPanel>
@@ -248,7 +248,7 @@ export default function AlertsPage() {
             {filters.map((item) => (
               <button
                 className={`border px-3 py-1.5 font-mono text-xs ${
-                  filter === item ? "border-emerald-400/60 text-emerald-200" : "border-zinc-800 text-zinc-500"
+                  filter === item ? "border-[var(--ixai-accent)]/60 text-[var(--ixai-cream)]" : "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-subtle)]"
                 }`}
                 key={item}
                 onClick={() => setFilter(item)}
@@ -258,7 +258,7 @@ export default function AlertsPage() {
               </button>
             ))}
           </div>
-          <div className="divide-y divide-zinc-900 border border-zinc-800">
+          <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
             {filteredAlerts.length === 0 && (
               <EmptyLine>{alerts.length === 0 ? labels.systemClear : labels.noMatch}</EmptyLine>
             )}
@@ -271,21 +271,21 @@ export default function AlertsPage() {
         <TerminalPanel title={labels.grouped} meta="critical · fcn · market · portfolio · system">
           <div className="grid gap-3 lg:grid-cols-2">
             {groups.map((group) => (
-              <div className="border border-zinc-800 bg-zinc-950/70" key={group.title}>
-                <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2">
-                  <h3 className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-300">{group.title}</h3>
-                  <span className="font-mono text-[10px] text-zinc-500">{group.items.length}</span>
+              <div className="border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)]" key={group.title}>
+                <div className="flex items-center justify-between border-b border-[var(--ixai-border-subtle)] px-3 py-2">
+                  <h3 className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--ixai-text-strong)]">{group.title}</h3>
+                  <span className="font-mono text-[10px] text-[var(--ixai-text-subtle)]">{group.items.length}</span>
                 </div>
-                <div className="divide-y divide-zinc-900">
+                <div className="divide-y divide-[var(--ixai-border-subtle)]">
                   {group.items.length === 0 && <EmptyLine>{labels.noSignals}</EmptyLine>}
                   {group.items.slice(0, 5).map((alert) => (
                     <div className="px-3 py-2 text-xs" key={`${group.title}-${alert.id}`}>
                       <div className="flex items-center gap-2">
                         <span className={`border px-2 py-0.5 font-mono text-[10px] uppercase ${severityClass(alert.severity)}`}>{alert.severity}</span>
-                        <span className="font-mono text-zinc-500">{alert.symbol}</span>
+                        <span className="font-mono text-[var(--ixai-text-subtle)]">{alert.symbol}</span>
                       </div>
-                      <div className="mt-1 truncate font-semibold text-zinc-100">{alert.title}</div>
-                      <div className="mt-1 line-clamp-2 text-zinc-500">{alert.description}</div>
+                      <div className="mt-1 truncate font-semibold text-[var(--ixai-text-strong)]">{alert.title}</div>
+                      <div className="mt-1 line-clamp-2 text-[var(--ixai-text-subtle)]">{alert.description}</div>
                     </div>
                   ))}
                 </div>

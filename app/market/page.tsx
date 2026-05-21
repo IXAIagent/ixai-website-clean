@@ -62,16 +62,16 @@ function toneLabel(article: NewsArticle) {
 
 function priorityClass(value?: string | null) {
   const normalized = (value || "").toLowerCase();
-  if (normalized.includes("critical") || normalized.includes("high")) return "border-red-500/50 text-red-300";
-  if (normalized.includes("medium")) return "border-yellow-500/50 text-yellow-300";
-  return "border-zinc-700 text-zinc-400";
+  if (normalized.includes("critical") || normalized.includes("high")) return "border-[var(--ixai-risk-critical)]/50 text-[var(--ixai-risk-critical)]";
+  if (normalized.includes("medium")) return "border-[var(--ixai-risk-watch)]/50 text-[var(--ixai-risk-watch)]";
+  return "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-muted)]";
 }
 
 function toneClass(value?: string | null) {
   const normalized = (value || "").toLowerCase();
-  if (normalized.includes("negative") || normalized.includes("increase")) return "text-red-300";
-  if (normalized.includes("positive") || normalized.includes("decrease")) return "text-emerald-300";
-  return "text-zinc-400";
+  if (normalized.includes("negative") || normalized.includes("increase")) return "text-[var(--ixai-risk-critical)]";
+  if (normalized.includes("positive") || normalized.includes("decrease")) return "text-[var(--ixai-risk-clear)]";
+  return "text-[var(--ixai-text-muted)]";
 }
 
 function whyItMatters(article: NewsArticle) {
@@ -189,7 +189,7 @@ export default function MarketPage() {
     <AppShell title={t("page.market")} subtitle={labels.subtitle}>
       <div className="space-y-5">
         {error && (
-          <div className="border border-yellow-500/30 bg-yellow-950/10 px-3 py-2 text-xs text-yellow-200">
+          <div className="border border-[var(--ixai-risk-watch)]/30 bg-[var(--ixai-surface-card)] px-3 py-2 text-xs text-[var(--ixai-risk-watch)]">
             {error}
           </div>
         )}
@@ -199,22 +199,22 @@ export default function MarketPage() {
         <TerminalPanel title={labels.header} meta={loading ? t("status.loading") : news?.is_stale ? t("status.stale") : error ? "data limited" : t("common.active")}>
           <div className="grid gap-3 md:grid-cols-4">
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">Regime</div>
-              <div className="mt-1 text-lg font-semibold text-zinc-100">{textValue(intelligence?.workspace?.market_regime, "Market regime pending")}</div>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Regime</div>
+              <div className="mt-1 text-lg font-semibold text-[var(--ixai-text-strong)]">{textValue(intelligence?.workspace?.market_regime, "Market regime pending")}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">Sentiment</div>
-              <div className="mt-1 text-lg font-semibold text-emerald-300">{textValue(intelligence?.workspace?.workspace_mode, "BALANCED")}</div>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Sentiment</div>
+              <div className="mt-1 text-lg font-semibold text-[var(--ixai-risk-clear)]">{textValue(intelligence?.workspace?.workspace_mode, "BALANCED")}</div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">Risk Tone</div>
-              <div className={negativeNews > 2 ? "mt-1 text-lg font-semibold text-yellow-300" : "mt-1 text-lg font-semibold text-zinc-300"}>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Risk Tone</div>
+              <div className={negativeNews > 2 ? "mt-1 text-lg font-semibold text-[var(--ixai-risk-watch)]" : "mt-1 text-lg font-semibold text-[var(--ixai-text-strong)]"}>
                 {negativeNews > 2 ? "risk watch" : "mixed / stable"}
               </div>
             </div>
             <div>
-              <div className="font-mono text-[10px] uppercase text-zinc-600">Last Updated</div>
-              <div className="mt-1 text-sm text-zinc-300">{timestamp(news?.fetched_at || priority?.generated_at || intelligence?.generated_at)}</div>
+              <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Last Updated</div>
+              <div className="mt-1 text-sm text-[var(--ixai-text-strong)]">{timestamp(news?.fetched_at || priority?.generated_at || intelligence?.generated_at)}</div>
             </div>
           </div>
         </TerminalPanel>
@@ -222,18 +222,18 @@ export default function MarketPage() {
         <TerminalPanel title={labels.pulse} meta="reference state">
           <div className="grid gap-2 font-mono text-xs md:grid-cols-6">
             {pulse.map((item) => (
-              <div className="border border-zinc-800 bg-black/20 p-2" key={item.label}>
-                <div className="text-zinc-600">{item.label}</div>
-                <div className={item.tone === "down" ? "text-red-300" : item.tone === "up" ? "text-emerald-300" : "text-zinc-300"}>
+              <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-2" key={item.label}>
+                <div className="text-[var(--ixai-text-subtle)]">{item.label}</div>
+                <div className={item.tone === "down" ? "text-[var(--ixai-risk-critical)]" : item.tone === "up" ? "text-[var(--ixai-risk-clear)]" : "text-[var(--ixai-text-strong)]"}>
                   {item.value}
                 </div>
               </div>
             ))}
           </div>
           <div className="mt-3 grid gap-2 font-mono text-xs md:grid-cols-3">
-            <div className="border border-zinc-800 bg-black/20 p-2 text-zinc-300">{labels.sentiment}: {textValue(intelligence?.workspace?.market_regime, "MIXED")}</div>
-            <div className="border border-zinc-800 bg-black/20 p-2 text-zinc-300">{labels.cryptoVolatility}: {cryptoNews > 0 ? labels.watch : labels.normal}</div>
-            <div className="border border-zinc-800 bg-black/20 p-2 text-zinc-300">{labels.fcnNews}: {fcnNews > 0 ? `${fcnNews} ${labels.items}` : labels.quiet}</div>
+            <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-2 text-[var(--ixai-text-strong)]">{labels.sentiment}: {textValue(intelligence?.workspace?.market_regime, "MIXED")}</div>
+            <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-2 text-[var(--ixai-text-strong)]">{labels.cryptoVolatility}: {cryptoNews > 0 ? labels.watch : labels.normal}</div>
+            <div className="border border-[var(--ixai-border-subtle)] bg-black/20 p-2 text-[var(--ixai-text-strong)]">{labels.fcnNews}: {fcnNews > 0 ? `${fcnNews} ${labels.items}` : labels.quiet}</div>
           </div>
         </TerminalPanel>
 
@@ -242,7 +242,7 @@ export default function MarketPage() {
             {filters.map((item) => (
               <button
                 className={`border px-3 py-1.5 font-mono text-xs ${
-                  filter === item ? "border-emerald-400/60 text-emerald-200" : "border-zinc-800 text-zinc-500"
+                  filter === item ? "border-[var(--ixai-accent)]/60 text-[var(--ixai-risk-clear)]" : "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-subtle)]"
                 }`}
                 key={item}
                 onClick={() => setFilter(item)}
@@ -253,26 +253,26 @@ export default function MarketPage() {
             ))}
           </div>
 
-          <div className="divide-y divide-zinc-900 border border-zinc-800">
+          <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
             {filteredArticles.length === 0 && <EmptyLine>{labels.noNews}</EmptyLine>}
             {filteredArticles.map((article, index) => (
               <div className="px-3 py-2 text-xs" key={`${article.link || article.title || "article"}-${index}`}>
                 <div className="flex flex-wrap items-center gap-2 font-mono">
-                  <span className="border border-emerald-500/40 px-2 py-0.5 text-emerald-300">{textValue(article.symbol, "MKT")}</span>
+                  <span className="border border-[var(--ixai-accent)]/40 px-2 py-0.5 text-[var(--ixai-risk-clear)]">{textValue(article.symbol, "MKT")}</span>
                   <span className={`border px-2 py-0.5 ${priorityClass(priorityLabel(article))}`}>{priorityLabel(article)}</span>
                   <span className={toneClass(toneLabel(article))}>{toneLabel(article)}</span>
-                  <span className="text-zinc-500">{newsCategory(article)}</span>
+                  <span className="text-[var(--ixai-text-subtle)]">{newsCategory(article)}</span>
                 </div>
-                <div className="mt-1 font-semibold text-zinc-100">{textValue(article.title, "Untitled market item")}</div>
-                <div className="mt-1 text-zinc-400">{whyItMatters(article)}</div>
-                <div className="mt-1 flex flex-wrap gap-2 font-mono text-[10px] text-zinc-600">
+                <div className="mt-1 font-semibold text-[var(--ixai-text-strong)]">{textValue(article.title, "Untitled market item")}</div>
+                <div className="mt-1 text-[var(--ixai-text-muted)]">{whyItMatters(article)}</div>
+                <div className="mt-1 flex flex-wrap gap-2 font-mono text-[10px] text-[var(--ixai-text-subtle)]">
                   <span>{textValue(article.publisher || article.source, "source pending")}</span>
                   <span>·</span>
                   <span>{timestamp(article.published_at)}</span>
                   {article.link && (
                     <>
                       <span>·</span>
-                      <a className="text-zinc-400 hover:text-emerald-300" href={article.link} rel="noopener noreferrer" target="_blank">
+                      <a className="text-[var(--ixai-text-muted)] hover:text-[var(--ixai-risk-clear)]" href={article.link} rel="noopener noreferrer" target="_blank">
                         View
                       </a>
                     </>
@@ -285,25 +285,25 @@ export default function MarketPage() {
 
         <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
           <TerminalPanel title={labels.interpretation} meta="portfolio lens">
-            <div className="space-y-2 text-sm leading-6 text-zinc-300">
+            <div className="space-y-2 text-sm leading-6 text-[var(--ixai-text-strong)]">
               <p>{textValue(intelligence?.narrative?.market_narrative, labels.marketNarrativeBuilding)}</p>
               <p>{t("market.relatedNewsCounts").replace("{fcn}", String(fcnNews)).replace("{crypto}", String(cryptoNews)).replace("{macro}", String(macroNews))}</p>
-              <p className="text-zinc-500">{labels.complianceNote}</p>
+              <p className="text-[var(--ixai-text-subtle)]">{labels.complianceNote}</p>
             </div>
           </TerminalPanel>
 
           <TerminalPanel title={labels.provider} meta={news?.is_stale ? "stale" : "best effort"}>
-            <div className="space-y-2 font-mono text-xs text-zinc-400">
-              <div className="flex justify-between border-b border-zinc-900 pb-2">
-                <span className="text-zinc-600">{labels.yfinanceNews}</span>
+            <div className="space-y-2 font-mono text-xs text-[var(--ixai-text-muted)]">
+              <div className="flex justify-between border-b border-[var(--ixai-border-subtle)] pb-2">
+                <span className="text-[var(--ixai-text-subtle)]">{labels.yfinanceNews}</span>
                 <span>{news?.is_stale ? labels.staleProvider : labels.bestEffort}</span>
               </div>
-              <div className="flex justify-between border-b border-zinc-900 pb-2">
-                <span className="text-zinc-600">{labels.scheduler}</span>
+              <div className="flex justify-between border-b border-[var(--ixai-border-subtle)] pb-2">
+                <span className="text-[var(--ixai-text-subtle)]">{labels.scheduler}</span>
                 <span>{labels.canSkipNews}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-600">{labels.feedStatus}</span>
+                <span className="text-[var(--ixai-text-subtle)]">{labels.feedStatus}</span>
                 <span>{articles.length > 0 ? `${articles.length} ${labels.items}` : labels.waiting}</span>
               </div>
             </div>

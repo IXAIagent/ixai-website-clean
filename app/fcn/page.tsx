@@ -64,18 +64,18 @@ function distanceValue(value: unknown) {
 
 function distanceTone(value: unknown) {
   const parsed = distanceValue(value);
-  if (parsed === null) return "text-zinc-500";
-  if (parsed < 5) return "text-red-300";
-  if (parsed <= 15) return "text-yellow-300";
-  return "text-emerald-300";
+  if (parsed === null) return "text-[var(--ixai-text-subtle)]";
+  if (parsed < 5) return "text-[var(--ixai-risk-critical)]";
+  if (parsed <= 15) return "text-[var(--ixai-risk-watch)]";
+  return "text-[var(--ixai-risk-clear)]";
 }
 
 function riskClass(risk?: string | null) {
   const normalized = (risk || "").toLowerCase();
-  if (normalized.includes("high") || normalized.includes("critical")) return "border-red-500/50 text-red-300";
-  if (normalized.includes("medium") || normalized.includes("watch")) return "border-yellow-500/50 text-yellow-300";
-  if (normalized.includes("low")) return "border-emerald-500/50 text-emerald-300";
-  return "border-zinc-700 text-zinc-400";
+  if (normalized.includes("high") || normalized.includes("critical")) return "border-[var(--ixai-risk-critical)]/50 text-[var(--ixai-risk-critical)]";
+  if (normalized.includes("medium") || normalized.includes("watch")) return "border-[var(--ixai-risk-watch)]/50 text-[var(--ixai-risk-watch)]";
+  if (normalized.includes("low")) return "border-[var(--ixai-accent)]/50 text-[var(--ixai-risk-clear)]";
+  return "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-muted)]";
 }
 
 function sourceLabel(source?: string | null, stale?: boolean | null) {
@@ -231,19 +231,19 @@ function UnderlyingMiniTable({ rows }: { rows: FCNUnderlyingResult[] }) {
   if (rows.length === 0) return <EmptyLine>No underlying detail yet.</EmptyLine>;
 
   return (
-    <div className="divide-y divide-zinc-900 border border-zinc-800">
+    <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
       {rows.map((row, index) => {
         const performance = row.performance;
         const performanceValue = nullableNumber(performance);
         return (
           <div className="grid gap-2 px-3 py-2 font-mono text-xs md:grid-cols-5" key={`${row.symbol || "underlying"}-${index}`}>
-            <span className="font-semibold text-zinc-100">{row.symbol || "-"}</span>
-            <span className="text-zinc-400">Initial {price(row.initial_price)}</span>
-            <span className="text-zinc-400">Current {price(row.current_price)}</span>
-            <span className={performanceValue !== null && performanceValue < 0 ? "text-red-300" : "text-emerald-300"}>
+            <span className="font-semibold text-[var(--ixai-text-strong)]">{row.symbol || "-"}</span>
+            <span className="text-[var(--ixai-text-muted)]">Initial {price(row.initial_price)}</span>
+            <span className="text-[var(--ixai-text-muted)]">Current {price(row.current_price)}</span>
+            <span className={performanceValue !== null && performanceValue < 0 ? "text-[var(--ixai-risk-critical)]" : "text-[var(--ixai-risk-clear)]"}>
               Move {percent(performance)}
             </span>
-            <span className="text-zinc-500">{sourceLabel(row.price_source, row.is_stale)}</span>
+            <span className="text-[var(--ixai-text-subtle)]">{sourceLabel(row.price_source, row.is_stale)}</span>
           </div>
         );
       })}
@@ -344,46 +344,46 @@ export default function FcnPage() {
     <AppShell title={t("page.fcn")} subtitle={labels.subtitle}>
       <div className="space-y-5">
         {error && (
-          <div className="border border-red-500/40 bg-red-950/20 px-3 py-2 text-sm text-red-200">
+          <div className="border border-[var(--ixai-risk-critical)]/40 bg-[var(--ixai-surface-card)] px-3 py-2 text-sm text-[var(--ixai-risk-critical)]">
             {error}
           </div>
         )}
 
         <section className="grid gap-3 md:grid-cols-5">
-          <div className="border border-zinc-800 bg-zinc-950 p-3">
-            <div className="font-mono text-[10px] uppercase text-zinc-500">FCN Notional</div>
+          <div className="border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] p-3">
+            <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">FCN Notional</div>
             <div className="mt-1 text-xl font-semibold">{money(totalNotional)}</div>
           </div>
-          <div className="border border-zinc-800 bg-zinc-950 p-3">
-            <div className="font-mono text-[10px] uppercase text-zinc-500">Contracts</div>
+          <div className="border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] p-3">
+            <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Contracts</div>
             <div className="mt-1 text-xl font-semibold">{loading ? "-" : fcns.length}</div>
           </div>
-          <div className="border border-zinc-800 bg-zinc-950 p-3">
-            <div className="font-mono text-[10px] uppercase text-zinc-500">Overall Risk</div>
+          <div className="border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] p-3">
+            <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Overall Risk</div>
             <div className={`mt-2 inline-block border px-2 py-1 font-mono text-xs uppercase ${riskClass(highestRisk)}`}>
               {highestRisk}
             </div>
           </div>
-          <div className="border border-zinc-800 bg-zinc-950 p-3">
-            <div className="font-mono text-[10px] uppercase text-zinc-500">Nearest KI</div>
+          <div className="border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] p-3">
+            <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Nearest KI</div>
             <div className={`mt-1 text-xl font-semibold ${distanceTone(nearestKi)}`}>
               {nearestKi === undefined ? "-" : `${nearestKi.toFixed(1)}%`}
             </div>
           </div>
-          <div className="border border-zinc-800 bg-zinc-950 p-3">
-            <div className="font-mono text-[10px] uppercase text-zinc-500">Next Coupon</div>
-            <div className="mt-1 text-sm font-semibold text-zinc-200">{nextCoupon || "schedule pending"}</div>
+          <div className="border border-[var(--ixai-border-subtle)] bg-[var(--ixai-surface-card)] p-3">
+            <div className="font-mono text-[10px] uppercase text-[var(--ixai-text-subtle)]">Next Coupon</div>
+            <div className="mt-1 text-sm font-semibold text-[var(--ixai-text-strong)]">{nextCoupon || "schedule pending"}</div>
           </div>
         </section>
 
         <div className="flex flex-wrap gap-2">
-          <Link className="border border-emerald-500/50 px-3 py-2 text-xs text-emerald-200" href="/input">
+          <Link className="border border-[var(--ixai-accent)]/50 px-3 py-2 text-xs text-[var(--ixai-risk-clear)]" href="/input">
             Add FCN
           </Link>
-          <Link className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300" href="/import">
+          <Link className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-xs text-[var(--ixai-text-strong)]" href="/import">
             Import FCN
           </Link>
-          <Link className="border border-zinc-700 px-3 py-2 text-xs text-zinc-300" href="/intelligence">
+          <Link className="border border-[var(--ixai-border-subtle)] px-3 py-2 text-xs text-[var(--ixai-text-strong)]" href="/intelligence">
             View related Intelligence
           </Link>
         </div>
@@ -391,27 +391,27 @@ export default function FcnPage() {
         <TerminalPanel title={labels.table} meta="worst-of / barrier monitor">
           {fcns.length === 0 && <EmptyLine>No FCN positions yet. Add structured products from /input.</EmptyLine>}
           <div className="overflow-x-auto">
-            <div className="min-w-[980px] divide-y divide-zinc-900 border border-zinc-800">
+            <div className="min-w-[980px] divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
               {fcns.map((fcn) => (
                 <div className="grid grid-cols-[1.1fr_0.8fr_1.1fr_0.8fr_0.8fr_0.8fr_1fr_1fr] gap-3 px-3 py-2 font-mono text-xs" key={fcn.mergedKey}>
                   <div>
-                    <div className="font-semibold text-zinc-100">{fcn.displayCode}</div>
-                    <div className="text-[10px] text-zinc-500">{fcn.issuer || "issuer pending"}</div>
+                    <div className="font-semibold text-[var(--ixai-text-strong)]">{fcn.displayCode}</div>
+                    <div className="text-[10px] text-[var(--ixai-text-subtle)]">{fcn.issuer || "issuer pending"}</div>
                   </div>
-                  <div className="text-zinc-200">{money(fcn.notionalValue)}</div>
-                  <div className="text-zinc-300">
+                  <div className="text-[var(--ixai-text-strong)]">{money(fcn.notionalValue)}</div>
+                  <div className="text-[var(--ixai-text-strong)]">
                     {getWorstSymbol(fcn)}
-                    <div className="text-[10px] text-zinc-500">{fcn.underlyingRows.length || "no"} underlyings</div>
+                    <div className="text-[10px] text-[var(--ixai-text-subtle)]">{fcn.underlyingRows.length || "no"} underlyings</div>
                   </div>
                   <div className={distanceTone(getKiDistance(fcn))}>KI {percent(getKiDistance(fcn))}</div>
-                  <div className="text-zinc-400">KO {percent(getKoDistance(fcn))}</div>
+                  <div className="text-[var(--ixai-text-muted)]">KO {percent(getKoDistance(fcn))}</div>
                   <div>
                     <span className={`border px-2 py-0.5 uppercase ${riskClass(fcn.risk_level)}`}>
                       {fcn.risk_level || "unknown"}
                     </span>
                   </div>
-                  <div className="text-zinc-400">{fcn.next_observation_date || "obs pending"}</div>
-                  <div className="text-zinc-400">{fcn.next_coupon_date || "coupon pending"}</div>
+                  <div className="text-[var(--ixai-text-muted)]">{fcn.next_observation_date || "obs pending"}</div>
+                  <div className="text-[var(--ixai-text-muted)]">{fcn.next_coupon_date || "coupon pending"}</div>
                 </div>
               ))}
             </div>
@@ -420,21 +420,21 @@ export default function FcnPage() {
 
         <section className="grid gap-5 xl:grid-cols-[1.35fr_1fr]">
           <TerminalPanel title={labels.worst} meta="per contract stress point">
-            <div className="divide-y divide-zinc-900 border border-zinc-800">
+            <div className="divide-y divide-[var(--ixai-border-subtle)] border border-[var(--ixai-border-subtle)]">
               {worstRows.length === 0 && <EmptyLine>No worst-of monitor data yet.</EmptyLine>}
               {worstRows.map(({ fcn, worstSymbol, detail }) => (
                 <div className="grid gap-2 px-3 py-2 font-mono text-xs md:grid-cols-7" key={`${fcn.mergedKey}-worst`}>
-                  <span className="font-semibold text-zinc-100">{fcn.displayCode}</span>
-                  <span className="text-red-300">{worstSymbol}</span>
-                  <span className="text-zinc-400">Initial {price(detail?.initial_price)}</span>
-                  <span className="text-zinc-400">Current {price(detail?.current_price)}</span>
-                  <span className={nullableNumber(detail?.performance) !== null && numberValue(detail?.performance) < 0 ? "text-red-300" : "text-emerald-300"}>
+                  <span className="font-semibold text-[var(--ixai-text-strong)]">{fcn.displayCode}</span>
+                  <span className="text-[var(--ixai-risk-critical)]">{worstSymbol}</span>
+                  <span className="text-[var(--ixai-text-muted)]">Initial {price(detail?.initial_price)}</span>
+                  <span className="text-[var(--ixai-text-muted)]">Current {price(detail?.current_price)}</span>
+                  <span className={nullableNumber(detail?.performance) !== null && numberValue(detail?.performance) < 0 ? "text-[var(--ixai-risk-critical)]" : "text-[var(--ixai-risk-clear)]"}>
                     Move {percent(detail?.performance || fcn.worst_performance)}
                   </span>
                   <span className={distanceTone(detail?.distance_to_KI || detail?.distance_to_ki || detail?.distance_to_ki_pct || getKiDistance(fcn))}>
                     KI {percent(detail?.distance_to_KI || detail?.distance_to_ki || detail?.distance_to_ki_pct || getKiDistance(fcn))}
                   </span>
-                  <span className="text-zinc-400">
+                  <span className="text-[var(--ixai-text-muted)]">
                     KO {percent(detail?.distance_to_KO || detail?.distance_to_ko || detail?.distance_to_ko_pct || getKoDistance(fcn))}
                   </span>
                 </div>
@@ -446,14 +446,14 @@ export default function FcnPage() {
             <div className="space-y-2">
               {exposures.length === 0 && <EmptyLine>No underlying exposure data yet.</EmptyLine>}
               {exposures.slice(0, 10).map((item) => (
-                <div className="flex items-center justify-between gap-3 border-b border-zinc-900 pb-2 font-mono text-xs" key={item.symbol}>
+                <div className="flex items-center justify-between gap-3 border-b border-[var(--ixai-border-subtle)] pb-2 font-mono text-xs" key={item.symbol}>
                   <div>
-                    <div className={item.count > 1 ? "font-semibold text-yellow-300" : "font-semibold text-zinc-200"}>
+                    <div className={item.count > 1 ? "font-semibold text-[var(--ixai-risk-watch)]" : "font-semibold text-[var(--ixai-text-strong)]"}>
                       {item.symbol}
                     </div>
-                    <div className="text-[10px] text-zinc-500">{item.fcns.slice(0, 4).join(" · ")}</div>
+                    <div className="text-[10px] text-[var(--ixai-text-subtle)]">{item.fcns.slice(0, 4).join(" · ")}</div>
                   </div>
-                  <span className={`border px-2 py-1 ${item.count > 1 ? "border-yellow-500/40 text-yellow-300" : "border-zinc-700 text-zinc-400"}`}>
+                  <span className={`border px-2 py-1 ${item.count > 1 ? "border-[var(--ixai-risk-watch)]/40 text-[var(--ixai-risk-watch)]" : "border-[var(--ixai-border-subtle)] text-[var(--ixai-text-muted)]"}`}>
                     {item.count}x
                   </span>
                 </div>
@@ -468,7 +468,7 @@ export default function FcnPage() {
             {fcns.map((fcn) => (
               <div key={`${fcn.mergedKey}-underlyings`}>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <h3 className="font-mono text-xs uppercase tracking-[0.18em] text-zinc-300">{fcn.displayCode}</h3>
+                  <h3 className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--ixai-text-strong)]">{fcn.displayCode}</h3>
                   <span className={`border px-2 py-0.5 font-mono text-[10px] uppercase ${riskClass(fcn.risk_level)}`}>
                     {fcn.risk_level || "unknown"}
                   </span>
@@ -482,30 +482,30 @@ export default function FcnPage() {
         <section className="grid gap-5 lg:grid-cols-2">
           <TerminalPanel title={labels.timeline} meta="coupon / observation">
             <div className="space-y-2 font-mono text-xs">
-              <div className="flex justify-between border-b border-zinc-900 pb-2">
-                <span className="text-zinc-500">NEXT OBSERVATION</span>
-                <span className="text-zinc-200">{nextObservation || "schedule pending"}</span>
+              <div className="flex justify-between border-b border-[var(--ixai-border-subtle)] pb-2">
+                <span className="text-[var(--ixai-text-subtle)]">NEXT OBSERVATION</span>
+                <span className="text-[var(--ixai-text-strong)]">{nextObservation || "schedule pending"}</span>
               </div>
-              <div className="flex justify-between border-b border-zinc-900 pb-2">
-                <span className="text-zinc-500">NEXT COUPON</span>
-                <span className="text-zinc-200">{nextCoupon || "schedule pending"}</span>
+              <div className="flex justify-between border-b border-[var(--ixai-border-subtle)] pb-2">
+                <span className="text-[var(--ixai-text-subtle)]">NEXT COUPON</span>
+                <span className="text-[var(--ixai-text-strong)]">{nextCoupon || "schedule pending"}</span>
               </div>
-              <p className="pt-2 text-[11px] leading-5 text-zinc-500">
+              <p className="pt-2 text-[11px] leading-5 text-[var(--ixai-text-subtle)]">
                 {scheduleRows.length > 0
                   ? "Generated from trade date, tenor, frequency, and business-day payment lag."
                   : "Coupon schedule will be available once observation data is connected."}
               </p>
               <details className="pt-2">
-                <summary className="cursor-pointer text-zinc-300">Full schedule</summary>
-                <div className="mt-2 max-h-72 overflow-auto border border-zinc-800">
+                <summary className="cursor-pointer text-[var(--ixai-text-strong)]">Full schedule</summary>
+                <div className="mt-2 max-h-72 overflow-auto border border-[var(--ixai-border-subtle)]">
                   {fcns.map((fcn) => {
                     const rows = schedules[String(fcn.id)] || [];
                     return (
-                      <div className="border-b border-zinc-900" key={`${fcn.mergedKey}-schedule`}>
-                        <div className="bg-black/30 px-2 py-1 text-zinc-300">{fcn.displayCode}</div>
-                        {rows.length === 0 && <div className="px-2 py-1 text-zinc-600">schedule pending</div>}
+                      <div className="border-b border-[var(--ixai-border-subtle)]" key={`${fcn.mergedKey}-schedule`}>
+                        <div className="bg-black/30 px-2 py-1 text-[var(--ixai-text-strong)]">{fcn.displayCode}</div>
+                        {rows.length === 0 && <div className="px-2 py-1 text-[var(--ixai-text-subtle)]">schedule pending</div>}
                         {rows.map((row) => (
-                          <div className="grid grid-cols-[0.5fr_1fr_1fr_0.8fr] gap-2 px-2 py-1 text-zinc-400" key={row.id || `${fcn.id}-${row.period_index}`}>
+                          <div className="grid grid-cols-[0.5fr_1fr_1fr_0.8fr] gap-2 px-2 py-1 text-[var(--ixai-text-muted)]" key={row.id || `${fcn.id}-${row.period_index}`}>
                             <span>T{row.period_index}</span>
                             <span>{row.observation_date}</span>
                             <span>{row.payment_date}</span>
@@ -521,7 +521,7 @@ export default function FcnPage() {
           </TerminalPanel>
 
           <TerminalPanel title={labels.interpretation} meta="compliance-safe">
-            <div className="space-y-2 text-sm leading-6 text-zinc-300">
+            <div className="space-y-2 text-sm leading-6 text-[var(--ixai-text-strong)]">
               <p>
                 {closestKiFcn
                   ? `${closestKiFcn.fcn.displayCode} is currently the closest FCN to KI distance at ${closestKiFcn.distance.toFixed(1)}%, with ${getWorstSymbol(closestKiFcn.fcn)} as the current worst-of focus.`
@@ -532,7 +532,7 @@ export default function FcnPage() {
                   ? `${repeatedExposures[0].symbol} appears across ${repeatedExposures[0].count} FCN contracts, indicating repeated underlying exposure.`
                   : "No repeated FCN underlying exposure is detected from the current payload."}
               </p>
-              <p className="text-zinc-500">
+              <p className="text-[var(--ixai-text-subtle)]">
                 This workspace highlights monitoring priority only and does not provide trading instructions.
               </p>
             </div>
