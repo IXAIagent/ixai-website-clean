@@ -53,6 +53,23 @@ export default function LoginPage() {
             <p className="mt-3 text-sm leading-6 text-[var(--ixai-text-muted)]">
               受邀用戶可登入 Portfolio Intelligence、FCN Monitoring 與 AI Risk Alerts 工作區。
             </p>
+            <div className="mt-4 rounded-xl border border-[rgba(176,141,87,0.28)] bg-[rgba(176,141,87,0.10)] px-4 py-3 text-xs leading-6 text-[var(--ixai-text-muted)]">
+              <p className="font-semibold text-[var(--ixai-text-strong)]">
+                This is the legacy IXAI Pro Lab.
+              </p>
+              <p className="mt-1">
+                App account shared login is being connected. For beta testers, use
+                assigned Pro Lab credentials if available; your app.ixuan.ai
+                password is not guaranteed to work here yet.
+              </p>
+              <a
+                className="mt-2 inline-flex font-semibold text-[var(--ixai-risk-clear)] transition hover:text-[var(--ixai-accent)]"
+                href="https://app.ixuan.ai/account"
+                rel="noreferrer"
+              >
+                Back to IXAI App
+              </a>
+            </div>
           </div>
 
           <form className="space-y-5" onSubmit={handleLogin}>

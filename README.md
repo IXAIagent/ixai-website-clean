@@ -1,5 +1,22 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## IXAI Legacy Pro Lab
+
+This repository is the legacy IXAI Pro Lab preview environment. It is separate
+from the production IXAI App at `https://app.ixuan.ai`.
+
+Current status:
+
+- Legacy Pro Lab uses its own FastAPI JWT login flow.
+- App account shared login is being connected, but this is not true SSO yet.
+- Beta testers should use assigned Pro Lab credentials if available.
+- App users should return to `https://app.ixuan.ai/account` for the primary IXAI
+  App account and Pro bridge status.
+
+v1.59.0 records this project as the existing Pro Lab target while the new in-app
+beta workspace remains inside `app.ixuan.ai`. No Stripe, broker API, trading
+execution, or investment advice is enabled by this bridge.
+
 ## Getting Started
 
 First, run the development server:
