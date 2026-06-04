@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createLegacySsoSession } from "../../lib/sso-session";
 
 type ReceiveState =
   | { status: "checking" }
@@ -40,6 +42,7 @@ function getLaunchCode() {
 
 export default function SsoReceivePage() {
   const appBaseUrl = useMemo(() => getAppBaseUrl(), []);
+  const router = useRouter();
   const [state, setState] = useState<ReceiveState>({ status: "checking" });
 
   useEffect(() => {
@@ -82,6 +85,13 @@ export default function SsoReceivePage() {
           status: "valid",
           userIdTail: payload.identity?.userIdTail ?? null,
         });
+        createLegacySsoSession({
+          emailMasked: payload.identity?.emailMasked ?? null,
+          userIdTail: payload.identity?.userIdTail ?? null,
+        });
+        window.setTimeout(() => {
+          router.replace("/dashboard");
+        }, 850);
       } catch {
         if (mounted) {
           setState({
@@ -97,7 +107,7 @@ export default function SsoReceivePage() {
     return () => {
       mounted = false;
     };
-  }, [appBaseUrl]);
+  }, [appBaseUrl, router]);
 
   return (
     <main className="min-h-screen bg-[#061a14] px-5 py-10 text-[#f5f0e6]">
@@ -122,7 +132,7 @@ export default function SsoReceivePage() {
                 已接收 App 帳號身份，正在準備進入 IXAI Pro。
               </h1>
               <p className="mt-4 text-sm leading-7 text-[var(--ixai-text-muted)]">
-                v1.67 目前只驗證 App 到 Pro 的身份交接，尚未取代 Legacy Pro 登入。下一版會評估是否接上短效 Pro session 或直接導入 Supabase Auth。
+                已建立短效 IXAI Pro 測試 session，系統會自動帶你進入 Pro Dashboard。這不等於付費 Pro 權限，也不會儲存 Supabase token。
               </p>
               <div className="mt-5 rounded-xl border border-[rgba(176,141,87,0.28)] bg-[rgba(176,141,87,0.10)] px-4 py-3 text-sm leading-6 text-[var(--ixai-text-muted)]">
                 <p>

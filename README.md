@@ -17,6 +17,21 @@ v1.59.0 records this project as the existing Pro Lab target while the new in-app
 beta workspace remains inside `app.ixuan.ai`. No Stripe, broker API, trading
 execution, or investment advice is enabled by this bridge.
 
+v1.68.0 adds the first App → Pro Unified Identity MVP. When a signed-in App user
+clicks `開啟 IXAI Pro`, the App issues a short-lived one-time launch code. This
+Legacy Pro Lab validates that code on `/sso/receive`, creates a clearly marked
+short-lived `ixai_sso_v1` MVP session, and redirects the user to `/dashboard`.
+The legacy `/login` page remains available as fallback.
+
+Important limitations:
+
+- The MVP SSO session is a temporary UI bridge, not a full Supabase migration.
+- The MVP session does not grant paid Pro access.
+- The MVP session does not authorize protected backend Portfolio / FCN / Risk
+  data by itself.
+- Future versions should replace the localStorage marker with a safer shared
+  Supabase / backend-validated session model.
+
 ## Getting Started
 
 First, run the development server:
