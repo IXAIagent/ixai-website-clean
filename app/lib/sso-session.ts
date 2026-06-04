@@ -106,7 +106,12 @@ export function getProSession(): ProSession | null {
   }
 
   const session = readStoredSsoSession();
-  if (!session) return null;
+  if (!session) {
+    if (isSsoSession(token)) {
+      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+    return null;
+  }
 
   const ssoToken = createSsoToken(session);
   if (token !== ssoToken) {
@@ -158,6 +163,10 @@ export function clearProSession() {
 
 export function clearLegacySsoSession() {
   clearSsoOnly();
+  if (typeof window === "undefined") return;
+  if (isSsoSession(window.localStorage.getItem(TOKEN_STORAGE_KEY))) {
+    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  }
 }
 
 export function getStoredLegacySsoSession() {
