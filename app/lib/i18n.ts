@@ -6,6 +6,8 @@
 // back through:
 //   requested locale namespace → en namespace → key string itself.
 
+import { useCallback, useMemo } from "react";
+
 import {
   FALLBACK_LOCALE,
   registry,
@@ -94,10 +96,13 @@ export function translate(
 export function useI18n() {
   const { preferences } = usePreferences();
   const locale = (preferences.locale || defaultPreferences.locale) as SupportedLocale;
-  return {
-    locale,
-    t(key: string) {
-      return translate(key, locale);
-    },
-  };
+  const t = useCallback((key: string) => translate(key, locale), [locale]);
+
+  return useMemo(
+    () => ({
+      locale,
+      t,
+    }),
+    [locale, t],
+  );
 }
