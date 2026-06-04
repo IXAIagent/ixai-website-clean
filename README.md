@@ -23,6 +23,12 @@ Legacy Pro Lab validates that code on `/sso/receive`, creates a clearly marked
 short-lived `ixai_sso_v1` MVP session, and redirects the user to `/dashboard`.
 The legacy `/login` page remains available as fallback.
 
+v1.69.0 hardens that MVP session into a structured `ixai_sso_v2` session. The
+session helper layer now centralizes legacy JWT and App SSO session handling,
+enforces expiry, restores valid SSO sessions across refresh, prevents the SSO
+marker from being sent to FastAPI as a backend JWT, and clears both legacy JWT
+and SSO state on Legacy Pro logout.
+
 Important limitations:
 
 - The MVP SSO session is a temporary UI bridge, not a full Supabase migration.

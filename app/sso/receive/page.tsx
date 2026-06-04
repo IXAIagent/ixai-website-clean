@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createLegacySsoSession } from "../../lib/sso-session";
+import { clearLegacySsoSession, setProSsoSession } from "../../lib/sso-session";
 
 type ReceiveState =
   | { status: "checking" }
@@ -52,6 +52,7 @@ export default function SsoReceivePage() {
       const code = getLaunchCode();
 
       if (!code) {
+        clearLegacySsoSession();
         setState({
           message: "缺少 IXAI Pro 連線代碼。",
           status: "failed",
@@ -71,6 +72,7 @@ export default function SsoReceivePage() {
         }
 
         if (!response.ok || !payload.ok) {
+          clearLegacySsoSession();
           setState({
             message:
               payload.message ||
@@ -85,14 +87,15 @@ export default function SsoReceivePage() {
           status: "valid",
           userIdTail: payload.identity?.userIdTail ?? null,
         });
-        createLegacySsoSession({
-          emailMasked: payload.identity?.emailMasked ?? null,
-          userIdTail: payload.identity?.userIdTail ?? null,
+        setProSsoSession({
+          appUserIdTail: payload.identity?.userIdTail ?? null,
+          maskedEmail: payload.identity?.emailMasked ?? null,
         });
         window.setTimeout(() => {
           router.replace("/dashboard");
         }, 850);
       } catch {
+        clearLegacySsoSession();
         if (mounted) {
           setState({
             message: "暫時無法驗證 App 帳號身份，請使用 Pro 登入頁。",

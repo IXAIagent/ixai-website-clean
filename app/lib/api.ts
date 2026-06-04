@@ -2,8 +2,9 @@
 
 import {
   clearLegacySsoSession,
-  getStoredLegacySsoSession,
-  isLegacySsoToken,
+  clearProSession,
+  getProSession,
+  isLegacyJwtSession,
 } from "./sso-session";
 
 const LOCAL_API_BASE = "http://localhost:8000";
@@ -816,18 +817,13 @@ export class ApiError extends Error {
 
 export function getToken() {
   if (typeof window === "undefined") return null;
-  const token = window.localStorage.getItem("ixai_token");
-
-  if (isLegacySsoToken(token) && !getStoredLegacySsoSession()) {
-    return null;
-  }
-
-  return token;
+  return getProSession()?.token || null;
 }
 
 export function setToken(token: string) {
   if (typeof window === "undefined") return;
   clearApiCache();
+  clearLegacySsoSession();
   window.localStorage.setItem("ixai_token", token);
   window.localStorage.removeItem("token");
 }
@@ -852,9 +848,9 @@ export function authHeaders(headers?: HeadersInit) {
   const nextHeaders = new Headers(headers);
   const token = getToken();
 
-  // v1.68 MVP: ixai_sso_v1 is a local UI bridge marker, not a FastAPI JWT.
+  // v1.69: ixai_sso_v2 is a local UI bridge marker, not a FastAPI JWT.
   // Do not send it to protected backend endpoints as an Authorization token.
-  if (token && !isLegacySsoToken(token)) {
+  if (isLegacyJwtSession(token)) {
     nextHeaders.set("Authorization", `Bearer ${token}`);
   }
 
@@ -869,9 +865,7 @@ export function authHeaders(headers?: HeadersInit) {
 export function logout() {
   if (typeof window === "undefined") return;
   clearApiCache();
-  clearLegacySsoSession();
-  window.localStorage.removeItem("ixai_token");
-  window.localStorage.removeItem("token");
+  clearProSession();
 }
 
 export function clearApiCache() {
@@ -919,8 +913,8 @@ export async function apiFetch<T>(
   init: ApiFetchInit = {},
 ): Promise<T> {
   const { skipAuthRedirect, ...fetchInit } = init;
-  const currentToken = getToken();
-  const isSsoSession = isLegacySsoToken(currentToken);
+  const currentSession = getProSession();
+  const isSsoSession = currentSession?.kind === "sso";
   const headers = authHeaders(fetchInit.headers);
   const isFormData =
     typeof FormData !== "undefined" && fetchInit.body instanceof FormData;

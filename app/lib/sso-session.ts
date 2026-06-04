@@ -1,68 +1,171 @@
 export const LEGACY_SSO_SESSION_KEY = "ixai_sso_session";
-export const LEGACY_SSO_TOKEN_PREFIX = "ixai_sso_v1.";
+export const LEGACY_SSO_TOKEN_PREFIX = "ixai_sso_v2.";
 
+const LEGACY_SSO_TOKEN_PREFIX_V1 = "ixai_sso_v1.";
 const DEFAULT_SSO_SESSION_TTL_MS = 30 * 60 * 1000;
+const TOKEN_STORAGE_KEY = "ixai_token";
+const LEGACY_TOKEN_STORAGE_KEY = "token";
 
-export type LegacySsoSession = {
-  createdAt: string;
-  emailMasked: string | null;
-  expiresAt: string;
+export type IxaiSsoSession = {
+  appUserIdTail: string;
+  expiresAt: number;
+  issuedAt: number;
+  maskedEmail?: string;
+  provider: "supabase";
   source: "ixai-app";
-  token: string;
-  userIdTail: string | null;
+  type: "ixai_sso_v2";
 };
 
-function createTokenPayload(session: Omit<LegacySsoSession, "token">) {
-  const json = JSON.stringify({
-    createdAt: session.createdAt,
-    expiresAt: session.expiresAt,
-    source: session.source,
-    userIdTail: session.userIdTail,
-  });
+export type ProSession =
+  | {
+      kind: "legacy_jwt";
+      token: string;
+    }
+  | {
+      kind: "sso";
+      session: IxaiSsoSession;
+      token: string;
+    };
 
+function safeEncode(value: unknown) {
+  const json = JSON.stringify(value);
   return window.btoa(encodeURIComponent(json));
 }
 
-export function isLegacySsoToken(token: string | null | undefined) {
-  return Boolean(token?.startsWith(LEGACY_SSO_TOKEN_PREFIX));
+function createSsoToken(session: IxaiSsoSession) {
+  return `${LEGACY_SSO_TOKEN_PREFIX}${safeEncode({
+    appUserIdTail: session.appUserIdTail,
+    expiresAt: session.expiresAt,
+    issuedAt: session.issuedAt,
+    provider: session.provider,
+    source: session.source,
+    type: session.type,
+  })}`;
 }
 
-export function clearLegacySsoSession() {
+function clearSsoOnly() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(LEGACY_SSO_SESSION_KEY);
 }
 
-export function getStoredLegacySsoSession(): LegacySsoSession | null {
+function readStoredSsoSession(): IxaiSsoSession | null {
   if (typeof window === "undefined") return null;
 
   try {
     const raw = window.localStorage.getItem(LEGACY_SSO_SESSION_KEY);
     if (!raw) return null;
 
-    const parsed = JSON.parse(raw) as Partial<LegacySsoSession>;
-    if (!parsed.token || !isLegacySsoToken(parsed.token) || !parsed.expiresAt) {
-      clearLegacySsoSession();
-      return null;
-    }
-
-    if (Date.parse(parsed.expiresAt) <= Date.now()) {
-      clearLegacySsoSession();
-      window.localStorage.removeItem("ixai_token");
-      return null;
-    }
-
-    return {
-      createdAt: parsed.createdAt || new Date().toISOString(),
-      emailMasked: parsed.emailMasked || null,
-      expiresAt: parsed.expiresAt,
+    const parsed = JSON.parse(raw) as Partial<IxaiSsoSession>;
+    const session: IxaiSsoSession = {
+      appUserIdTail: typeof parsed.appUserIdTail === "string" ? parsed.appUserIdTail : "",
+      expiresAt: typeof parsed.expiresAt === "number" ? parsed.expiresAt : 0,
+      issuedAt: typeof parsed.issuedAt === "number" ? parsed.issuedAt : 0,
+      maskedEmail: typeof parsed.maskedEmail === "string" ? parsed.maskedEmail : undefined,
+      provider: "supabase",
       source: "ixai-app",
-      token: parsed.token,
-      userIdTail: parsed.userIdTail || null,
+      type: "ixai_sso_v2",
     };
+
+    if (!session.appUserIdTail || isSessionExpired(session)) {
+      clearSsoOnly();
+      if (isSsoSession(window.localStorage.getItem(TOKEN_STORAGE_KEY))) {
+        window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+      }
+      return null;
+    }
+
+    return session;
   } catch {
-    clearLegacySsoSession();
+    clearSsoOnly();
     return null;
   }
+}
+
+export function isSsoSession(token: string | null | undefined) {
+  return Boolean(
+    token?.startsWith(LEGACY_SSO_TOKEN_PREFIX) ||
+      token?.startsWith(LEGACY_SSO_TOKEN_PREFIX_V1),
+  );
+}
+
+export function isLegacyJwtSession(token: string | null | undefined): token is string {
+  return Boolean(token && !isSsoSession(token));
+}
+
+export function isSessionExpired(session: Pick<IxaiSsoSession, "expiresAt"> | null | undefined) {
+  return !session || session.expiresAt <= Date.now();
+}
+
+export function getProSession(): ProSession | null {
+  if (typeof window === "undefined") return null;
+
+  const token = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+
+  if (isLegacyJwtSession(token)) {
+    return { kind: "legacy_jwt", token };
+  }
+
+  const session = readStoredSsoSession();
+  if (!session) return null;
+
+  const ssoToken = createSsoToken(session);
+  if (token !== ssoToken) {
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, ssoToken);
+  }
+
+  return {
+    kind: "sso",
+    session,
+    token: ssoToken,
+  };
+}
+
+export function setProSsoSession({
+  appUserIdTail,
+  maskedEmail,
+}: {
+  appUserIdTail?: string | null;
+  maskedEmail?: string | null;
+}): IxaiSsoSession {
+  if (typeof window === "undefined") {
+    throw new Error("Pro SSO session can only be created in the browser.");
+  }
+
+  const issuedAt = Date.now();
+  const session: IxaiSsoSession = {
+    appUserIdTail: appUserIdTail || "unknown",
+    expiresAt: issuedAt + DEFAULT_SSO_SESSION_TTL_MS,
+    issuedAt,
+    maskedEmail: maskedEmail || undefined,
+    provider: "supabase",
+    source: "ixai-app",
+    type: "ixai_sso_v2",
+  };
+
+  window.localStorage.setItem(LEGACY_SSO_SESSION_KEY, JSON.stringify(session));
+  window.localStorage.setItem(TOKEN_STORAGE_KEY, createSsoToken(session));
+  window.localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY);
+
+  return session;
+}
+
+export function clearProSession() {
+  if (typeof window === "undefined") return;
+  clearSsoOnly();
+  window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  window.localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY);
+}
+
+export function clearLegacySsoSession() {
+  clearSsoOnly();
+}
+
+export function getStoredLegacySsoSession() {
+  return readStoredSsoSession();
+}
+
+export function isLegacySsoToken(token: string | null | undefined) {
+  return isSsoSession(token);
 }
 
 export function createLegacySsoSession({
@@ -71,33 +174,9 @@ export function createLegacySsoSession({
 }: {
   emailMasked?: string | null;
   userIdTail?: string | null;
-}): LegacySsoSession {
-  if (typeof window === "undefined") {
-    throw new Error("Legacy SSO session can only be created in the browser.");
-  }
-
-  const createdAt = new Date();
-  const expiresAt = new Date(createdAt.getTime() + DEFAULT_SSO_SESSION_TTL_MS);
-  const tokenBody = createTokenPayload({
-    createdAt: createdAt.toISOString(),
-    emailMasked: emailMasked || null,
-    expiresAt: expiresAt.toISOString(),
-    source: "ixai-app",
-    userIdTail: userIdTail || null,
+}) {
+  return setProSsoSession({
+    appUserIdTail: userIdTail,
+    maskedEmail: emailMasked,
   });
-  const token = `${LEGACY_SSO_TOKEN_PREFIX}${tokenBody}`;
-  const session: LegacySsoSession = {
-    createdAt: createdAt.toISOString(),
-    emailMasked: emailMasked || null,
-    expiresAt: expiresAt.toISOString(),
-    source: "ixai-app",
-    token,
-    userIdTail: userIdTail || null,
-  };
-
-  window.localStorage.setItem(LEGACY_SSO_SESSION_KEY, JSON.stringify(session));
-  window.localStorage.setItem("ixai_token", token);
-  window.localStorage.removeItem("token");
-
-  return session;
 }
